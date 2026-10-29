@@ -3,7 +3,7 @@ import { Img, staticFile } from "remotion";
 import maskData from "../geometry/maskPaths.json";
 import metrics from "../geometry/icon-metrics.json";
 import { LAYOUT } from "../theme";
-import type { RevealGroupName } from "../timeline";
+import { clamp01, type RevealGroupName } from "../timeline";
 
 const VIEW_W = 302;
 const VIEW_H = 292;
@@ -26,10 +26,10 @@ const toPath = (points: number[][]): string =>
 const buildMask = (reveal: Record<RevealGroupName, number>): string => {
   const paths = (Object.keys(reveal) as RevealGroupName[])
     .flatMap((name) =>
-      polylinesFor(name).map(
-        (points) =>
-          `<path d="${toPath(points)}" fill="none" stroke="white" stroke-width="${MASK_STROKE}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${1 - reveal[name]}"/>`,
-      ),
+      polylinesFor(name).map((points) => {
+        const progress = clamp01(reveal[name]);
+        return `<path d="${toPath(points)}" fill="none" stroke="white" stroke-width="${MASK_STROKE}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${1 - progress}"/>`;
+      }),
     )
     .join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="none">${paths}</svg>`;
