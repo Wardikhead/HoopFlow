@@ -3,6 +3,7 @@ import { BracketMark } from "./components/BracketMark";
 import { CourtBackdrop } from "./components/CourtBackdrop";
 import { Motto } from "./components/Motto";
 import { PulseRing } from "./components/PulseRing";
+import { Sfx } from "./components/Sfx";
 import { Wordmark } from "./components/Wordmark";
 import "./fonts";
 import { ballDrop, ballSquash } from "./lib/ballMotion";
@@ -48,6 +49,7 @@ export const Splash: React.FC = () => {
       </AbsoluteFill>
       <Wordmark frame={frame} />
       <Motto frame={frame} />
+      <Sfx />
     </AbsoluteFill>
   );
 };
