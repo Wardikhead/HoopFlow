@@ -1,0 +1,10 @@
+﻿{
+    "ball":  {
+                 "radius":  49.5,
+                 "cx":  149,
+                 "cy":  60
+             },
+    "width":  302,
+    "height":  292,
+    "strokeWidth":  12
+}
