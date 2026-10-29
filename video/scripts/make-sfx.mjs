@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+// Imports TypeScript directly, so this needs Node >= 22.18 (type stripping on
+// by default; flag-gated from 22.6 and unavailable on 20.x).
 import { encodeWav } from "../src/lib/wav.ts";
 
 const SAMPLE_RATE = 48000;
