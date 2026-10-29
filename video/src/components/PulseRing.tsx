@@ -11,7 +11,12 @@ export const PulseRing: React.FC<{ frame: number }> = ({ frame }) => {
   const radius = RADIUS_FROM + (RADIUS_TO - RADIUS_FROM) * progress;
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${metrics.width} ${metrics.height}`}>
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${metrics.width} ${metrics.height}`}
+      style={{ overflow: "visible" }}
+    >
       <circle
         cx={metrics.ball.cx}
         cy={metrics.ball.cy}
