@@ -21,6 +21,9 @@ export const REVEAL_GROUPS = [
 export type RevealGroupName = (typeof REVEAL_GROUPS)[number]["name"];
 
 export const BALL_FADE = [46, 54] as const;
+export const BALL_LIFT_PEAK = 66;
+export const BALL_SQUASH_END = 84;
+export const PULSE_RING_FRAMES = 18;
 export const WORDMARK_TEXT = "HoopFlow";
 export const WORDMARK_START = 88;
 export const LETTER_STAGGER = 3;
