@@ -540,19 +540,28 @@ import { REVEAL_GROUPS, type RevealGroupName } from "../timeline";
 export type IconCompareProps = {
   reveal: number;
   drop: number;
+  ballOpacity?: number;
 };
 
-export const IconCompare: React.FC<IconCompareProps> = ({ reveal, drop }) => {
+export const IconCompare: React.FC<IconCompareProps> = ({ reveal, drop, ballOpacity = 1 }) => {
   const revealMap = REVEAL_GROUPS.reduce(
     (acc, group) => ({ ...acc, [group.name]: reveal }),
     {} as Record<RevealGroupName, number>,
   );
 
   return (
-    <BracketMark reveal={revealMap} drop={drop} squash={0} ballOpacity={1} width={302} />
+    <BracketMark
+      reveal={revealMap}
+      drop={drop}
+      squash={0}
+      ballOpacity={ballOpacity}
+      width={302}
+    />
   );
 };
 ```
+
+`ballOpacity` exists so the 50% coverage gate can measure **bracket reveal only** — with the ball visible it contributes a constant ~4.8k ink pixels and pushes any coverage ratio out of the acceptance window.
 
 - [ ] **Step 4: Confirm the mask composite is alpha-based in the renderer**
 
@@ -630,12 +639,12 @@ git commit -m "feat(video): add reveal mask data, BracketMark, and IconCompare h
 ```powershell
 Set-Location video
 New-Item -ItemType Directory -Force out | Out-Null
-npx remotion still IconCompare out/icon-100.png --frame=0 --props='{"reveal":1,"drop":0}'
-npx remotion still IconCompare out/icon-50.png --frame=0 --props='{"reveal":0.5,"drop":0}'
+npx remotion still IconCompare out/icon-100.png --frame=0 --props='{"reveal":1,"drop":0,"ballOpacity":1}'
+npx remotion still IconCompare out/icon-50.png --frame=0 --props='{"reveal":0.5,"drop":0,"ballOpacity":0}'
 Set-Location ..
 ```
 
-Expected: both PNGs written.
+Expected: both PNGs written. The 100% render includes the ball (structural identity check); the 50% render excludes it (coverage check measures the bracket reveal only).
 
 - [ ] **Step 2: Write `video/tools/compare-icon.ps1`**
 
@@ -688,6 +697,7 @@ function Get-MaskDistance([double]$px, [double]$py) {
 
 $source = Get-InkSet $sourcePath
 $render100 = Get-InkSet 'out/icon-100.png'
+$bracketInk = Get-InkSet 'public/brand/bracket.png'
 
 $mismatch = 0
 foreach ($point in $source) { if (-not $render100.Contains($point)) { $mismatch++ } }
@@ -697,11 +707,11 @@ $sourceInk = $source.Count
 $renderInk = $render100.Count
 
 $revealed = Get-InkSet 'out/icon-50.png'
-$revealedRatio = $revealed.Count / $sourceInk
+$revealedRatio = $revealed.Count / $bracketInk.Count
 
 $worst = New-Object System.Collections.ArrayList
 $offenders = 0
-foreach ($point in $source) {
+foreach ($point in $bracketInk) {
   $parts = $point.Split(',')
   $d = Get-MaskDistance ([double]$parts[0]) ([double]$parts[1])
   if ($d -gt 18) {
@@ -711,7 +721,7 @@ foreach ($point in $source) {
 }
 
 Write-Output "source ink=$sourceInk render ink=$renderInk mismatch=$mismatch"
-Write-Output "reveal@0.5 ratio=$([Math]::Round($revealedRatio,3))"
+Write-Output "bracket ink=$($bracketInk.Count) reveal@0.5 ratio=$([Math]::Round($revealedRatio,3))"
 Write-Output "mask offenders (>18 units)=$offenders"
 if ($worst.Count -gt 0) { Write-Output ($worst -join '; ') }
 
