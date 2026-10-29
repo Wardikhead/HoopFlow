@@ -1594,7 +1594,7 @@ Set-Location ..
 
 Scrub frames 0, 20, 45, 60, 70, 74, 80, 95, 130, 194. Confirm: reveal tracks the bracket, ball fades in as the sweep clears the top, squash reads at 76–80, wordmark lands by 125, nothing clips at the frame edges. Stop the server.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
 git add -A
