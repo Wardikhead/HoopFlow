@@ -1188,11 +1188,7 @@ export const PulseRing: React.FC<{ frame: number }> = ({ frame }) => {
   const radius = RADIUS_FROM + (RADIUS_TO - RADIUS_FROM) * progress;
 
   return (
-    <svg
-      width={metrics.width}
-      height={metrics.height}
-      viewBox={`0 0 ${metrics.width} ${metrics.height}`}
-    >
+    <svg width="100%" height="100%" viewBox={`0 0 ${metrics.width} ${metrics.height}`}>
       <circle
         cx={metrics.ball.cx}
         cy={metrics.ball.cy}
@@ -1208,6 +1204,8 @@ export const PulseRing: React.FC<{ frame: number }> = ({ frame }) => {
 ```
 
 `RADIUS_FROM` is the drawn ball's edge (~46px) — **not** `metrics.ball.radius`, which is the 49.5px *split* radius used by the asset script. Keep `46` as a literal.
+
+The `<svg>` is `width="100%" height="100%"` on purpose: it is mounted inside an absolutely-positioned `inset: 0` layer that exactly covers `BracketMark`, which renders the icon at `LAYOUT.iconWidth` (470px), not 302px. A fixed `width={302}` would draw the ring at 0.64× scale and offset its centre, because the ball's centre at icon coordinates `(149, 60)` would map to `(149, 60)` device px instead of `(232, 93)`. The `viewBox` keeps the 302×292 coordinate space so `metrics.ball.cx/cy` stay meaningful.
 
 - [ ] **Step 6: Mount ball motion and pulse ring in `Splash.tsx`**
 
