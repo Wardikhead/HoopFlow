@@ -1121,13 +1121,22 @@ Set-Location ..
 
 Expected: FAIL — cannot resolve `../lib/ballMotion`.
 
-- [ ] **Step 3: Implement `video/src/lib/ballMotion.ts`**
+- [ ] **Step 3a: Add the ball-motion beats to `video/src/timeline.ts`**
+
+The project rule is that no frame number is hardcoded outside `timeline.ts`. Append to `video/src/timeline.ts`:
 
 ```ts
-const LIFT_START = 57;
-const LIFT_PEAK = 66;
-const IMPACT = 74;
-const SQUASH_END = 84;
+export const BALL_LIFT_PEAK = 66;
+export const BALL_SQUASH_END = 84;
+export const PULSE_RING_FRAMES = 18;
+```
+
+- [ ] **Step 3b: Implement `video/src/lib/ballMotion.ts`**
+
+```ts
+import { BALL_LIFT_PEAK, BALL_SQUASH_END, BEATS, IMPACT_FRAME } from "../timeline";
+
+const LIFT_START = BEATS.ball[0];
 const LIFT_HEIGHT = -16;
 
 const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
@@ -1137,18 +1146,18 @@ const clamp = (t: number): number => Math.min(1, Math.max(0, t));
 
 export const ballDrop = (frame: number): number => {
   if (frame <= LIFT_START) return 0;
-  if (frame <= LIFT_PEAK) {
-    return lerp(0, LIFT_HEIGHT, easeOut((frame - LIFT_START) / (LIFT_PEAK - LIFT_START)));
+  if (frame <= BALL_LIFT_PEAK) {
+    return lerp(0, LIFT_HEIGHT, easeOut((frame - LIFT_START) / (BALL_LIFT_PEAK - LIFT_START)));
   }
-  if (frame <= IMPACT) {
-    return lerp(LIFT_HEIGHT, 0, easeIn((frame - LIFT_PEAK) / (IMPACT - LIFT_PEAK)));
+  if (frame <= IMPACT_FRAME) {
+    return lerp(LIFT_HEIGHT, 0, easeIn((frame - BALL_LIFT_PEAK) / (IMPACT_FRAME - BALL_LIFT_PEAK)));
   }
   return 0;
 };
 
 export const ballSquash = (frame: number): number => {
-  if (frame < IMPACT || frame > SQUASH_END) return 0;
-  const t = clamp((frame - IMPACT) / (SQUASH_END - IMPACT));
+  if (frame < IMPACT_FRAME || frame > BALL_SQUASH_END) return 0;
+  const t = clamp((frame - IMPACT_FRAME) / (BALL_SQUASH_END - IMPACT_FRAME));
   return Math.sin(Math.PI * t);
 };
 ```
@@ -1166,22 +1175,27 @@ Expected: PASS — 7 tests.
 - [ ] **Step 5: Write `video/src/components/PulseRing.tsx`**
 
 ```tsx
+import metrics from "../geometry/icon-metrics.json";
 import { COLORS } from "../theme";
-import { IMPACT_FRAME, beatProgress } from "../timeline";
+import { IMPACT_FRAME, PULSE_RING_FRAMES, beatProgress } from "../timeline";
 
 const RADIUS_FROM = 46;
 const RADIUS_TO = 120;
 
 export const PulseRing: React.FC<{ frame: number }> = ({ frame }) => {
-  const progress = beatProgress(frame, IMPACT_FRAME, IMPACT_FRAME + 18);
+  const progress = beatProgress(frame, IMPACT_FRAME, IMPACT_FRAME + PULSE_RING_FRAMES);
   if (progress <= 0 || progress >= 1) return null;
   const radius = RADIUS_FROM + (RADIUS_TO - RADIUS_FROM) * progress;
 
   return (
-    <svg width={302} height={292} viewBox="0 0 302 292">
+    <svg
+      width={metrics.width}
+      height={metrics.height}
+      viewBox={`0 0 ${metrics.width} ${metrics.height}`}
+    >
       <circle
-        cx={149}
-        cy={60}
+        cx={metrics.ball.cx}
+        cy={metrics.ball.cy}
         r={radius}
         fill="none"
         stroke={COLORS.orange}
@@ -1192,6 +1206,8 @@ export const PulseRing: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 ```
+
+`RADIUS_FROM` is the drawn ball's edge (~46px) — **not** `metrics.ball.radius`, which is the 49.5px *split* radius used by the asset script. Keep `46` as a literal.
 
 - [ ] **Step 6: Mount ball motion and pulse ring in `Splash.tsx`**
 
