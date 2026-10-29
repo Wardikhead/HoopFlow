@@ -1,5 +1,6 @@
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { CourtBackdrop } from "./components/CourtBackdrop";
+import { Motto } from "./components/Motto";
 import { Wordmark } from "./components/Wordmark";
 import "./fonts";
 import { BEATS, beatProgress } from "./timeline";
@@ -16,6 +17,7 @@ export const Splash: React.FC = () => {
     <AbsoluteFill>
       <CourtBackdrop glow={glow} drift={drift} />
       <Wordmark frame={frame} />
+      <Motto frame={frame} />
     </AbsoluteFill>
   );
 };
