@@ -1,5 +1,7 @@
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { CourtBackdrop } from "./components/CourtBackdrop";
+import { Wordmark } from "./components/Wordmark";
+import "./fonts";
 import { BEATS, beatProgress } from "./timeline";
 
 const [BACKDROP_FROM, BACKDROP_TO] = BEATS.backdrop;
@@ -13,6 +15,7 @@ export const Splash: React.FC = () => {
   return (
     <AbsoluteFill>
       <CourtBackdrop glow={glow} drift={drift} />
+      <Wordmark frame={frame} />
     </AbsoluteFill>
   );
 };
