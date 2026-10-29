@@ -24,6 +24,7 @@ export const BALL_FADE = [46, 54] as const;
 export const WORDMARK_TEXT = "HoopFlow";
 export const WORDMARK_START = 88;
 export const LETTER_STAGGER = 3;
+export const MOTTO_FADE = 18;
 
 export const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 

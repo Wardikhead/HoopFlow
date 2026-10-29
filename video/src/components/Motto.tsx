@@ -1,13 +1,13 @@
 import { Easing, interpolate } from "remotion";
 import { COLORS, FONTS, LAYOUT } from "../theme";
-import { BEATS, beatProgress } from "../timeline";
+import { BEATS, MOTTO_FADE, beatProgress } from "../timeline";
 
 const [MOTTO_FROM, MOTTO_TO] = BEATS.motto;
 
 export const Motto: React.FC<{ frame: number }> = ({ frame }) => {
   const progress = beatProgress(frame, MOTTO_FROM, MOTTO_TO);
   const eased = Easing.out(Easing.cubic)(progress);
-  const opacity = interpolate(frame, [MOTTO_FROM, MOTTO_FROM + 18], [0, 1], {
+  const opacity = interpolate(frame, [MOTTO_FROM, MOTTO_FROM + MOTTO_FADE], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
