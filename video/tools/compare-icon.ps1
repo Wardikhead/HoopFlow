@@ -1,5 +1,23 @@
+# Icon fidelity gate: compares out/icon-100.png with the source artwork and
+# measures how much of the bracket the 50% reveal covers, plus how far the mask
+# polylines stray from real ink (>18 units fails).
+#
+# Usage (two steps, from the video/ directory):
+#   1. powershell -ExecutionPolicy Bypass -File tools/render-icon-compare.ps1
+#   2. powershell -ExecutionPolicy Bypass -File tools/compare-icon.ps1
+#
+# Step 1 writes the git-ignored stills out/icon-100.png and out/icon-50.png from
+# the committed props in tools/props/*.json. The preflight below exits 2 with
+# guidance if they are missing. Exit codes: 0 pass, 1 gate failure, 2 missing input.
 Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = 'Stop'
+
+$missingStills = @('out/icon-100.png', 'out/icon-50.png') | Where-Object { -not (Test-Path $_) }
+if ($missingStills.Count -gt 0) {
+  Write-Output "missing stills: $($missingStills -join ', ')"
+  Write-Output 'run tools/render-icon-compare.ps1 first'
+  exit 2
+}
 
 $sourcePath = Join-Path (Resolve-Path '..\logo') 'hoopflow icon without background.png'
 $maskPath = Join-Path (Get-Location) 'src\geometry\maskPaths.json'
@@ -58,16 +76,20 @@ $renderInk = $render100.Count
 $revealed = Get-InkSet 'out/icon-50.png'
 $revealedRatio = $revealed.Count / $bracketInk.Count
 
-$worst = New-Object System.Collections.ArrayList
+$worstList = New-Object System.Collections.ArrayList
 $offenders = 0
 foreach ($point in $bracketInk) {
   $parts = $point.Split(',')
   $d = Get-MaskDistance ([double]$parts[0]) ([double]$parts[1])
   if ($d -gt 18) {
     $offenders++
-    if ($worst.Count -lt 10) { [void]$worst.Add("($($parts[0]),$($parts[1])) d=$([Math]::Round($d,1))") }
+    [void]$worstList.Add([pscustomobject]@{ X = [int]$parts[0]; Y = [int]$parts[1]; D = $d })
   }
 }
+
+$worst = @($worstList | Sort-Object D -Descending | Select-Object -First 10 | ForEach-Object {
+  "($($_.X),$($_.Y)) d=$([Math]::Round($_.D,1))"
+})
 
 Write-Output "source ink=$sourceInk render ink=$renderInk mismatch=$mismatch"
 Write-Output "bracket ink=$($bracketInk.Count) reveal@0.5 ratio=$([Math]::Round($revealedRatio,3))"
