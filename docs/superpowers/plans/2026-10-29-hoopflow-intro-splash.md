@@ -1578,11 +1578,11 @@ Render and measure. The delivered track must land near **−18 LUFS integrated**
 ```powershell
 Set-Location video
 npx remotion render HoopFlowSplash out/mix-check.mp4 --codec=h264
-npx remotion ffmpeg -i out/mix-check.mp4 -ac 1 -ar 48000 out/mix-check.wav -y
+npx remotion ffmpeg -i out/mix-check.mp4 -ac 2 -ar 48000 out/mix-check.wav -y
 Set-Location ..
 ```
 
-Then compute peak and a gated BS.1770-style integrated loudness from `out/mix-check.wav`. If the result is quieter than −19 LUFS, raise `VOLUME`; if the true peak exceeds −1 dBTP, lower it. Do not exceed `VOLUME = 3.5`.
+Then compute peak and a gated BS.1770-style integrated loudness from `out/mix-check.wav` **as stereo** — a mono downmix reads 3.01 dB low and will fail this gate spuriously. If the result is quieter than −19 LUFS, raise `VOLUME`; if the true peak exceeds −1 dBTP, lower it. Do not exceed `VOLUME = 3.5`.
 
 - [ ] **Step 5: Review the full motion in Studio**
 
