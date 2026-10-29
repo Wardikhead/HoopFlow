@@ -1690,7 +1690,7 @@ Vertical 1080×1920, 30fps, 6.5s intro splash for HoopFlow.
 
 ## Notes
 
-- The bracket is the official raster art, not a redraw. Do not upscale past ~1.5× without vectorizing (see `docs/superpowers/specs/2026-10-29-hoopflow-intro-splash-design.md` §13).
+- The bracket is the official raster art, not a redraw. Do not upscale past ~1.5× without vectorizing (see `../docs/superpowers/specs/2026-10-29-hoopflow-intro-splash-design.md` §13).
 - SFX are generated procedurally, so they are license-free. Tune them in `scripts/make-sfx.mjs`.
 ```
 
