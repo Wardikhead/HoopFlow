@@ -1528,15 +1528,29 @@ git commit -m "feat(video): generate license-free whoosh and swish SFX"
 import { Audio, Sequence, staticFile } from "remotion";
 import { BEATS, IMPACT_FRAME } from "../timeline";
 
-const VOLUME = 0.5;
+// The sources peak at -14 dBFS (whoosh) and -10 dBFS (swish). A music-less
+// splash is its own soundtrack, so it must be mastered near -18 LUFS, not left
+// at the conservative source level: 3.0 puts the delivered peak near -3.6 dBFS.
+// Values above 1 need the Web Audio API, hence `useWebAudioApi` below.
+const VOLUME = 3;
 
 export const Sfx: React.FC = () => (
   <>
     <Sequence from={BEATS.reveal[0]}>
-      <Audio src={staticFile("sfx/whoosh.wav")} volume={VOLUME} />
+      <Audio
+        src={staticFile("sfx/whoosh.wav")}
+        volume={VOLUME}
+        useWebAudioApi
+        crossOrigin="anonymous"
+      />
     </Sequence>
     <Sequence from={IMPACT_FRAME}>
-      <Audio src={staticFile("sfx/swish.wav")} volume={VOLUME} />
+      <Audio
+        src={staticFile("sfx/swish.wav")}
+        volume={VOLUME}
+        useWebAudioApi
+        crossOrigin="anonymous"
+      />
     </Sequence>
   </>
 );
@@ -1557,7 +1571,20 @@ Set-Location ..
 
 Expected: both exit 0.
 
-- [ ] **Step 4: Review the full motion in Studio**
+- [ ] **Step 4: Verify the mix level, not just the timing**
+
+Render and measure. The delivered track must land near **−18 LUFS integrated** with a true peak **≤ −1 dBTP**:
+
+```powershell
+Set-Location video
+npx remotion render HoopFlowSplash out/mix-check.mp4 --codec=h264
+npx remotion ffmpeg -i out/mix-check.mp4 -ac 1 -ar 48000 out/mix-check.wav -y
+Set-Location ..
+```
+
+Then compute peak and a gated BS.1770-style integrated loudness from `out/mix-check.wav`. If the result is quieter than −19 LUFS, raise `VOLUME`; if the true peak exceeds −1 dBTP, lower it. Do not exceed `VOLUME = 3.5`.
+
+- [ ] **Step 5: Review the full motion in Studio**
 
 ```powershell
 Set-Location video
