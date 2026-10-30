@@ -79,22 +79,31 @@ function appendAudit(state, { action, entityType, entityId, summary, changes = n
 export function createStore({ storage = globalThis.localStorage, seed = SEED } = {}) {
   if (!storage) throw new Error('createStore requires a storage adapter.');
 
+  const expectedSeedVersion = seed.seedVersion ?? SEED_VERSION;
+
   let state = load();
   const listeners = new Set();
+
+  function freshState() {
+    const next = clone(seed);
+    next.schemaVersion = SCHEMA_VERSION;
+    next.seedVersion = expectedSeedVersion;
+    return next;
+  }
 
   function load() {
     const raw = storage.getItem(STORAGE_KEY);
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        if (parsed.schemaVersion === SCHEMA_VERSION && parsed.seedVersion === SEED_VERSION) {
+        if (parsed.schemaVersion === SCHEMA_VERSION && parsed.seedVersion === expectedSeedVersion) {
           return parsed;
         }
       } catch {
         // Fall through to a clean seed.
       }
     }
-    const fresh = clone(seed);
+    const fresh = freshState();
     storage.setItem(STORAGE_KEY, JSON.stringify(fresh));
     return fresh;
   }
@@ -135,7 +144,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
   }
 
   function reset() {
-    commit(clone(seed), 'reset');
+    commit(freshState(), 'reset');
   }
 
   function setRole(role) {

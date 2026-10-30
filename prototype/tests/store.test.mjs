@@ -60,6 +60,38 @@ test('permissions are role-based', () => {
   assert.equal(store.canRole(['coach']), false);
 });
 
+test('custom seed versions survive reloads and reset', () => {
+  const storage = memoryStorage();
+  const customSeed = {
+    seedVersion: 'custom-2026-10-30',
+    role: 'organizer',
+    currentUserId: 'custom-organizer',
+    users: [
+      { id: 'custom-organizer', name: 'Custom Organizer', email: 'organizer@example.test', role: 'organizer' },
+      { id: 'custom-coach', name: 'Custom Coach', email: 'coach@example.test', role: 'coach' },
+    ],
+    tournaments: [{ id: 'custom-tournament', name: 'Custom Cup' }],
+    teams: [],
+    matches: [],
+    announcements: [],
+    audit: [],
+  };
+
+  const first = createStore({ storage, seed: customSeed });
+  first.actions.setRole('coach');
+
+  const second = createStore({ storage, seed: customSeed });
+  assert.equal(second.getRole(), 'coach');
+  assert.equal(second.getState().schemaVersion, SCHEMA_VERSION);
+  assert.equal(second.getState().seedVersion, 'custom-2026-10-30');
+
+  second.actions.reset();
+  const third = createStore({ storage, seed: customSeed });
+  assert.equal(third.getRole(), 'organizer');
+  assert.equal(third.getState().schemaVersion, SCHEMA_VERSION);
+  assert.equal(third.getState().seedVersion, 'custom-2026-10-30');
+});
+
 test('selectors are tournament-scoped', () => {
   const store = makeStore();
   const activeTeams = store.select.teams('tournament-1');
