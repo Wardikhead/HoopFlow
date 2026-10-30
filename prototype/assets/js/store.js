@@ -366,7 +366,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     const next = clone(state);
     const id = nextId('team', next.teams);
     const submittedAt = isoNow();
-    next.teams.push({
+    const registeredTeam = {
       id,
       tournamentId,
       name,
@@ -379,9 +379,11 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       rejectionReason: '',
       submittedAt,
       payment: { status: 'pending', method, ref, amount: tournament.fee, verifiedAt: null },
-      eligibility: { documentsComplete: true, consentComplete: true, verifiedAt: null },
+      eligibility: { documentsComplete: false, consentComplete: false, verifiedAt: null },
       players,
-    });
+    };
+    refreshEligibility(registeredTeam);
+    next.teams.push(registeredTeam);
     appendAudit(next, {
       action: 'team.register',
       entityType: 'team',
@@ -482,7 +484,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       author: author.organization || author.name,
       createdAt: isoNow(),
     });
-    next.meta.lastSeenAnnouncementsAt = isoNow();
+    next.meta = { ...(next.meta || {}), lastSeenAnnouncementsAt: isoNow() };
     appendAudit(next, {
       action: 'announcement.publish',
       entityType: 'announcement',
@@ -618,7 +620,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
 
   function markAnnouncementsSeen() {
     const next = clone(state);
-    next.meta.lastSeenAnnouncementsAt = isoNow();
+    next.meta = { ...(next.meta || {}), lastSeenAnnouncementsAt: isoNow() };
     commit(next, 'announcements.seen');
   }
 

@@ -30,6 +30,37 @@ function registration(overrides = {}) {
   };
 }
 
+function bareSeed() {
+  return {
+    seedVersion: 'task-4-custom-seed',
+    role: 'organizer',
+    currentUserId: 'custom-organizer',
+    users: [
+      {
+        id: 'custom-organizer',
+        name: 'Custom Organizer',
+        email: 'organizer@example.test',
+        role: 'organizer',
+      },
+    ],
+    tournaments: [
+      {
+        id: 'custom-tournament',
+        name: 'Custom Cup',
+        division: 'Under 15 (U15)',
+        status: 'registration-open',
+        registrationOpen: true,
+        seedLocked: false,
+        fee: 1000,
+      },
+    ],
+    teams: [],
+    matches: [],
+    announcements: [],
+    audit: [],
+  };
+}
+
 test('organizer creates a tournament and writes audit', () => {
   const store = makeStore();
   const id = store.actions.createTournament({
@@ -214,4 +245,48 @@ test('coach submits a payment reference for the own team', () => {
   assert.equal(payment.status, 'pending');
   assert.equal(payment.ref, 'MAYA-5556667');
   assert.equal(store.select.audit({ entityType: 'team' })[0].action, 'payment.submit');
+});
+
+test('registerTeam marks pending documents as incomplete eligibility', () => {
+  const store = makeStore();
+  store.actions.setRole('coach');
+  const pendingRoster = roster().map((player) => ({ ...player, documentStatus: 'pending' }));
+  const teamId = store.actions.registerTeam('tournament-2', registration({
+    name: 'Pending Docs',
+    players: pendingRoster,
+  }));
+  const team = store.select.team(teamId);
+  assert.equal(team.eligibility.documentsComplete, false);
+  assert.equal(
+    team.eligibility.consentComplete,
+    team.players.every((player) => player.guardianConsent)
+  );
+});
+
+test('registerTeam marks fully verified rosters as complete eligibility', () => {
+  const store = makeStore();
+  store.actions.setRole('coach');
+  const teamId = store.actions.registerTeam('tournament-2', registration());
+  const team = store.select.team(teamId);
+  assert.equal(team.eligibility.documentsComplete, true);
+  assert.equal(
+    team.eligibility.consentComplete,
+    team.players.every((player) => player.guardianConsent)
+  );
+});
+
+test('announcement read-state actions initialize meta on custom seeds', () => {
+  const seenStore = createStore({ storage: memoryStorage(), seed: bareSeed() });
+  seenStore.actions.markAnnouncementsSeen();
+  assert.ok(seenStore.getState().meta.lastSeenAnnouncementsAt);
+
+  const publishStore = createStore({ storage: memoryStorage(), seed: bareSeed() });
+  publishStore.actions.publishAnnouncement({
+    tournamentId: 'custom-tournament',
+    title: 'Custom seed notice',
+    body: 'This custom seed has no meta object.',
+    category: 'general',
+    audience: 'all',
+  });
+  assert.ok(publishStore.getState().meta.lastSeenAnnouncementsAt);
 });
