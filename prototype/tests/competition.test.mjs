@@ -31,6 +31,44 @@ test('generateBracket refuses to disturb a bracket with results', () => {
   );
 });
 
+test('generateBracket allows a 16-slot bracket with only byes to be scheduled and regenerated', () => {
+  const seed = structuredClone(SEED);
+  seed.teams = seed.teams.map((team) =>
+    team.tournamentId === 'tournament-2' ? { ...team, status: 'approved' } : team
+  );
+  const store = createStore({ storage: memoryStorage(), seed });
+  const first = store.actions.generateBracket('tournament-2');
+  assert.equal(first.matches, 15);
+  assert.equal(first.byes, 8);
+  const plan = store.planSchedule('tournament-2');
+  assert.equal(plan.assignments.length, 7);
+  const regenerated = store.actions.generateBracket('tournament-2');
+  assert.equal(regenerated.matches, 15);
+  assert.equal(regenerated.byes, 8);
+});
+
+test('the 15-team active cup bracket has one bye and can be scheduled', () => {
+  const seed = structuredClone(SEED);
+  seed.matches = [];
+  seed.teams = seed.teams.filter(
+    (team) => team.tournamentId !== 'tournament-1' || team.status === 'approved'
+  );
+  seed.tournaments.find((tournament) => tournament.id === 'tournament-1').seedLocked = false;
+  const store = createStore({ storage: memoryStorage(), seed });
+  const result = store.actions.generateBracket('tournament-1');
+  assert.equal(result.byes, 1);
+  const plan = store.planSchedule('tournament-1');
+  assert.equal(plan.assignments.length, 14);
+});
+
+test('generateBracket rejects tournaments below half the bracket slots', () => {
+  const store = makeStore();
+  assert.throws(
+    () => store.actions.generateBracket('tournament-2'),
+    (error) => error.code === 'NOT_ENOUGH_TEAMS' && error.field === 'teams'
+  );
+});
+
 test('planSchedule and generateSchedule assign courts and times', () => {
   const store = makeStore();
   store.actions.generateBracket('tournament-3');

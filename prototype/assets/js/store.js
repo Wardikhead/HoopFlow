@@ -664,6 +664,13 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     const approved = state.teams.filter(
       (team) => team.tournamentId === tournamentId && team.status === 'approved'
     );
+    if (approved.length < tournament.slots / 2) {
+      throw new StoreError(
+        'NOT_ENOUGH_TEAMS',
+        `At least ${tournament.slots / 2} approved teams are required for a ${tournament.slots}-slot bracket.`,
+        'teams'
+      );
+    }
     if (approved.length < 2) {
       throw new StoreError('NOT_ENOUGH_TEAMS', 'At least two approved teams are required.');
     }
@@ -673,6 +680,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     const hasResults = state.matches.some(
       (match) =>
         match.tournamentId === tournamentId &&
+        !match.isBye &&
         (match.status === 'final' || match.status === 'forfeit')
     );
     if (hasResults) {
@@ -773,6 +781,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     const hasResults = state.matches.some(
       (match) =>
         match.tournamentId === tournamentId &&
+        !match.isBye &&
         (match.status === 'final' || match.status === 'forfeit')
     );
     if (hasResults) {
