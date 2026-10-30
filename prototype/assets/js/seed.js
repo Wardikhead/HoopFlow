@@ -4,7 +4,7 @@ const ACTIVE = 'tournament-1';
 const OPEN = 'tournament-2';
 const CDO = 'tournament-3';
 
-const POSITIONS = [
+export const POSITIONS = [
   'Point Guard (PG)',
   'Shooting Guard (SG)',
   'Small Forward (SF)',
