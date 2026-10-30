@@ -779,6 +779,15 @@ body {
   pointer-events: none;
 }
 
+@media (max-width: 991.98px) {
+  .hf-toast-container {
+    bottom: 84px; /* clears the mobile bottom nav */
+    right: 12px;
+    left: 12px;
+    max-width: none;
+  }
+}
+
 .hf-toast {
   pointer-events: auto;
   background: #111827;
