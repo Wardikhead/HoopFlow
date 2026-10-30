@@ -31,6 +31,40 @@ export const AUDIENCE_BY_ROLE = {
   fan: ['all'],
 };
 
+const ROUND_LABELS = {
+  2: 'Championship Final',
+  4: 'Semifinals',
+  8: 'Quarterfinals',
+  16: 'Round of 16',
+  32: 'Round of 32',
+};
+const ROUND_START_HOUR = { 32: 8, 16: 9, 8: 13, 4: 15, 2: 16 };
+
+function seedOrder(size) {
+  let order = [1, 2];
+  while (order.length < size) {
+    const complement = order.length * 2 + 1;
+    order = order.flatMap((seed) => [seed, complement - seed]);
+  }
+  return order;
+}
+
+function pad(value) {
+  return String(value).padStart(2, '0');
+}
+
+function buildBoxScore(team, total) {
+  const count = team.players.length || 1;
+  const base = Math.floor(total / count);
+  const remainder = total % count;
+  return team.players.map((player, index) => ({
+    playerId: player.id,
+    points: base + (index < remainder ? 1 : 0),
+    assists: (index * 3 + 1) % 7,
+    rebounds: (index * 2 + 2) % 9,
+  }));
+}
+
 function requireText(value, field, label, min = 1) {
   if (typeof value !== 'string' || value.trim().length < min) {
     throw new StoreError('VALIDATION', `${label} is required.`, field);
@@ -624,6 +658,322 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     commit(next, 'announcements.seen');
   }
 
+  function generateBracket(tournamentId) {
+    requirePermission(state, 'bracket.generate');
+    const tournament = findTournament(state, tournamentId);
+    const approved = state.teams.filter(
+      (team) => team.tournamentId === tournamentId && team.status === 'approved'
+    );
+    if (approved.length < 2) {
+      throw new StoreError('NOT_ENOUGH_TEAMS', 'At least two approved teams are required.');
+    }
+    if (approved.length > tournament.slots) {
+      throw new StoreError('TOO_MANY_TEAMS', 'There are more approved teams than bracket slots.');
+    }
+    const hasResults = state.matches.some(
+      (match) =>
+        match.tournamentId === tournamentId &&
+        (match.status === 'final' || match.status === 'forfeit')
+    );
+    if (hasResults) {
+      throw new StoreError('BRACKET_LOCKED', 'This bracket already has recorded results.');
+    }
+    const size = tournament.slots;
+    if (![2, 4, 8, 16, 32].includes(size)) {
+      throw new StoreError('VALIDATION', 'Bracket size must be 8 or 16.', 'slots');
+    }
+    const ordered = [...approved].sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999));
+    const orderedSlots = seedOrder(size).map((seedNumber) => ordered[seedNumber - 1] || null);
+    const next = clone(state);
+    next.matches = next.matches.filter((match) => match.tournamentId !== tournamentId);
+    const rounds = [];
+    for (let roundSize = size; roundSize >= 2; roundSize /= 2) {
+      rounds.push({ round: String(roundSize), roundSize });
+    }
+    const created = [];
+    const byRound = new Map();
+    rounds.forEach(({ round, roundSize }, roundIndex) => {
+      const nextRound = rounds[roundIndex + 1];
+      const count = roundSize / 2;
+      const roundMatches = [];
+      for (let slot = 1; slot <= count; slot += 1) {
+        roundMatches.push({
+          id: `${tournamentId}-${round}-${slot}`,
+          tournamentId,
+          round,
+          roundLabel: ROUND_LABELS[roundSize],
+          bracketSlot: slot,
+          team1Id: null,
+          team2Id: null,
+          score1: null,
+          score2: null,
+          winnerId: null,
+          status: 'scheduled',
+          courtId: null,
+          scheduledAt: null,
+          nextMatchId: nextRound ? `${tournamentId}-${nextRound.round}-${Math.ceil(slot / 2)}` : null,
+          nextSlot: nextRound ? (slot % 2 === 1 ? 1 : 2) : null,
+          isBye: false,
+          correction: null,
+          boxScore: { team1: [], team2: [] },
+        });
+      }
+      byRound.set(round, roundMatches);
+      created.push(...roundMatches);
+    });
+    const firstRound = byRound.get(String(size));
+    orderedSlots.forEach((team, index) => {
+      const match = firstRound[Math.floor(index / 2)];
+      if (index % 2 === 0) match.team1Id = team ? team.id : null;
+      else match.team2Id = team ? team.id : null;
+    });
+    firstRound.forEach((match) => {
+      if (match.team1Id && !match.team2Id) {
+        match.isBye = true;
+        match.status = 'final';
+        match.winnerId = match.team1Id;
+      }
+      if (!match.team1Id && match.team2Id) {
+        match.isBye = true;
+        match.status = 'final';
+        match.winnerId = match.team2Id;
+      }
+      if (!match.winnerId) return;
+      const nextMatch = created.find((item) => item.id === match.nextMatchId);
+      if (!nextMatch) return;
+      if (match.nextSlot === 1) nextMatch.team1Id = match.winnerId;
+      else nextMatch.team2Id = match.winnerId;
+    });
+    next.matches.push(...created);
+    const targetTournament = findTournament(next, tournamentId);
+    targetTournament.seedLocked = true;
+    if (targetTournament.status === 'draft') targetTournament.status = 'upcoming';
+    appendAudit(next, {
+      action: 'bracket.generate',
+      entityType: 'tournament',
+      entityId: tournamentId,
+      summary: `Generated a ${size}-slot single-elimination bracket`,
+      changes: { teams: approved.length, byes: firstRound.filter((match) => match.isBye).length },
+    });
+    commit(next, 'bracket.generate');
+    return {
+      matches: created.length,
+      byes: firstRound.filter((match) => match.isBye).length,
+    };
+  }
+
+  function planSchedule(tournamentId, options = {}) {
+    const tournament = findTournament(state, tournamentId);
+    const matches = state.matches.filter(
+      (match) => match.tournamentId === tournamentId && !match.isBye
+    );
+    if (!matches.length) {
+      throw new StoreError('NO_BRACKET', 'Generate a bracket before scheduling.');
+    }
+    const hasResults = state.matches.some(
+      (match) =>
+        match.tournamentId === tournamentId &&
+        (match.status === 'final' || match.status === 'forfeit')
+    );
+    if (hasResults) {
+      throw new StoreError('SCHEDULE_LOCKED', 'The schedule is locked because results exist.');
+    }
+    const courts = Array.isArray(options.courtIds) && options.courtIds.length
+      ? tournament.courts.filter((court) => options.courtIds.includes(court.id))
+      : tournament.courts;
+    if (!courts.length) {
+      throw new StoreError('VALIDATION', 'Choose at least one court.', 'courtIds');
+    }
+    const startDate = options.startDate || tournament.startDate;
+    const slotMinutes = Number(options.slotMinutes ?? tournament.slotMinutes);
+    const restMinutes = Number(options.restMinutes ?? tournament.restMinutes);
+    if (!Number.isInteger(slotMinutes) || slotMinutes < 10) {
+      throw new StoreError('VALIDATION', 'Slot length must be at least 10 minutes.', 'slotMinutes');
+    }
+    const rounds = [...new Set(matches.map((match) => match.round))].sort(
+      (a, b) => Number(b) - Number(a)
+    );
+    const courtSlots = new Set();
+    const teamTimes = new Map();
+    const assignments = [];
+    rounds.forEach((round, roundIndex) => {
+      const roundMatches = matches
+        .filter((match) => match.round === round)
+        .sort((a, b) => a.bracketSlot - b.bracketSlot);
+      const date = new Date(`${startDate}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + roundIndex);
+      const dateLabel = date.toISOString().slice(0, 10);
+      const baseHour = ROUND_START_HOUR[Number(round)] ?? 9;
+      roundMatches.forEach((match, index) => {
+        const wave = Math.floor(index / courts.length);
+        const court = courts[index % courts.length];
+        const totalMinutes = baseHour * 60 + wave * slotMinutes;
+        const scheduledAt = `${dateLabel}T${pad(Math.floor(totalMinutes / 60))}:${pad(
+          totalMinutes % 60
+        )}:00+08:00`;
+        const key = `${court.id}|${scheduledAt}`;
+        if (courtSlots.has(key)) {
+          throw new StoreError('COURT_CONFLICT', `${court.name} is double-booked at ${scheduledAt}.`);
+        }
+        courtSlots.add(key);
+        [match.team1Id, match.team2Id].filter(Boolean).forEach((teamId) => {
+          const times = teamTimes.get(teamId) || [];
+          const startMs = Date.parse(scheduledAt);
+          const clash = times.some(
+            (other) => Math.abs(other - startMs) < (slotMinutes + restMinutes) * 60000
+          );
+          if (clash) {
+            throw new StoreError('REST_VIOLATION', 'A team would play without the required rest.');
+          }
+          times.push(startMs);
+          teamTimes.set(teamId, times);
+        });
+        assignments.push({ matchId: match.id, courtId: court.id, scheduledAt });
+      });
+    });
+    return { assignments, courts, slotMinutes, restMinutes, startDate };
+  }
+
+  function generateSchedule(tournamentId, options = {}) {
+    requirePermission(state, 'schedule.generate');
+    const plan = planSchedule(tournamentId, options);
+    const next = clone(state);
+    plan.assignments.forEach(({ matchId, courtId, scheduledAt }) => {
+      const match = next.matches.find((item) => item.id === matchId);
+      if (match) {
+        match.courtId = courtId;
+        match.scheduledAt = scheduledAt;
+      }
+    });
+    appendAudit(next, {
+      action: 'schedule.generate',
+      entityType: 'tournament',
+      entityId: tournamentId,
+      summary: `Scheduled ${plan.assignments.length} matches across ${plan.courts.length} courts`,
+      changes: {
+        courts: plan.courts.length,
+        slotMinutes: plan.slotMinutes,
+        restMinutes: plan.restMinutes,
+      },
+    });
+    commit(next, 'schedule.generate');
+    return plan.assignments.length;
+  }
+
+  function placeWinner(next, match, winnerId) {
+    if (!match.nextMatchId) return;
+    const nextMatch = next.matches.find((item) => item.id === match.nextMatchId);
+    if (!nextMatch) return;
+    if (nextMatch.status === 'final' || nextMatch.status === 'forfeit') {
+      throw new StoreError('DOWNSTREAM_LOCKED', 'The next-round match already has a result.');
+    }
+    if (match.nextSlot === 1) nextMatch.team1Id = winnerId;
+    else nextMatch.team2Id = winnerId;
+  }
+
+  function saveScore(matchId, score1, score2, options = {}) {
+    requirePermission(state, 'score.save');
+    const match = findMatch(state, matchId);
+    if (match.status === 'final' || match.status === 'forfeit') {
+      throw new StoreError('MATCH_FINAL', 'Use correction to change a recorded result.');
+    }
+    if (!match.team1Id || !match.team2Id) {
+      throw new StoreError('TEAMS_PENDING', 'Both teams must be known before entering a score.');
+    }
+    const forfeitTeam = Number(options.forfeitTeam || 0);
+    let first = Number(score1);
+    let second = Number(score2);
+    if (!Number.isInteger(first) || !Number.isInteger(second) || first < 0 || second < 0) {
+      throw new StoreError('VALIDATION', 'Scores must be zero or positive whole numbers.', 'score');
+    }
+    if (forfeitTeam && ![1, 2].includes(forfeitTeam)) {
+      throw new StoreError('VALIDATION', 'Choose which team forfeited.', 'forfeitTeam');
+    }
+    if (!forfeitTeam && first === second) {
+      throw new StoreError('TIE', 'Elimination games cannot end in a tie.', 'score');
+    }
+    const next = clone(state);
+    const target = findMatch(next, matchId);
+    const team1 = findTeam(next, target.team1Id);
+    const team2 = findTeam(next, target.team2Id);
+    if (forfeitTeam) {
+      first = forfeitTeam === 1 ? 0 : 20;
+      second = forfeitTeam === 2 ? 0 : 20;
+      target.status = 'forfeit';
+      target.winnerId = forfeitTeam === 1 ? team2.id : team1.id;
+    } else {
+      target.status = 'final';
+      target.winnerId = first > second ? team1.id : team2.id;
+    }
+    target.score1 = first;
+    target.score2 = second;
+    target.boxScore = {
+      team1: buildBoxScore(team1, first),
+      team2: buildBoxScore(team2, second),
+    };
+    placeWinner(next, target, target.winnerId);
+    appendAudit(next, {
+      action: 'score.save',
+      entityType: 'match',
+      entityId: matchId,
+      summary: `${team1.shortName} ${first}-${second} ${team2.shortName}`,
+      changes: { status: target.status, score1: first, score2: second, winnerId: target.winnerId },
+    });
+    commit(next, 'score.save');
+    return clone(target);
+  }
+
+  function correctScore(matchId, score1, score2, reason) {
+    requirePermission(state, 'score.correct');
+    const match = findMatch(state, matchId);
+    if (match.status !== 'final' && match.status !== 'forfeit') {
+      throw new StoreError('MATCH_NOT_FINAL', 'Only recorded results can be corrected.');
+    }
+    const cleanReason = requireText(reason, 'reason', 'Correction reason', 5);
+    const first = Number(score1);
+    const second = Number(score2);
+    if (!Number.isInteger(first) || !Number.isInteger(second) || first < 0 || second < 0) {
+      throw new StoreError('VALIDATION', 'Scores must be zero or positive whole numbers.', 'score');
+    }
+    if (first === second) {
+      throw new StoreError('TIE', 'Elimination games cannot end in a tie.', 'score');
+    }
+    const next = clone(state);
+    const target = findMatch(next, matchId);
+    const team1 = findTeam(next, target.team1Id);
+    const team2 = findTeam(next, target.team2Id);
+    const previousScore1 = target.score1;
+    const previousScore2 = target.score2;
+    const previousWinnerId = target.winnerId;
+    target.score1 = first;
+    target.score2 = second;
+    target.winnerId = first > second ? team1.id : team2.id;
+    target.status = 'final';
+    target.correction = {
+      reason: cleanReason,
+      previousScore1,
+      previousScore2,
+      correctedAt: isoNow(),
+      correctedBy: currentUser(state).id,
+    };
+    target.boxScore = {
+      team1: buildBoxScore(team1, first),
+      team2: buildBoxScore(team2, second),
+    };
+    if (previousWinnerId !== target.winnerId) {
+      placeWinner(next, target, target.winnerId);
+    }
+    appendAudit(next, {
+      action: 'score.correct',
+      entityType: 'match',
+      entityId: matchId,
+      summary: `Corrected ${team1.shortName} ${previousScore1}-${previousScore2} ${team2.shortName} to ${first}-${second}`,
+      changes: { previousScore1, previousScore2, score1: first, score2: second, reason: cleanReason },
+    });
+    commit(next, 'score.correct');
+    return clone(target);
+  }
+
   function notificationsFor() {
     const lastSeen = state.meta?.lastSeenAnnouncementsAt || '1970-01-01T00:00:00+08:00';
     const allowed = AUDIENCE_BY_ROLE[getRole()] || ['all'];
@@ -631,6 +981,170 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       state.announcements.filter(
         (item) => allowed.includes(item.audience) && item.createdAt > lastSeen
       )
+    );
+  }
+
+  function bracketFor(tournamentId) {
+    const matches = state.matches.filter((match) => match.tournamentId === tournamentId);
+    const rounds = [...new Set(matches.map((match) => match.round))].sort(
+      (a, b) => Number(b) - Number(a)
+    );
+    const finalMatch = matches.find((match) => !match.nextMatchId) || null;
+    const championId =
+      finalMatch && (finalMatch.status === 'final' || finalMatch.status === 'forfeit')
+        ? finalMatch.winnerId
+        : null;
+    return {
+      hasBracket: matches.length > 0,
+      rounds: rounds.map((round) => ({
+        round,
+        label: matches.find((match) => match.round === round)?.roundLabel || round,
+        matches: matches
+          .filter((match) => match.round === round)
+          .sort((a, b) => a.bracketSlot - b.bracketSlot)
+          .map(clone),
+      })),
+      final: finalMatch ? clone(finalMatch) : null,
+      champion: championId
+        ? clone(state.teams.find((team) => team.id === championId) || null)
+        : null,
+    };
+  }
+
+  function standingsFor(tournamentId) {
+    const tournament = state.tournaments.find((item) => item.id === tournamentId);
+    if (!tournament) return [];
+    const teams = state.teams.filter(
+      (team) => team.tournamentId === tournamentId && team.status === 'approved'
+    );
+    const rows = teams.map((team) => {
+      const played = state.matches.filter(
+        (match) =>
+          match.tournamentId === tournamentId &&
+          !match.isBye &&
+          (match.status === 'final' || match.status === 'forfeit') &&
+          (match.team1Id === team.id || match.team2Id === team.id)
+      );
+      let wins = 0;
+      let losses = 0;
+      let pointsFor = 0;
+      let pointsAgainst = 0;
+      played.forEach((match) => {
+        const isTeam1 = match.team1Id === team.id;
+        const own = isTeam1 ? match.score1 : match.score2;
+        const other = isTeam1 ? match.score2 : match.score1;
+        pointsFor += own ?? 0;
+        pointsAgainst += other ?? 0;
+        if (match.winnerId === team.id) wins += 1;
+        else losses += 1;
+      });
+      return {
+        teamId: team.id,
+        team: clone(team),
+        wins,
+        losses,
+        played: wins + losses,
+        pointsFor,
+        pointsAgainst,
+        diff: pointsFor - pointsAgainst,
+        seed: team.seed,
+      };
+    });
+    rows.sort(
+      (a, b) =>
+        b.wins - a.wins ||
+        b.diff - a.diff ||
+        b.pointsFor - a.pointsFor ||
+        (a.seed ?? 999) - (b.seed ?? 999)
+    );
+    const cut = Math.ceil(tournament.slots / 2);
+    return rows.map((row, index) => ({ ...row, rank: index + 1, qualified: index < cut }));
+  }
+
+  function kpisFor(tournamentId) {
+    const tournament = state.tournaments.find((item) => item.id === tournamentId);
+    const teams = state.teams.filter((team) => team.tournamentId === tournamentId);
+    const matches = state.matches.filter((match) => match.tournamentId === tournamentId);
+    const billable = teams.filter((team) => team.status !== 'rejected');
+    const paid = billable.filter((team) => team.payment.status === 'paid');
+    const expected = billable.length * (tournament?.fee || 0);
+    const collected = paid.reduce((sum, team) => sum + (team.payment.amount || 0), 0);
+    return {
+      registered: teams.length,
+      approved: teams.filter((team) => team.status === 'approved').length,
+      pending: teams.filter((team) => team.status === 'pending').length,
+      rejected: teams.filter((team) => team.status === 'rejected').length,
+      collected,
+      outstanding: Math.max(0, expected - collected),
+      expected,
+      collectionRate: expected ? Math.round((collected / expected) * 100) : 0,
+      matchesPlayed: matches.filter(
+        (match) => match.status === 'final' || match.status === 'forfeit'
+      ).length,
+      matchesScheduled: matches.filter((match) => match.status === 'scheduled').length,
+      courts: tournament?.courts.length || 0,
+      pendingPayments: billable.filter((team) => team.payment.status !== 'paid').length,
+    };
+  }
+
+  function paymentSummaryFor(tournamentId) {
+    const teams = state.teams.filter(
+      (team) => team.tournamentId === tournamentId && team.status !== 'rejected'
+    );
+    const kpis = kpisFor(tournamentId);
+    return {
+      collected: kpis.collected,
+      outstanding: kpis.outstanding,
+      expected: kpis.expected,
+      rate: kpis.collectionRate,
+      paidCount: teams.filter((team) => team.payment.status === 'paid').length,
+      pendingCount: teams.filter((team) => team.payment.status === 'pending').length,
+      partialCount: teams.filter((team) => team.payment.status === 'partial').length,
+    };
+  }
+
+  function recentResultsFor(tournamentId, limit = 4) {
+    return state.matches
+      .filter(
+        (match) =>
+          match.tournamentId === tournamentId &&
+          (match.status === 'final' || match.status === 'forfeit') &&
+          !match.isBye
+      )
+      .sort((a, b) => String(b.scheduledAt || '').localeCompare(String(a.scheduledAt || '')))
+      .slice(0, limit)
+      .map(clone);
+  }
+
+  function upcomingFor(tournamentId, limit = 4) {
+    return state.matches
+      .filter((match) => match.tournamentId === tournamentId && match.status === 'scheduled')
+      .sort((a, b) => {
+        if (!a.scheduledAt) return 1;
+        if (!b.scheduledAt) return -1;
+        return a.scheduledAt.localeCompare(b.scheduledAt);
+      })
+      .slice(0, limit)
+      .map(clone);
+  }
+
+  function teamMatchesFor(teamId) {
+    return state.matches
+      .filter((match) => match.team1Id === teamId || match.team2Id === teamId)
+      .sort((a, b) => String(a.scheduledAt || '').localeCompare(String(b.scheduledAt || '')))
+      .map(clone);
+  }
+
+  function nextMatchFor(teamId) {
+    const match = teamMatchesFor(teamId).find((item) => item.status === 'scheduled');
+    return match || null;
+  }
+
+  function coachTeamsFor() {
+    const user = currentUser(state);
+    const coachName = user.name.replace(/^Coach\s+/i, '').trim();
+    return clone(
+      state.teams.filter((team) => team.coach === coachName || team.coach === user.name)
     );
   }
 
@@ -671,6 +1185,30 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
             (!actorId || entry.actorId === actorId)
         )
       ),
+    bracket: (tournamentId) => bracketFor(tournamentId),
+    standings: (tournamentId) => standingsFor(tournamentId),
+    kpis: (tournamentId) => kpisFor(tournamentId),
+    paymentSummary: (tournamentId) => paymentSummaryFor(tournamentId),
+    teamRecord: (teamId) => {
+      const team = state.teams.find((item) => item.id === teamId);
+      if (!team) return null;
+      const row = standingsFor(team.tournamentId).find((item) => item.teamId === teamId);
+      return row
+        ? {
+            wins: row.wins,
+            losses: row.losses,
+            pointsFor: row.pointsFor,
+            pointsAgainst: row.pointsAgainst,
+            diff: row.diff,
+            rank: row.rank,
+          }
+        : { wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, diff: 0, rank: null };
+    },
+    recentResults: (tournamentId, limit = 4) => recentResultsFor(tournamentId, limit),
+    upcomingMatches: (tournamentId, limit = 4) => upcomingFor(tournamentId, limit),
+    teamMatches: (teamId) => teamMatchesFor(teamId),
+    nextMatch: (teamId) => nextMatchFor(teamId),
+    coachTeams: () => coachTeamsFor(),
     notifications: () => notificationsFor(),
   };
 
@@ -681,6 +1219,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     getCurrentUser,
     can,
     canRole,
+    planSchedule,
     select,
     actions: {
       reset,
@@ -695,6 +1234,10 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       removePlayer,
       submitPayment,
       markAnnouncementsSeen,
+      generateBracket,
+      generateSchedule,
+      saveScore,
+      correctScore,
     },
   };
 }
