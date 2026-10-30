@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to HoopFlow — Onboarding</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/hoopflow.css">
+</head>
+<body>
+  <div class="app-container">
+    <div class="hf-splash-wrapper" id="splashContainer">
+      <!-- Top Bar -->
+      <div class="d-flex justify-content-between align-items-center">
+        <img src="../assets/img/logo.png" alt="HoopFlow" class="hf-brand-logo" onerror="this.src='../assets/img/hoopflow%20lockup%20horizontal%20on%20white.png'">
+        <a href="login.html" class="text-muted text-decoration-none small fw-semibold">Skip</a>
+      </div>
+
+      <!-- Slides Carousel -->
+      <div class="text-center my-auto py-4">
+        <div id="stepContent">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- 4-Dot Step Indicator -->
+        <div class="hf-splash-dots" id="stepDots">
+          <span class="hf-splash-dot active"></span>
+          <span class="hf-splash-dot"></span>
+          <span class="hf-splash-dot"></span>
+          <span class="hf-splash-dot"></span>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="pb-3">
+        <button id="nextBtn" class="btn btn-hf-primary w-100 py-3 fs-6">NEXT</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/role-switcher.js"></script>
+  <script>
+    const steps = [
+      {
+        icon: 'bi-trophy',
+        title: 'Manage Youth Tournaments',
+        desc: 'Easily set up divisions, venues, and court allocations for grassroots basketball leagues.'
+      },
+      {
+        icon: 'bi-diagram-3',
+        title: 'Automated Brackets',
+        desc: 'Generate balanced single-elimination brackets with automatic seedings, byes, and winner advancement.'
+      },
+      {
+        icon: 'bi-calendar-check',
+        title: 'Conflict-Free Scheduling',
+        desc: 'Schedule games across courts with automatic team rest calculations and venue constraint checks.'
+      },
+      {
+        icon: 'bi-people',
+        title: 'Roster & Eligibility Control',
+        desc: 'Verify player birthdates, guardian consent waivers, and team payment statuses with complete audit logs.'
+      }
+    ];
+
+    let currentStep = 0;
+    const contentEl = document.getElementById('stepContent');
+    const dotsEl = document.getElementById('stepDots');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function renderStep() {
+      const step = steps[currentStep];
+      contentEl.innerHTML = `
+        <div class="mb-4 d-inline-flex align-items-center justify-content-center bg-white shadow-sm rounded-circle p-4" style="width: 140px; height: 140px; border: 2px solid var(--hf-primary-border);">
+          <i class="bi ${step.icon} text-primary" style="font-size: 4rem; color: var(--hf-primary) !important;"></i>
+        </div>
+        <h3 class="fw-bold text-dark px-3 mb-3">${step.title}</h3>
+        <p class="text-muted px-4 mb-0" style="font-size: 0.95rem; line-height: 1.5;">${step.desc}</p>
+      `;
+
+      dotsEl.innerHTML = steps.map((_, i) => 
+        `<span class="hf-splash-dot ${i === currentStep ? 'active' : ''}"></span>`
+      ).join('');
+
+      if (currentStep === steps.length - 1) {
+        nextBtn.textContent = 'GET STARTED';
+        nextBtn.classList.remove('btn-hf-primary');
+        nextBtn.classList.add('btn-hf-primary');
+      } else {
+        nextBtn.textContent = 'NEXT';
+      }
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStep();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+
+    renderStep();
+  </script>
+</body>
+</html>
+
