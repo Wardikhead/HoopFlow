@@ -1,0 +1,17 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # Tests are executed by Pest rather than analysed: Pest closures forward HTTP
+    # helpers through __call, which PHPStan cannot resolve without suppressing the
+    # error. Correctness of tests is covered by running them, not by reading types.
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    level: 6
+
+    excludePaths:
+        - app/Providers/*
