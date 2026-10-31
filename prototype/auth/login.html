@@ -3,113 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In — HoopFlow</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <title>Sign in — HoopFlow</title>
+  <link rel="stylesheet" href="../assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="../assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="../assets/css/hoopflow.css">
 </head>
-<body>
-  <div class="app-container">
-    <div class="hf-content d-flex flex-column justify-content-between py-4">
-      <!-- Top Bar -->
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <img src="../assets/img/logo.png" alt="HoopFlow" class="hf-brand-logo" onerror="this.src='../assets/img/hoopflow%20lockup%20horizontal%20on%20white.png'">
-        <a href="splash.html" class="hf-icon-btn"><i class="bi bi-chevron-left"></i></a>
-      </div>
-
-      <!-- Main Form (Centered Card on Desktop) -->
-      <div class="my-auto auth-desktop-card w-100">
-        <div class="text-center mb-4">
-          <div class="d-inline-flex p-3 bg-white rounded-circle shadow-sm border mb-3">
-            <i class="bi bi-person-fill-lock text-primary fs-1" style="color: var(--hf-primary) !important;"></i>
-          </div>
-          <h2 class="fw-bold mb-1">Sign In</h2>
-          <p class="text-muted small">
-            Don't have an account? <a href="register.html" class="text-decoration-none fw-semibold" style="color: var(--hf-primary);">Sign up</a>
-          </p>
-        </div>
-
-        <form id="loginForm" onsubmit="handleLogin(event)">
-          <div class="mb-3">
-            <label class="form-label small fw-semibold text-muted">Email or Username</label>
-            <div class="input-group">
-              <span class="input-group-text bg-white border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-              <input type="text" id="loginEmail" class="form-control border-start-0 py-2" placeholder="name@example.com" value="organizer@hoopflow.ph" required>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <label class="form-label small fw-semibold text-muted">Password</label>
-              <a href="#" class="small text-decoration-none text-muted">Forgot password?</a>
-            </div>
-            <div class="input-group">
-              <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock text-muted"></i></span>
-              <input type="password" id="loginPassword" class="form-control border-start-0 border-end-0 py-2" placeholder="Enter password" value="password123" required>
-              <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" id="togglePasswordBtn">
-                <i class="bi bi-eye text-muted" id="passwordEyeIcon"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Role Autofill for Prototype Testing -->
-          <div class="p-3 bg-white rounded-3 border mb-4">
-            <span class="small fw-bold d-block text-muted mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Quick Test Accounts:</span>
-            <div class="d-flex flex-wrap gap-1">
-              <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="fillCreds('organizer@hoopflow.ph', 'organizer')">Organizer (Admin)</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="fillCreds('coach.marcus@hoopflow.ph', 'coach')">Coach</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="fillCreds('fan.juan@hoopflow.ph', 'fan')">Fan</button>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-hf-primary w-100 py-3 fs-6">
-            Log In <i class="bi bi-arrow-right ms-1"></i>
-          </button>
-        </form>
-      </div>
-
-      <!-- Footer Info -->
-      <div class="text-center text-muted small pt-3">
-        Protected under Philippine Data Privacy Act (RA 10173)
-      </div>
-    </div>
+<body data-page="login" data-shell="auth">
+  <div class="hf-auth">
+    <div id="hfShell"></div>
+    <main id="main" class="hf-auth-main" tabindex="-1"></main>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="../assets/js/mock-data.js"></script>
-  <script src="../assets/js/app.js"></script>
-  <script src="../assets/js/role-switcher.js"></script>
-  <script>
-    // Password toggle
-    const toggleBtn = document.getElementById('togglePasswordBtn');
-    const pwdInput = document.getElementById('loginPassword');
-    const eyeIcon = document.getElementById('passwordEyeIcon');
-
-    toggleBtn.addEventListener('click', () => {
-      const type = pwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      pwdInput.setAttribute('type', type);
-      eyeIcon.classList.toggle('bi-eye');
-      eyeIcon.classList.toggle('bi-eye-slash');
-    });
-
-    function fillCreds(email, role) {
-      document.getElementById('loginEmail').value = email;
-      if (window.HF) {
-        localStorage.setItem('hoopflow_role', role);
-      }
-    }
-
-    function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value.toLowerCase();
-      let role = 'organizer';
-      if (email.includes('coach')) role = 'coach';
-      else if (email.includes('fan')) role = 'fan';
-
-      localStorage.setItem('hoopflow_role', role);
-      window.location.href = '../dashboard/index.html';
-    }
-  </script>
+  <script type="module" src="../assets/js/app.js"></script>
 </body>
 </html>
-
