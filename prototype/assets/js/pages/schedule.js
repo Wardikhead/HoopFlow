@@ -62,9 +62,9 @@ export function render({ store, ui, components, root }) {
     return;
   }
 
-  const allMatches = store.select.matches(tournamentId);
-  const scheduled = allMatches.filter((match) => match.scheduledAt && match.courtId);
-  const matchDays = [...new Set(scheduled.map((match) => keyOf(match.scheduledAt)))].sort();
+  let allMatches = store.select.matches(tournamentId);
+  let scheduled = allMatches.filter((match) => match.scheduledAt && match.courtId);
+  let matchDays = [...new Set(scheduled.map((match) => keyOf(match.scheduledAt)))].sort();
   let selected = params.get('date') || matchDays[0] || tournament.startDate;
   let month = startOfMonth(selected);
   const courtFilter = new Set(tournament.courts.map((court) => court.id));
@@ -78,6 +78,9 @@ export function render({ store, ui, components, root }) {
   }
 
   function draw() {
+    allMatches = store.select.matches(tournamentId);
+    scheduled = allMatches.filter((match) => match.scheduledAt && match.courtId);
+    matchDays = [...new Set(scheduled.map((match) => keyOf(match.scheduledAt)))].sort();
     const role = store.getRole();
     const bracket = store.select.bracket(tournamentId);
     const kpis = store.select.kpis(tournamentId);
