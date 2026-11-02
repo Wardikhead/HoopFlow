@@ -131,17 +131,39 @@ export function createComponents({ store, ui }) {
     `;
   }
 
-  function standingsTable(tournamentId, { limit = null } = {}) {
-    const rows = store.select.standings(tournamentId);
-    if (!rows.length) {
+  function standingsTable(tournamentId, { limit = null, query = null } = {}) {
+    const allRows = store.select.standings(tournamentId);
+    if (!allRows.length) {
       return ui.emptyState({
         icon: 'bar-chart',
         title: 'No standings yet',
         message: 'Standings appear as soon as approved teams have recorded results.',
       });
     }
+
+    const term = String(query?.search || '').trim().toLowerCase();
+    const filter = query?.filter || 'all';
+    const rows = allRows.filter((row) => {
+      const haystack = `${row.team.name} ${row.team.shortName} ${row.team.city}`.toLowerCase();
+      const matchesTerm = !term || haystack.includes(term);
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'qualified' && row.qualified) ||
+        (filter === 'wins' && row.wins > 0) ||
+        (filter === 'winless' && row.wins === 0);
+      return matchesTerm && matchesFilter;
+    });
+
+    if (!rows.length) {
+      return ui.emptyState({
+        icon: 'search',
+        title: 'No teams match',
+        message: 'Clear the search or choose another standings filter.',
+      });
+    }
+
     const visible = limit ? rows.slice(0, limit) : rows;
-    const lastQualified = visible.filter((row) => row.qualified).length;
+    const lastQualified = !query && !limit ? visible.filter((row) => row.qualified).length : 0;
     const table = `
       <div class="hf-table-wrap">
         <table class="hf-table hf-table--standings">
@@ -176,7 +198,7 @@ export function createComponents({ store, ui }) {
                     <td class="is-num">${row.diff > 0 ? '+' : ''}${row.diff}</td>
                     <td class="is-num">${row.seed ?? '–'}</td>
                   </tr>
-                  ${lastQualified === index + 1 && !limit ? '<tr class="hf-qual-line"><td colspan="8"></td></tr>' : ''}
+                  ${lastQualified === index + 1 ? '<tr class="hf-qual-line"><td colspan="8"></td></tr>' : ''}
                 `
               )
               .join('')}
@@ -211,7 +233,6 @@ export function createComponents({ store, ui }) {
     `;
     return table + cards;
   }
-
   function scoreboard(match) {
     const team1 = match.team1Id ? store.select.team(match.team1Id) : null;
     const team2 = match.team2Id ? store.select.team(match.team2Id) : null;
