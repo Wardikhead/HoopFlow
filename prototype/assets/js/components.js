@@ -5,6 +5,7 @@ import {
   formatTime,
   statusMeta,
 } from './ui.js';
+import { ANNOUNCEMENT_AUDIENCES, ANNOUNCEMENT_CATEGORIES } from './options.js';
 
 export function createComponents({ store, ui }) {
   function shield(team, size = '') {
@@ -114,11 +115,19 @@ export function createComponents({ store, ui }) {
   }
 
   function announcementCard(item, { compact = false } = {}) {
+    const tournament = store.select.tournament(item.tournamentId);
+    const category =
+      ANNOUNCEMENT_CATEGORIES.find((option) => option.value === item.category)?.label ||
+      item.category;
+    const audience =
+      ANNOUNCEMENT_AUDIENCES.find((option) => option.value === item.audience)?.label ||
+      item.audience;
     return `
-      <article class="hf-card hf-card--flat" data-testid="announcement-${escapeHtml(item.id)}">
+      <article class="hf-card hf-card--flat ${item.pinned ? 'hf-announcement--pinned' : ''}"
+               data-testid="announcement-${escapeHtml(item.id)}">
         <div class="hf-between">
-          <span class="hf-chip hf-chip--slate">${escapeHtml(item.category)}</span>
-          ${item.pinned ? '<span class="hf-chip hf-chip--gold">Pinned</span>' : ''}
+          <span class="hf-chip hf-chip--slate">${escapeHtml(category)}</span>
+          ${item.pinned ? '<span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>' : ''}
         </div>
         <h3 class="hf-section-title hf-mt-1">${escapeHtml(item.title)}</h3>
         <p class="hf-muted hf-small hf-mb-0">${escapeHtml(item.body)}</p>
@@ -126,7 +135,14 @@ export function createComponents({ store, ui }) {
           <span>${escapeHtml(item.author)}</span>
           <span>${escapeHtml(formatDate(item.createdAt))}</span>
         </div>
-        ${compact ? '' : `<div class="hf-match-head"><span>Audience: ${escapeHtml(item.audience)}</span><span>${escapeHtml(item.tournamentId)}</span></div>`}
+        ${
+          compact
+            ? ''
+            : `<div class="hf-match-head">
+                 <span>Audience: ${escapeHtml(audience)}</span>
+                 <span>${escapeHtml(tournament?.name || item.tournamentId)}</span>
+               </div>`
+        }
       </article>
     `;
   }

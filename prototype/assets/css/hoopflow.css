@@ -2004,3 +2004,10 @@ textarea {
   border: 0;
 }
 
+
+/* Announcements */
+.hf-announcement--pinned {
+  border-left: 4px solid var(--hf-gold);
+  background: color-mix(in srgb, var(--hf-gold) 6%, var(--hf-surface));
+}
+
