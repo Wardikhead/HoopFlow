@@ -24,6 +24,7 @@ export function render({ store, ui, components, root }) {
 
   const defaultTournament =
     params.get('id') ||
+    params.get('tournament') ||
     tournaments.find((tournament) => tournament.status === 'active')?.id ||
     tournaments[0].id;
   const user = store.getCurrentUser();
