@@ -292,6 +292,7 @@ export function renderShell({ store, ui, root, theme }) {
   };
 
   store.subscribe(refreshBadges);
+  document.addEventListener('hf:theme-changed', syncTheme);
   syncTheme();
   refreshBadges();
 }

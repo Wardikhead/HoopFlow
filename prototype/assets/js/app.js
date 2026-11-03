@@ -57,7 +57,7 @@ const page = document.body.dataset.page;
 const root = document.getElementById('main');
 if (page && root) {
   import(`./pages/${page}.js`)
-    .then((module) => module.render({ store, ui, components, root }))
+    .then((module) => module.render({ store, ui, components, root, theme }))
     .catch((error) => {
       console.error(error);
       root.innerHTML = `

@@ -2011,3 +2011,76 @@ textarea {
   background: color-mix(in srgb, var(--hf-gold) 6%, var(--hf-surface));
 }
 
+/* Profile */
+.hf-profile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+
+.hf-avatar--xl {
+  width: 68px;
+  height: 68px;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.hf-profile-meta {
+  min-width: 0;
+}
+
+.hf-profile-meta h2 {
+  margin: 6px 0 2px;
+  font-family: var(--hf-font-display);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.hf-profile-meta p {
+  margin: 0 0 2px;
+  color: var(--hf-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.hf-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hf-border);
+}
+
+.hf-setting:first-of-type {
+  border-top: 0;
+}
+
+.hf-setting > span:first-child {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.hf-setting strong {
+  font-size: 13px;
+}
+
+.hf-setting > span:first-child > span {
+  color: var(--hf-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 575.98px) {
+  .hf-profile-head {
+    align-items: flex-start;
+  }
+
+  .hf-profile-meta h2 {
+    font-size: 24px;
+  }
+}
