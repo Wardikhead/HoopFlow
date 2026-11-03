@@ -149,6 +149,7 @@ export function render({ store, ui, components, root, theme }) {
       syncThemeButtons();
     });
   });
+  document.addEventListener('hf:theme-changed', syncThemeButtons);
   syncThemeButtons();
 
   root.querySelector('[data-profile-reset]').addEventListener('click', async () => {
