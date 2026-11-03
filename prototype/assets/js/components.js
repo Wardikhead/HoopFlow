@@ -163,7 +163,8 @@ export function createComponents({ store, ui }) {
     }
 
     const visible = limit ? rows.slice(0, limit) : rows;
-    const lastQualified = !query && !limit ? visible.filter((row) => row.qualified).length : 0;
+    const isUnfiltered = !term && filter === 'all';
+    const lastQualified = !limit && isUnfiltered ? visible.filter((row) => row.qualified).length : 0;
     const table = `
       <div class="hf-table-wrap">
         <table class="hf-table hf-table--standings">
