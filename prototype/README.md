@@ -2,7 +2,7 @@
 
 A build-free, click-through prototype of the HoopFlow tournament operations product. This is a demo surface, not the Laravel application in [`../src`](../src).
 
-The prototype runs offline, keeps all state in one browser, and covers the full ten-step organizer, scorekeeper, coach, and fan story.
+The prototype runs offline, keeps all state in one browser, and covers the full ten-step organizer, coach, and fan story.
 
 ## Quick start
 
@@ -23,7 +23,7 @@ Do not open the HTML files with `file://`; the ES modules and local assets need 
 | Coach | `coach.marcus@hoopflow.ph` | San Antonio Vipers, roster, eligibility, payment reference |
 | Fan | `fan.juan@hoopflow.ph` | Read-only public bracket, schedule, results, standings, announcements |
 
-The login page has quick-fill buttons for all four roles. Passwords are not checked in this prototype.
+The login page has quick-fill buttons for all three roles. Passwords are not checked in this prototype.
 
 ## Ten-step demo
 
@@ -36,7 +36,7 @@ The login page has quick-fill buttons for all four roles. Passwords are not chec
 | 5 | Schedule → pick a court and day → open a box score | Filters drive the match list; the final opens the official box score |
 | 6 | Switch to coach → register for Pasig Youth Hoopfest → Fill demo data → submit | San Antonio Vipers U17 is created as pending with 8 verified players and `GCASH-9090909` |
 | 7 | Switch to organizer → approve San Antonio Vipers U17 | The coach's registration status becomes approved; the queue count falls |
-| 8 | Switch to scorekeeper → open the bracket → open a score console → visit Submissions | Score entry is available; the restricted route redirects to the dashboard with a toast |
+| 8 | Switch to coach → open the bracket → open a score console → visit Submissions | Score entry is unavailable to non-organizers; the restricted route redirects to the dashboard with a toast |
 | 9 | Switch to fan → resize to 390×844 | Public dashboard, bracket pager, week strip, standings cards, and announcements; no private payment or eligibility data |
 | 10 | Profile → Audit log → Reset demo | New audit entries appear newest first; reset restores 8 seeded entries, 2 pending teams, ₱19,500 collected |
 
@@ -56,7 +56,7 @@ Restricted routes use `guardRole` and redirect to the dashboard with an explanat
 
 The **Demo** menu in the press-box rail or topbar contains:
 
-- Role switch for organizer, scorekeeper, coach, and fan.
+- Role switch for organizer, coach, and fan.
 - Light and dark theme.
 - Seed version.
 - Reset demo.

@@ -53,6 +53,9 @@ test('setRole switches the current user and persists', () => {
 test('permissions are role-based', () => {
   const store = makeStore();
   assert.equal(store.can('team.approve'), true);
+  assert.equal(store.can('score.save'), true);
+  assert.equal(store.can('score.correct'), true);
+  assert.equal(store.can('stats.view'), true);
   assert.equal(store.canRole(['organizer', 'coach']), true);
   assert.equal(store.canRole(['coach']), false);
   store.actions.setRole('coach');
