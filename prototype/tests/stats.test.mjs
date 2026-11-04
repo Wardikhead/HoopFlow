@@ -19,7 +19,7 @@ test('boxScoreRows falls back when a player left the roster', () => {
   const stale = {
     ...match,
     boxScore: {
-      team1: [{ playerId: 'player-missing', points: 4, assists: 1, rebounds: 2 }],
+      team1: [{ playerId: 'player-missing', points: 4, ast: 1, reb: 2 }],
       team2: [],
     },
   };

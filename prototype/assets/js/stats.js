@@ -14,8 +14,8 @@ export function boxScoreRows(match, team) {
       number: player?.number ?? null,
       position: player?.position || '',
       points: Number(entry.points) || 0,
-      assists: Number(entry.assists) || 0,
-      rebounds: Number(entry.rebounds) || 0,
+      assists: Number(entry.ast ?? entry.assists) || 0,
+      rebounds: Number(entry.reb ?? entry.rebounds) || 0,
     };
   });
 }
