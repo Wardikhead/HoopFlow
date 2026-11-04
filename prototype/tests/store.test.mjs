@@ -53,11 +53,14 @@ test('setRole switches the current user and persists', () => {
 test('permissions are role-based', () => {
   const store = makeStore();
   assert.equal(store.can('team.approve'), true);
-  store.actions.setRole('scorekeeper');
-  assert.equal(store.can('score.save'), true);
-  assert.equal(store.can('team.approve'), false);
-  assert.equal(store.canRole(['organizer', 'scorekeeper']), true);
+  assert.equal(store.canRole(['organizer', 'coach']), true);
   assert.equal(store.canRole(['coach']), false);
+  store.actions.setRole('coach');
+  assert.equal(store.can('score.save'), false);
+  assert.equal(store.can('team.approve'), false);
+  store.actions.setRole('fan');
+  assert.equal(store.can('score.save'), false);
+  assert.equal(store.can('public.view'), true);
 });
 
 test('custom seed versions survive reloads and reset', () => {

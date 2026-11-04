@@ -298,7 +298,6 @@ const announcements = [
 
 const users = [
   { id: 'user-organizer', name: 'Jeward Mahinay', email: 'organizer@hoopflow.ph', role: 'organizer', organization: 'HoopFlow Tournament Operations', teamId: null },
-  { id: 'user-scorekeeper', name: 'Rusty Japos', email: 'scorekeeper@hoopflow.ph', role: 'scorekeeper', organization: 'HoopFlow Tournament Operations', teamId: null },
   { id: 'user-coach', name: 'Coach Marcus Rivera', email: 'coach.marcus@hoopflow.ph', role: 'coach', organization: 'Barangay San Antonio Youth Club', teamId: vipers.id },
   { id: 'user-fan', name: 'Juan Dela Cruz', email: 'fan.juan@hoopflow.ph', role: 'fan', organization: 'Barangay San Antonio', teamId: null },
 ];

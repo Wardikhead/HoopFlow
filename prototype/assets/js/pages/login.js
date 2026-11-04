@@ -2,14 +2,12 @@ import { route } from '../routes.js';
 
 const ACCOUNTS = {
   'organizer@hoopflow.ph': 'organizer',
-  'scorekeeper@hoopflow.ph': 'scorekeeper',
   'coach.marcus@hoopflow.ph': 'coach',
   'fan.juan@hoopflow.ph': 'fan',
 };
 
 const QUICK = [
   ['organizer', 'Organizer', 'Tournament operations'],
-  ['scorekeeper', 'Scorekeeper', 'Scores and stats'],
   ['coach', 'Coach', 'San Antonio Vipers'],
   ['fan', 'Fan', 'Public view'],
 ];

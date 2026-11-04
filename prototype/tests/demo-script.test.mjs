@@ -71,14 +71,16 @@ test('the ten-step demo script stays consistent end to end', () => {
   store.actions.reviewTeam(newTeamId, 'approve');
   assert.equal(store.select.team(newTeamId).status, 'approved');
 
-  // 8. Scorekeeper can score but cannot approve.
-  store.actions.setRole('scorekeeper');
-  assert.equal(store.can('score.save'), true);
+  // 8. Non-organizer cannot score or approve.
+  store.actions.setRole('coach');
+  assert.equal(store.can('score.save'), false);
   assert.equal(store.can('team.approve'), false);
   assert.throws(
     () => store.actions.reviewTeam(newTeamId, 'approve'),
     (error) => error.code === 'FORBIDDEN'
   );
+  store.actions.setRole('fan');
+  assert.equal(store.can('score.save'), false);
 
   // 9. Fan is read-only public.
   store.actions.setRole('fan');

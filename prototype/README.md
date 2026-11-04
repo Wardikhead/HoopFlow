@@ -20,7 +20,6 @@ Do not open the HTML files with `file://`; the ES modules and local assets need 
 | Role | Email | Scope |
 |---|---|---|
 | Organizer | `organizer@hoopflow.ph` | Everything: approvals, payments, tournaments, brackets, schedules, scores, announcements, audit |
-| Scorekeeper | `scorekeeper@hoopflow.ph` | Score entry, corrections, and game stats |
 | Coach | `coach.marcus@hoopflow.ph` | San Antonio Vipers, roster, eligibility, payment reference |
 | Fan | `fan.juan@hoopflow.ph` | Read-only public bracket, schedule, results, standings, announcements |
 
@@ -48,7 +47,6 @@ Bracket and schedule generation are demonstrated separately on **CDO Grassroots 
 | Role | Allowed | Blocked |
 |---|---|---|
 | Organizer | All actions | — |
-| Scorekeeper | `score.save`, `score.correct`, `stats.view` | Approvals, payments, tournament setup, roster edits, announcements |
 | Coach | `team.register`, `team.edit`, `payment.submit`, `team.view.own` | Score entry, approvals, other teams' private data |
 | Fan | `public.view` | Every write action and every private detail |
 

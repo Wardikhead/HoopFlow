@@ -12,10 +12,9 @@ export class StoreError extends Error {
   }
 }
 
-const ROLES = ['organizer', 'scorekeeper', 'coach', 'fan'];
+const ROLES = ['organizer', 'coach', 'fan'];
 const PERMISSIONS = {
-  organizer: new Set(['*']),
-  scorekeeper: new Set(['score.save', 'score.correct', 'stats.view']),
+  organizer: new Set(['*', 'score.save', 'score.correct', 'stats.view']),
   coach: new Set(['team.register', 'team.edit', 'payment.submit', 'team.view.own']),
   fan: new Set(['public.view']),
 };
@@ -26,7 +25,6 @@ const ANNOUNCEMENT_AUDIENCES = ['all', 'coaches', 'organizers'];
 
 export const AUDIENCE_BY_ROLE = {
   organizer: ['all', 'coaches', 'organizers'],
-  scorekeeper: ['all', 'organizers'],
   coach: ['all', 'coaches'],
   fan: ['all'],
 };

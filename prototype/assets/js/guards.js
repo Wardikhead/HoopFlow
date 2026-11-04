@@ -2,7 +2,6 @@ import { route } from './routes.js';
 
 const ROLE_LABELS = {
   organizer: 'organizer',
-  scorekeeper: 'scorekeeper',
   coach: 'coach',
   fan: 'fan',
 };

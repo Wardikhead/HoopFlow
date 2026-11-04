@@ -40,10 +40,10 @@ test('CDO has eight approved teams and no bracket', () => {
   assert.equal(SEED.matches.filter((m) => m.tournamentId === 'tournament-3').length, 0);
 });
 
-test('seed has four role users and audit history', () => {
+test('seed has three role users and audit history', () => {
   assert.deepEqual(
     SEED.users.map((u) => u.role).sort(),
-    ['coach', 'fan', 'organizer', 'scorekeeper']
+    ['coach', 'fan', 'organizer']
   );
   assert.ok(SEED.audit.length >= 6);
   assert.ok(SEED.announcements.length >= 4);

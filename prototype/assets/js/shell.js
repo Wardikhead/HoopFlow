@@ -51,9 +51,8 @@ function activeFor(page, key) {
 }
 
 function roleTools(role) {
-  if (role === 'organizer') return ['submissions', 'payments', 'audit', 'createTournament'];
+  if (role === 'organizer') return ['submissions', 'payments', 'audit', 'createTournament', 'gameStats'];
   if (role === 'coach') return ['myTeam', 'teamRegister'];
-  if (role === 'scorekeeper') return ['gameStats'];
   return [];
 }
 
@@ -120,7 +119,7 @@ export function renderShell({ store, ui, root, theme }) {
         <div class="hf-demo-panel ${up ? 'hf-demo-panel--up' : ''}">
           <p class="hf-demo-title">Demo role</p>
           <div class="hf-demo-roles">
-            ${['organizer', 'scorekeeper', 'coach', 'fan']
+            ${['organizer', 'coach', 'fan']
               .map(
                 (item) => `
                   <button type="button" class="${role === item ? 'is-active' : ''}"

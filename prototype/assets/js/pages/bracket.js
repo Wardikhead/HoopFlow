@@ -26,7 +26,7 @@ export function render({ store, ui, components, root }) {
     const approved = store.select.teams(tournamentId, { status: 'approved' });
     const kpis = store.select.kpis(tournamentId);
     const canGenerate = role === 'organizer' && approved.length >= 2;
-    const canScore = role === 'organizer' || role === 'scorekeeper';
+    const canScore = role === 'organizer';
 
     const header = components.pageHeader({
       eyebrow: `${tournament.division} · ${tournament.status}`,
@@ -259,13 +259,13 @@ export function render({ store, ui, components, root }) {
     const court = tournament?.courts.find((item) => item.id === match.courtId);
     const role = store.getRole();
     const canScore =
-      (role === 'organizer' || role === 'scorekeeper') &&
+      role === 'organizer' &&
       match.status === 'scheduled' &&
       match.team1Id &&
       match.team2Id &&
       !match.isBye;
     const canCorrect =
-      (role === 'organizer' || role === 'scorekeeper') &&
+      role === 'organizer' &&
       (match.status === 'final' || match.status === 'forfeit');
 
     ui.dialog({

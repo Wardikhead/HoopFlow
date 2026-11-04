@@ -4,8 +4,6 @@ import { escapeHtml, formatDate, initials } from '../ui.js';
 const ROLE_COPY = {
   organizer:
     'Full tournament operations: approvals, payments, brackets, schedules, scores, announcements, and audit.',
-  scorekeeper:
-    'Score entry, score corrections, and official box scores. Approvals, payments, and roster edits are blocked.',
   coach:
     'Register a team, manage its roster and eligibility, submit a payment reference, and follow its status.',
   fan:
@@ -18,10 +16,6 @@ const ROLE_LINKS = {
     ['submissions', 'Review queue'],
     ['payments', 'Payments'],
     ['audit', 'Audit log'],
-  ],
-  scorekeeper: [
-    ['bracket', 'Score queue'],
-    ['gameStats', 'Game stats'],
   ],
   coach: [
     ['myTeam', 'My team'],

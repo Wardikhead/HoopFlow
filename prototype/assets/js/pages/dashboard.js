@@ -15,19 +15,15 @@ export function render({ store, ui, components, root }) {
     title:
       role === 'organizer'
         ? 'Run the tournament'
-        : role === 'scorekeeper'
-          ? 'Score console'
-          : role === 'coach'
-            ? 'Coach corner'
-            : 'Courtside pass',
+        : role === 'coach'
+          ? 'Coach corner'
+          : 'Courtside pass',
     description:
       role === 'organizer'
         ? 'Approvals, payments, bracket progress, and the next action that keeps the matchday moving.'
-        : role === 'scorekeeper'
-          ? 'Enter final scores, correct recorded results, and open the official box score.'
-          : role === 'coach'
-            ? 'Your registration status, roster readiness, payment, and next game.'
-            : 'Follow the active tournament: bracket, schedule, results, standings, and announcements.',
+        : role === 'coach'
+          ? 'Your registration status, roster readiness, payment, and next game.'
+          : 'Follow the active tournament: bracket, schedule, results, standings, and announcements.',
     actions:
       role === 'organizer'
         ? `<a class="hf-btn hf-btn--primary" href="${route('tournamentCreate')}" data-testid="dashboard-create-tournament"><i class="bi bi-plus-lg"></i> New tournament</a>
@@ -47,11 +43,9 @@ export function render({ store, ui, components, root }) {
   body.innerHTML =
     role === 'organizer'
       ? organizerDashboard()
-      : role === 'scorekeeper'
-        ? scorekeeperDashboard()
-        : role === 'coach'
-          ? coachDashboard()
-          : fanDashboard();
+      : role === 'coach'
+        ? coachDashboard()
+        : fanDashboard();
 
   function organizerDashboard() {
     const kpis = store.select.kpis('tournament-1');
@@ -124,30 +118,6 @@ export function render({ store, ui, components, root }) {
           <div class="hf-grid">${announcements.map((item) => components.announcementCard(item, { compact: true })).join('')}</div>
         </aside>
       </div>
-    `;
-  }
-
-  function scorekeeperDashboard() {
-    const kpis = store.select.kpis('tournament-1');
-    const queue = store
-      .select.matches('tournament-1')
-      .filter((match) => match.status === 'scheduled' && match.team1Id && match.team2Id);
-    const recent = store.select.recentResults('tournament-1', 4);
-    return `
-      <div class="hf-grid hf-grid--3 hf-mb-3">
-        ${components.kpiTile({ label: 'Games to score', value: queue.length, hint: 'Both teams known', tone: 'primary', testid: 'kpi-score-queue' })}
-        ${components.kpiTile({ label: 'Finals recorded', value: kpis.matchesPlayed, hint: 'Final and forfeit', tone: 'success', testid: 'kpi-finals' })}
-        ${components.kpiTile({ label: 'Corrections', value: state.audit.filter((entry) => entry.action === 'score.correct').length, hint: 'Audited changes', tone: 'alert', testid: 'kpi-corrections' })}
-      </div>
-      ${components.sectionHeader({ title: 'Score queue', action: `<a class="hf-section-link" href="${route('bracket')}">Bracket</a>` })}
-      <div class="hf-grid hf-grid--2 hf-mb-3" data-testid="scorekeeper-queue">
-        ${queue.length ? queue.map((match) => components.matchCard(match, { href: `${route('bracket')}?match=${match.id}` })).join('') : ui.emptyState({ icon: 'check2-circle', title: 'Queue is clear', message: 'No scheduled game has both teams known.' })}
-      </div>
-      ${components.sectionHeader({ title: 'Recent finals' })}
-      <div class="hf-grid hf-grid--2">
-        ${recent.map((match) => components.matchCard(match, { compact: true, href: route('gameStats', { match: match.id }) })).join('')}
-      </div>
-      <p class="hf-small hf-muted hf-mt-3">Scorekeeper access allows score entry and correction only. Approvals, payments, and roster edits are blocked.</p>
     `;
   }
 
