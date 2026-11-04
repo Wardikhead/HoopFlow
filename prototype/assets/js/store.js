@@ -986,6 +986,56 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     return clone(target);
   }
 
+  function saveGameStats(matchId, payload = {}) {
+    requirePermission(state, 'score.save');
+    const match = findMatch(state, matchId);
+    if (!match.team1Id || !match.team2Id) {
+      throw new StoreError('TEAMS_PENDING', 'Both teams must be known before entering stats.', 'match');
+    }
+    const quarters1 = Array.isArray(payload.quarters?.team1) ? payload.quarters.team1 : [0,0,0,0];
+    const quarters2 = Array.isArray(payload.quarters?.team2) ? payload.quarters.team2 : [0,0,0,0];
+    for (const q of [...quarters1, ...quarters2]) {
+      if (!Number.isInteger(q) || q < 0) throw new StoreError('VALIDATION', 'Quarter scores must be whole numbers.', 'quarters');
+    }
+    const stats1 = Array.isArray(payload.stats?.team1) ? payload.stats.team1 : [];
+    const stats2 = Array.isArray(payload.stats?.team2) ? payload.stats.team2 : [];
+    // validate made <= attempted
+    const validateStat = (s, side, index) => {
+      for (const k of ['fgm','fga','tpm','tpa','ftm','fta','reb','ast','stl','blk','to','pf']) {
+        const v = Number(s?.[k] ?? 0);
+        if (!Number.isInteger(v) || v < 0) throw new StoreError('VALIDATION', 'Stats must be whole numbers.', `${side}.${index}.${k}`);
+      }
+      if ((s.fgm||0) > (s.fga||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FG).', `${side}.${index}.fgm`);
+      if ((s.tpm||0) > (s.tpa||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (3PT).', `${side}.${index}.tpm`);
+      if ((s.ftm||0) > (s.fta||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FT).', `${side}.${index}.ftm`);
+    };
+    stats1.forEach((s, i) => validateStat(s, 'team1', i));
+    stats2.forEach((s, i) => validateStat(s, 'team2', i));
+
+    const sum1 = quarters1.reduce((a,b)=>a+b,0);
+    const sum2 = quarters2.reduce((a,b)=>a+b,0);
+
+    const next = clone(state);
+    const target = findMatch(next, matchId);
+    target.boxScore = {
+      team1: stats1.length ? stats1 : target.boxScore?.team1 || [],
+      team2: stats2.length ? stats2 : target.boxScore?.team2 || [],
+      quarters: { team1: quarters1, team2: quarters2 },
+    };
+    // draft only — do not change status/winner/score
+    if (payload.score1 != null) target.score1 = Number(payload.score1);
+    if (payload.score2 != null) target.score2 = Number(payload.score2);
+    appendAudit(next, {
+      action: 'stats.save',
+      entityType: 'match',
+      entityId: matchId,
+      summary: `Saved game stats for ${target.roundLabel}`,
+      changes: { quarters: { team1: quarters1, team2: quarters2 } },
+    });
+    commit(next, 'stats.save');
+    return clone(target);
+  }
+
   function notificationsFor() {
     const lastSeen = state.meta?.lastSeenAnnouncementsAt || '1970-01-01T00:00:00+08:00';
     const allowed = AUDIENCE_BY_ROLE[getRole()] || ['all'];
@@ -1250,6 +1300,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       generateSchedule,
       saveScore,
       correctScore,
+      saveGameStats,
     },
   };
 }
