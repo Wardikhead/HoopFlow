@@ -271,6 +271,17 @@ export function renderShell({ store, ui, root, theme }) {
     });
   });
 
+  const demoMenus = [...root.querySelectorAll('.hf-demo-menu details')];
+  const closeDemoMenus = () => demoMenus.forEach((details) => details.removeAttribute('open'));
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!demoMenus.some((details) => details.contains(event.target))) closeDemoMenus();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDemoMenus();
+  });
+
   const refreshBadges = () => {
     const state = store.getState();
     const nextPending = state.teams.filter((team) => team.status === 'pending').length;

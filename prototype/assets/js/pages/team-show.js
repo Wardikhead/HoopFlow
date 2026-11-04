@@ -17,6 +17,15 @@ export function render({ store, ui, components, root }) {
   }
 
   const role = store.getRole();
+  if (role === 'fan' && team.status !== 'approved') {
+    root.innerHTML = ui.emptyState({
+      icon: 'shield-lock',
+      title: 'Team not available',
+      message: 'Pending and rejected registrations are visible only to the organizer and the team coach.',
+      action: `<a class="hf-btn hf-btn--primary" href="${route('teams')}">Back to public teams</a>`,
+    });
+    return;
+  }
   const tournament = store.select.tournament(team.tournamentId);
   const isOwner = role === 'coach' && store.select.coachTeams().some((item) => item.id === team.id);
   const canSeePrivate = role === 'organizer' || isOwner;
@@ -74,7 +83,7 @@ export function render({ store, ui, components, root }) {
                          <th scope="col">#</th>
                          <th scope="col">Player</th>
                          <th scope="col">Position</th>
-                         <th scope="col">Age</th>
+                         ${role === 'fan' ? '' : '<th scope="col">Age</th>'}
                          ${canSeePrivate ? '<th scope="col">Consent</th><th scope="col">Documents</th>' : ''}
                        </tr>
                      </thead>
@@ -86,7 +95,7 @@ export function render({ store, ui, components, root }) {
                                <td>${player.number}</td>
                                <td><strong>${escapeHtml(player.name)}</strong></td>
                                <td>${escapeHtml(player.position)}</td>
-                               <td>${player.age}</td>
+                               ${role === 'fan' ? '' : `<td>${player.age}</td>`}
                                ${canSeePrivate ? `<td>${player.guardianConsent ? '<span class="hf-chip hf-chip--success">On file</span>' : '<span class="hf-chip hf-chip--danger">Missing</span>'}</td><td>${ui.statusChip(player.documentStatus)}</td>` : ''}
                              </tr>
                            `

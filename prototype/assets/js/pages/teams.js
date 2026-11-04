@@ -4,7 +4,7 @@ import { escapeHtml } from '../ui.js';
 export function render({ store, ui, components, root }) {
   const role = store.getRole();
   const params = new URLSearchParams(window.location.search);
-  let statusFilter = params.get('status') || 'all';
+  let statusFilter = role === 'fan' ? 'approved' : params.get('status') || 'all';
   let divisionFilter = params.get('division') || 'all';
   let searchTerm = params.get('q') || '';
 
@@ -39,15 +39,19 @@ export function render({ store, ui, components, root }) {
           <input class="hf-input" id="teamSearch" type="search" placeholder="Team, coach, or city"
                  value="${escapeHtml(searchTerm)}" data-testid="team-search">
         </div>
-        <div class="hf-field">
-          <label class="hf-label" for="teamStatus">Status</label>
-          <select class="hf-select" id="teamStatus" data-testid="team-status-filter">
-            <option value="all">All statuses</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
+         ${
+           role === 'fan'
+             ? ''
+             : `<div class="hf-field">
+                  <label class="hf-label" for="teamStatus">Status</label>
+                  <select class="hf-select" id="teamStatus" data-testid="team-status-filter">
+                    <option value="all">All statuses</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>`
+         }
         <div class="hf-field">
           <label class="hf-label" for="teamDivision">Division</label>
           <select class="hf-select" id="teamDivision" data-testid="team-division-filter">
@@ -61,28 +65,41 @@ export function render({ store, ui, components, root }) {
     <div id="teamList" data-testid="team-list"></div>
   `;
 
-  root.querySelector('#teamStatus').value = statusFilter;
-  root.querySelector('#teamDivision').value = divisionFilter;
-
   const search = root.querySelector('#teamSearch');
   const status = root.querySelector('#teamStatus');
   const division = root.querySelector('#teamDivision');
   const list = root.querySelector('#teamList');
   const kpis = root.querySelector('#teamKpis');
+  if (status) status.value = statusFilter;
+  division.value = divisionFilter;
 
   const coachTeams = role === 'coach' ? store.select.coachTeams() : [];
   const ownsTeam = (team) => coachTeams.some((item) => item.id === team.id);
   const canSeePrivate = (team) =>
     role === 'organizer' || (role === 'coach' && ownsTeam(team));
 
-  function renderKpis() {
+  function visibleTeams() {
     const teams = store.getState().teams;
-    kpis.innerHTML = [
-      components.kpiTile({ label: 'Registered', value: teams.length, hint: `${tournaments.length} tournaments`, tone: 'primary', testid: 'team-kpi-registered' }),
-      components.kpiTile({ label: 'Approved', value: teams.filter((team) => team.status === 'approved').length, hint: 'Eligible for seeding', tone: 'success', testid: 'team-kpi-approved' }),
-      components.kpiTile({ label: 'Pending', value: teams.filter((team) => team.status === 'pending').length, hint: 'Waiting for organizer review', tone: 'gold', testid: 'team-kpi-pending' }),
-      components.kpiTile({ label: 'Divisions', value: divisions.length, hint: 'U12 through open', tone: 'slate', testid: 'team-kpi-divisions' }),
-    ].join('');
+    return role === 'fan'
+      ? teams.filter((team) => team.status === 'approved')
+      : teams;
+  }
+
+  function renderKpis() {
+    const teams = visibleTeams();
+    kpis.innerHTML = role === 'fan'
+      ? [
+          components.kpiTile({ label: 'Public teams', value: teams.length, hint: 'Approved and visible', tone: 'primary', testid: 'team-kpi-teams' }),
+          components.kpiTile({ label: 'Divisions', value: divisions.length, hint: 'Age groups', tone: 'slate', testid: 'team-kpi-divisions' }),
+          components.kpiTile({ label: 'Cities', value: new Set(teams.map((team) => team.city)).size, hint: 'Clubs represented', tone: 'gold', testid: 'team-kpi-cities' }),
+          components.kpiTile({ label: 'Tournaments', value: tournaments.length, hint: 'Seeded venues', tone: 'success', testid: 'team-kpi-tournaments' }),
+        ].join('')
+      : [
+          components.kpiTile({ label: 'Registered', value: teams.length, hint: `${tournaments.length} tournaments`, tone: 'primary', testid: 'team-kpi-registered' }),
+          components.kpiTile({ label: 'Approved', value: teams.filter((team) => team.status === 'approved').length, hint: 'Eligible for seeding', tone: 'success', testid: 'team-kpi-approved' }),
+          components.kpiTile({ label: 'Pending', value: teams.filter((team) => team.status === 'pending').length, hint: 'Waiting for organizer review', tone: 'gold', testid: 'team-kpi-pending' }),
+          components.kpiTile({ label: 'Divisions', value: divisions.length, hint: 'U12 through open', tone: 'slate', testid: 'team-kpi-divisions' }),
+        ].join('');
   }
 
   function teamCard(team) {
@@ -123,13 +140,13 @@ export function render({ store, ui, components, root }) {
 
   function renderList() {
     const term = search.value.trim().toLowerCase();
-    const filtered = store
-      .getState()
-      .teams.filter((team) => {
+    const statusValue = status ? status.value : 'approved';
+    const filtered = visibleTeams()
+      .filter((team) => {
         const tournament = store.select.tournament(team.tournamentId);
         const haystack = `${team.name} ${team.coach} ${team.city} ${tournament?.name || ''}`.toLowerCase();
         return (
-          (status.value === 'all' || team.status === status.value) &&
+          (statusValue === 'all' || team.status === statusValue) &&
           (division.value === 'all' || tournament?.division === division.value) &&
           (!term || haystack.includes(term))
         );
@@ -150,14 +167,14 @@ export function render({ store, ui, components, root }) {
 
     list.querySelector('[data-clear-team-filters]')?.addEventListener('click', () => {
       search.value = '';
-      status.value = 'all';
+      if (status) status.value = 'all';
       division.value = 'all';
       renderList();
     });
   }
 
   search.addEventListener('input', ui.debounce(renderList, 120));
-  status.addEventListener('change', renderList);
+  status?.addEventListener('change', renderList);
   division.addEventListener('change', renderList);
 
   renderKpis();
