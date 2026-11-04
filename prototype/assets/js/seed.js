@@ -202,7 +202,7 @@ function makeMatch({
     nextSlot,
     isBye,
     correction,
-    boxScore: boxScore || { team1: [], team2: [] },
+    boxScore: boxScore || { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
   };
 }
 
@@ -217,8 +217,10 @@ function makeBoxScore(team, total) {
   return team.players.map((player, index) => ({
     playerId: player.id,
     points: points[index],
-    assists: (index * 3 + 1) % 7,
-    rebounds: (index * 2 + 2) % 9,
+    fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0,
+    reb: (index * 2 + 2) % 9,
+    ast: (index * 3 + 1) % 7,
+    stl: 0, blk: 0, to: 0, pf: 0,
   }));
 }
 
@@ -240,8 +242,8 @@ const matches = [
   makeMatch({ id: 'r16-6', round: '16', roundLabel: 'Round of 16', bracketSlot: 6, team1Id: teamId('Rosario Strikers'), team2Id: comets.id, score1: 66, score2: 68, winnerId: comets.id, status: 'final', courtId: 'court-1', scheduledAt: '2026-05-16T09:30:00+08:00', nextMatchId: 'qf-3', nextSlot: 2 }),
   makeMatch({ id: 'r16-7', round: '16', roundLabel: 'Round of 16', bracketSlot: 7, team1Id: tigers.id, team2Id: teamId('Caniogan Cardinals'), score1: 20, score2: 0, winnerId: tigers.id, status: 'forfeit', courtId: 'court-2', scheduledAt: '2026-05-16T09:30:00+08:00', nextMatchId: 'qf-4', nextSlot: 1 }),
   makeMatch({ id: 'r16-8', round: '16', roundLabel: 'Round of 16', bracketSlot: 8, team1Id: titans.id, team2Id: teamId('Manggahan Jets'), score1: 65, score2: 60, winnerId: titans.id, status: 'final', courtId: 'court-3', scheduledAt: '2026-05-16T09:30:00+08:00', nextMatchId: 'qf-4', nextSlot: 2 }),
-  makeMatch({ id: 'qf-1', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 1, team1Id: vipers.id, team2Id: warriors.id, score1: 78, score2: 70, winnerId: vipers.id, status: 'final', courtId: 'court-1', scheduledAt: '2026-05-18T13:00:00+08:00', nextMatchId: 'sf-1', nextSlot: 1, correction: { reason: 'Shot-clock correction after referee review.', previousScore1: 74, previousScore2: 70, correctedAt: '2026-05-18T16:20:00+08:00', correctedBy: 'user-organizer' }, boxScore: { team1: makeBoxScore(vipers, 78), team2: makeBoxScore(warriors, 70) } }),
-  makeMatch({ id: 'qf-2', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 2, team1Id: dragons.id, team2Id: hawks.id, score1: 64, score2: 69, winnerId: hawks.id, status: 'final', courtId: 'court-2', scheduledAt: '2026-05-18T13:00:00+08:00', nextMatchId: 'sf-1', nextSlot: 2, boxScore: { team1: makeBoxScore(dragons, 64), team2: makeBoxScore(hawks, 69) } }),
+  makeMatch({ id: 'qf-1', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 1, team1Id: vipers.id, team2Id: warriors.id, score1: 78, score2: 70, winnerId: vipers.id, status: 'final', courtId: 'court-1', scheduledAt: '2026-05-18T13:00:00+08:00', nextMatchId: 'sf-1', nextSlot: 1, correction: { reason: 'Shot-clock correction after referee review.', previousScore1: 74, previousScore2: 70, correctedAt: '2026-05-18T16:20:00+08:00', correctedBy: 'user-organizer' }, boxScore: { team1: makeBoxScore(vipers, 78), team2: makeBoxScore(warriors, 70), quarters: { team1: splitPoints(78, 4), team2: splitPoints(70, 4) } } }),
+  makeMatch({ id: 'qf-2', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 2, team1Id: dragons.id, team2Id: hawks.id, score1: 64, score2: 69, winnerId: hawks.id, status: 'final', courtId: 'court-2', scheduledAt: '2026-05-18T13:00:00+08:00', nextMatchId: 'sf-1', nextSlot: 2, boxScore: { team1: makeBoxScore(dragons, 64), team2: makeBoxScore(hawks, 69), quarters: { team1: splitPoints(64, 4), team2: splitPoints(69, 4) } } }),
   makeMatch({ id: 'qf-3', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 3, team1Id: knights.id, team2Id: comets.id, status: 'scheduled', courtId: 'court-1', scheduledAt: '2026-05-18T14:00:00+08:00', nextMatchId: 'sf-2', nextSlot: 1 }),
   makeMatch({ id: 'qf-4', round: '8', roundLabel: 'Quarterfinals', bracketSlot: 4, team1Id: tigers.id, team2Id: titans.id, status: 'scheduled', courtId: 'court-2', scheduledAt: '2026-05-18T14:00:00+08:00', nextMatchId: 'sf-2', nextSlot: 2 }),
   makeMatch({ id: 'sf-1', round: '4', roundLabel: 'Semifinals', bracketSlot: 1, team1Id: vipers.id, team2Id: hawks.id, status: 'scheduled', courtId: 'court-1', scheduledAt: '2026-05-20T15:00:00+08:00', nextMatchId: 'final-1', nextSlot: 1 }),

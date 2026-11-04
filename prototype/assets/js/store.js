@@ -51,15 +51,18 @@ function pad(value) {
   return String(value).padStart(2, '0');
 }
 
-function buildBoxScore(team, total) {
+function buildBoxScore(team, total, quarters = null) {
   const count = team.players.length || 1;
   const base = Math.floor(total / count);
   const remainder = total % count;
+  const q = quarters || [0, 0, 0, 0];
   return team.players.map((player, index) => ({
     playerId: player.id,
     points: base + (index < remainder ? 1 : 0),
-    assists: (index * 3 + 1) % 7,
-    rebounds: (index * 2 + 2) % 9,
+    fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0,
+    reb: (index * 2 + 2) % 9,
+    ast: (index * 3 + 1) % 7,
+    stl: 0, blk: 0, to: 0, pf: 0,
   }));
 }
 
@@ -721,7 +724,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
           nextSlot: nextRound ? (slot % 2 === 1 ? 1 : 2) : null,
           isBye: false,
           correction: null,
-          boxScore: { team1: [], team2: [] },
+          boxScore: { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
         });
       }
       byRound.set(round, roundMatches);
@@ -917,6 +920,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     target.boxScore = {
       team1: buildBoxScore(team1, first),
       team2: buildBoxScore(team2, second),
+      quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] },
     };
     placeWinner(next, target, target.winnerId);
     appendAudit(next, {
@@ -966,6 +970,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     target.boxScore = {
       team1: buildBoxScore(team1, first),
       team2: buildBoxScore(team2, second),
+      quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] },
     };
     if (previousWinnerId !== target.winnerId) {
       placeWinner(next, target, target.winnerId);
