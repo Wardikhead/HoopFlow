@@ -75,16 +75,93 @@ function statInput(side, index, field, value) {
 export function render({ store, ui, components, root, theme }) {
   if (!guardRole({ store, ui, root, roles: ['organizer'] })) return;
 
+  function renderMatchPicker() {
+    const tournaments = store.select.tournaments();
+    root.innerHTML = `
+      ${components.pageHeader({
+        eyebrow: 'In-game management',
+        title: 'Select a match to manage',
+        description: 'Filter matchups by tournament, status, and team, then choose one to enter quarter scores and player stats.',
+      })}
+
+      <div class="hf-card hf-mb-3">
+        <div class="hf-form-grid">
+          <div class="hf-field">
+            <label class="hf-label" for="gameManageTournamentFilter">Tournament</label>
+            <select id="gameManageTournamentFilter" class="hf-select"
+                    data-testid="ingame-tournament-filter" data-tournament-filter data-match-tournament-filter>
+              <option value="all">All tournaments</option>
+              ${tournaments.map((tournament) => `<option value="${escapeHtml(tournament.id)}">${escapeHtml(tournament.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="hf-field">
+            <label class="hf-label" for="gameManageStatusFilter">Status</label>
+            <select id="gameManageStatusFilter" class="hf-select"
+                    data-testid="ingame-status-filter" data-status-filter data-match-status-filter>
+              <option value="all">All</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="final">Final</option>
+            </select>
+          </div>
+          <div class="hf-field hf-field--full">
+            <label class="hf-label" for="gameManageTeamSearch">Team</label>
+            <input id="gameManageTeamSearch" class="hf-input" type="search" placeholder="Team name"
+                   data-testid="ingame-team-search" data-team-search data-match-team-search>
+          </div>
+        </div>
+      </div>
+
+      <div id="gameManageMatchList" data-testid="ingame-match-list" data-match-list></div>
+    `;
+
+    const tournamentFilter = root.querySelector('#gameManageTournamentFilter');
+    const statusFilter = root.querySelector('#gameManageStatusFilter');
+    const teamSearch = root.querySelector('#gameManageTeamSearch');
+    const list = root.querySelector('#gameManageMatchList');
+
+    function renderList() {
+      const tournamentValue = tournamentFilter.value;
+      const statusValue = statusFilter.value;
+      const term = teamSearch.value.trim().toLowerCase();
+      const filtered = tournaments
+        .filter((tournament) => tournamentValue === 'all' || tournament.id === tournamentValue)
+        .flatMap((tournament) => store.select.matches(tournament.id))
+        .filter((match) => {
+          const team1 = match.team1Id ? store.select.team(match.team1Id) : null;
+          const team2 = match.team2Id ? store.select.team(match.team2Id) : null;
+          const haystack = `${team1?.name || ''} ${team2?.name || ''}`.toLowerCase();
+          return (
+            (statusValue === 'all' || match.status === statusValue) &&
+            (!term || haystack.includes(term))
+          );
+        })
+        .sort((a, b) => String(a.scheduledAt || '9999').localeCompare(String(b.scheduledAt || '9999')));
+
+      if (!filtered.length) {
+        list.innerHTML = ui.emptyState({
+          icon: 'search',
+          title: 'No matches match',
+          message: 'Clear the tournament, status, or team filter and try again.',
+        });
+        return;
+      }
+
+      list.innerHTML = `<div class="hf-grid hf-grid--2">${filtered
+        .map((match) => components.matchCard(match, { href: route('gameManage', { match: match.id }) }))
+        .join('')}</div>`;
+    }
+
+    tournamentFilter.addEventListener('change', renderList);
+    statusFilter.addEventListener('change', renderList);
+    teamSearch.addEventListener('input', ui.debounce(renderList, 120));
+    renderList();
+  }
+
   const params = new URLSearchParams(window.location.search);
   const matchId = params.get('match') || '';
 
   if (!matchId) {
-    root.innerHTML = ui.emptyState({
-      icon: 'clipboard',
-      title: 'Select a match to manage',
-      message: 'Choose a matchup to enter quarter scores and player stats.',
-      action: `<a class="hf-btn hf-btn--primary" href="${route('matches')}" data-testid="manage-select-match">Browse matchups</a>`,
-    });
+    renderMatchPicker();
     return;
   }
 
@@ -94,7 +171,7 @@ export function render({ store, ui, components, root, theme }) {
       icon: 'clipboard',
       title: 'Select a match to manage',
       message: 'That match could not be found. Choose another matchup.',
-      action: `<a class="hf-btn hf-btn--primary" href="${route('matches')}" data-testid="manage-select-match">Browse matchups</a>`,
+      action: `<a class="hf-btn hf-btn--primary" href="${route('gameManage')}" data-testid="manage-select-match">Browse matchups</a>`,
     });
     return;
   }
@@ -424,6 +501,7 @@ export function render({ store, ui, components, root, theme }) {
       actions: `
         <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-bracket">Bracket</a>
         <a class="hf-btn" href="${route('matches', { id: match.tournamentId })}" data-testid="ingame-matches">Matchups</a>
+        <button type="button" class="hf-btn" data-change-match data-testid="ingame-change-match" data-href="${route('gameManage')}">Change match</button>
       `,
     })}
 
@@ -448,6 +526,11 @@ export function render({ store, ui, components, root, theme }) {
       <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-cancel">Cancel</a>
     </div>
   `;
+
+  // Change match
+  root.querySelector('[data-change-match]')?.addEventListener('click', () => {
+    window.location.href = route('gameManage');
+  });
 
   // Bind quarter inputs
   bindQuarterInputs();
