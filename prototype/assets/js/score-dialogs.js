@@ -399,6 +399,7 @@ export function openInGameManagement({ store, ui, matchId, onDone }) {
 
   function statInput(side, index, field, value) {
     return `<input class="hf-input" type="number" min="0" value="${escapeHtml(value)}"
+      id="ingame-${field}-${side}-${index}"
       data-team="${side}" data-idx="${index}" data-stat="${field}" data-field="${field}"
       data-testid="ingame-${field}-${side}-${index}">`;
   }
@@ -618,6 +619,8 @@ export function openInGameManagement({ store, ui, matchId, onDone }) {
           }
           const total = element.querySelector(`[data-qtotal="${side}"]`);
           if (total) total.textContent = String(sum);
+          const finalInput = element.querySelector(`[data-final="${side}"]`);
+          if (finalInput) finalInput.value = String(sum);
           setError('');
         });
       });
@@ -701,7 +704,13 @@ export function openInGameManagement({ store, ui, matchId, onDone }) {
             quarters: { team1: q1, team2: q2 },
             stats: { team1: s1, team2: s2 },
           });
-          store.actions.saveScore(matchId, sum1, sum2);
+          store.actions.saveScore(matchId, sum1, sum2, {
+            boxScore: {
+              team1: s1,
+              team2: s2,
+              quarters: { team1: q1, team2: q2 },
+            },
+          });
           ui.setBusy(publish, false);
           close();
           ui.toast('Result published.', { tone: 'success', title: 'Score finalized' });

@@ -917,11 +917,15 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     }
     target.score1 = first;
     target.score2 = second;
-    target.boxScore = {
-      team1: buildBoxScore(team1, first),
-      team2: buildBoxScore(team2, second),
-      quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] },
-    };
+    if (options.boxScore) {
+      target.boxScore = options.boxScore;
+    } else {
+      target.boxScore = {
+        team1: buildBoxScore(team1, first),
+        team2: buildBoxScore(team2, second),
+        quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] },
+      };
+    }
     placeWinner(next, target, target.winnerId);
     appendAudit(next, {
       action: 'score.save',
