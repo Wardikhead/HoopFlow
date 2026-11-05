@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->nullable()->constrained('organizations')->nullOnDelete();
-            $table->foreignId('actor_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('actor_user_id')->nullable()->constrained('users')->restrictOnDelete();
             $table->string('action');
             $table->string('entity_type');
             $table->unsignedBigInteger('entity_id')->nullable();
