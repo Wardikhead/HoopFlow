@@ -18,6 +18,7 @@ CREATE TABLE player_stats (
     LIKE player_stats_old EXCLUDING CONSTRAINTS EXCLUDING INDEXES
 ) PARTITION BY HASH (tournament_id);
 SQL);
+        DB::statement('ALTER TABLE player_stats ALTER COLUMN tournament_id SET NOT NULL');
         for ($i = 0; $i < 16; $i++) {
             DB::statement("CREATE TABLE IF NOT EXISTS player_stats_p{$i} PARTITION OF player_stats FOR VALUES WITH (MODULUS 16, REMAINDER {$i})");
         }

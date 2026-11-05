@@ -11,11 +11,14 @@ return new class extends Migration
             return;
         }
         DB::statement('ALTER TABLE audit_logs RENAME TO audit_logs_old');
+        DB::statement('UPDATE audit_logs_old SET created_at = COALESCE(created_at, now()) WHERE created_at IS NULL');
         DB::statement(<<<'SQL'
 CREATE TABLE audit_logs (
     LIKE audit_logs_old EXCLUDING CONSTRAINTS EXCLUDING INDEXES
 ) PARTITION BY RANGE (created_at);
 SQL);
+        DB::statement('ALTER TABLE audit_logs ALTER COLUMN created_at SET NOT NULL');
+        DB::statement('ALTER TABLE audit_logs ALTER COLUMN created_at SET DEFAULT now()');
         for ($i = 0; $i < 4; $i++) {
             $start = now()->startOfMonth()->addMonths($i)->format('Y-m-d');
             $end = now()->startOfMonth()->addMonths($i + 1)->format('Y-m-d');
