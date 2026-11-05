@@ -12,11 +12,13 @@ return new class extends Migration
         }
         DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gist');
         DB::statement('ALTER TABLE match_slots RENAME TO match_slots_old');
+        DB::statement('UPDATE match_slots_old SET tournament_id = (SELECT m.tournament_id FROM matches m WHERE m.id = match_slots_old.match_id) WHERE tournament_id IS NULL');
         DB::statement(<<<'SQL'
 CREATE TABLE match_slots (
     LIKE match_slots_old EXCLUDING CONSTRAINTS EXCLUDING INDEXES
 ) PARTITION BY HASH (tournament_id);
 SQL);
+        DB::statement('ALTER TABLE match_slots ALTER COLUMN tournament_id SET NOT NULL');
         for ($i = 0; $i < 16; $i++) {
             $name = "match_slots_p{$i}";
             DB::statement("CREATE TABLE IF NOT EXISTS {$name} PARTITION OF match_slots FOR VALUES WITH (MODULUS 16, REMAINDER {$i})");
