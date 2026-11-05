@@ -147,14 +147,14 @@ export function render({ store, ui, components, root }) {
                 ${[0, 1, 2, 3]
                   .map((index) => `<td class="is-num">${escapeHtml(String(Number(quarters.team1[index]) || 0))}</td>`)
                   .join('')}
-                <td class="is-num"><strong>${quarters.team1.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)}</strong></td>
+                <td class="is-num"><strong>${escapeHtml(String(quarters.team1.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)))}</strong></td>
               </tr>
               <tr data-testid="stats-quarters-team2">
                 <td><strong>${escapeHtml(team2?.name || 'Team 2')}</strong></td>
                 ${[0, 1, 2, 3]
                   .map((index) => `<td class="is-num">${escapeHtml(String(Number(quarters.team2[index]) || 0))}</td>`)
                   .join('')}
-                <td class="is-num"><strong>${quarters.team2.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)}</strong></td>
+                <td class="is-num"><strong>${escapeHtml(String(quarters.team2.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)))}</strong></td>
               </tr>
             </tbody>
           </table>
