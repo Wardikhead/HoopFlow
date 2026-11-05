@@ -61,6 +61,12 @@ export function render({ store, ui, components, root }) {
       (team) => team && boxScoreRows(current, team).length > 0
     );
 
+    const quarters = current.boxScore?.quarters;
+    const hasQuarters =
+      quarters &&
+      Array.isArray(quarters.team1) &&
+      Array.isArray(quarters.team2);
+
     root.innerHTML = `
       ${components.pageHeader({
         eyebrow: `${tournament?.division || 'Tournament'} · ${tournament?.name || 'HoopFlow'}`,
@@ -113,6 +119,49 @@ export function render({ store, ui, components, root }) {
           </div>
         </div>
       </div>
+
+      ${
+        hasQuarters
+          ? `<section class="hf-card hf-mb-3" data-testid="stats-quarters">
+        <div class="hf-between hf-wrap hf-mb-2">
+          <div>
+            <span class="hf-eyebrow">Quarter breakdown</span>
+            <h2 class="hf-section-title hf-mb-0" data-testid="quarter-breakdown">By quarter</h2>
+          </div>
+        </div>
+        <div class="hf-table-wrap" data-testid="stats-quarter-breakdown">
+          <table class="hf-table">
+            <thead>
+              <tr>
+                <th scope="col">Team</th>
+                <th scope="col" class="is-num">Q1</th>
+                <th scope="col" class="is-num">Q2</th>
+                <th scope="col" class="is-num">Q3</th>
+                <th scope="col" class="is-num">Q4</th>
+                <th scope="col" class="is-num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-testid="stats-quarters-team1">
+                <td><strong>${escapeHtml(team1?.name || 'Team 1')}</strong></td>
+                ${[0, 1, 2, 3]
+                  .map((index) => `<td class="is-num">${escapeHtml(String(Number(quarters.team1[index]) || 0))}</td>`)
+                  .join('')}
+                <td class="is-num"><strong>${quarters.team1.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)}</strong></td>
+              </tr>
+              <tr data-testid="stats-quarters-team2">
+                <td><strong>${escapeHtml(team2?.name || 'Team 2')}</strong></td>
+                ${[0, 1, 2, 3]
+                  .map((index) => `<td class="is-num">${escapeHtml(String(Number(quarters.team2[index]) || 0))}</td>`)
+                  .join('')}
+                <td class="is-num"><strong>${quarters.team2.slice(0, 4).reduce((sum, value) => sum + (Number(value) || 0), 0)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>`
+          : ''
+      }
 
       <section class="hf-card hf-mb-3" data-testid="stats-box-score">
         <div class="hf-between hf-wrap hf-mb-2">
