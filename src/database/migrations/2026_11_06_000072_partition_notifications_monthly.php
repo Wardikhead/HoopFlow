@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+        DB::statement('ALTER TABLE notifications RENAME TO notifications_old');
+        DB::statement(<<<'SQL'
+CREATE TABLE notifications (
+    LIKE notifications_old EXCLUDING CONSTRAINTS EXCLUDING INDEXES
+) PARTITION BY RANGE (created_at);
+SQL);
+        for ($i = 0; $i < 4; $i++) {
+            $start = now()->startOfMonth()->addMonths($i)->format('Y-m-d');
+            $end = now()->startOfMonth()->addMonths($i + 1)->format('Y-m-d');
+            $name = 'notifications_'.now()->startOfMonth()->addMonths($i)->format('Y_m');
+            DB::statement("CREATE TABLE IF NOT EXISTS {$name} PARTITION OF notifications FOR VALUES FROM ('{$start}') TO ('{$end}')");
+        }
+        DB::statement('ALTER SEQUENCE notifications_id_seq OWNED BY notifications.id');
+        DB::statement('INSERT INTO notifications SELECT * FROM notifications_old');
+        DB::statement('DROP TABLE notifications_old');
+        DB::statement('CREATE INDEX IF NOT EXISTS notifications_user_status_idx ON notifications (user_id, status)');
+    }
+
+    public function down(): void
+    {
+        // no-op: partitioning is additive
+    }
+};
