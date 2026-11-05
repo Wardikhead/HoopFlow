@@ -14,6 +14,7 @@ export const ROUTES = {
   matches: 'schedule/matches.html',
   standings: 'standings/table.html',
   gameStats: 'games/stats.html',
+  gameManage: 'games/manage.html',
   announcements: 'announcements/index.html',
   announcementCreate: 'announcements/create.html',
   profile: 'profile/index.html',
