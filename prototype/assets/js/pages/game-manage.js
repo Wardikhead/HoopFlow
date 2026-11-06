@@ -521,9 +521,9 @@ export function render({ store, ui, components, root, theme }) {
   function recomputePlayerTotals(side, playerIndex) {
     const team = side === '1' ? team1 : team2;
     const players = team?.players || [];
-    const statsArr = side === 1 ? stats1 : stats2;
+    const statsArr = side === '1' ? stats1 : stats2;
     const entry = statsArr[playerIndex];
-    const quarterCount = Math.max(4, (side === 1 ? quarters1 : quarters2).length || 4);
+    const quarterCount = Math.max(4, (side === '1' ? quarters1 : quarters2).length || 4);
     // ensure quarters array is padded
     if (entry) {
       if (!Array.isArray(entry.quarters)) entry.quarters = [];
@@ -565,7 +565,7 @@ export function render({ store, ui, components, root, theme }) {
     const qInput = root.querySelector(`[data-q="${side}"][data-qi="${activeQuarter}"]`);
     if (qInput) qInput.value = String(qSum);
     // keep in-memory team quarters in sync
-    const teamQuarters = side === 1 ? quarters1 : quarters2;
+    const teamQuarters = side === '1' ? quarters1 : quarters2;
     if (teamQuarters && teamQuarters[activeQuarter] !== undefined) {
       teamQuarters[activeQuarter] = qSum;
     }
