@@ -318,7 +318,7 @@ export function render({ store, ui, components, root, theme }) {
             <td>${statInput(side, index, 'to', q.to, activeQ)}</td>
             <td>${statInput(side, index, 'pf', q.pf, activeQ)}</td>
             <td class="is-num"><span data-points="${side}-${index}">${pts}</span></td>
-            <td class="is-num hf-muted">${totalPts}</td>
+            <td class="is-num hf-muted" data-totals="${side}-${index}">${totalPts}</td>
           </tr>
         `;
       })
@@ -553,6 +553,12 @@ export function render({ store, ui, components, root, theme }) {
     const pqFtm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${activeQuarter}"][data-pq-stat="ftm"]`)?.value) || 0;
     const pointsEl = root.querySelector(`[data-points="${side}-${playerIndex}"]`);
     if (pointsEl) pointsEl.textContent = String(pqFgm * 2 + pqTpm * 3 + pqFtm);
+    const totalsEl = root.querySelector(`[data-totals="${side}-${playerIndex}"]`);
+    if (totalsEl) {
+      const entry = (side === '1' ? stats1 : stats2)[playerIndex];
+      const tp = (Number(entry?.fgm) || 0) * 2 + (Number(entry?.tpm) || 0) * 3 + (Number(entry?.ftm) || 0);
+      totalsEl.textContent = String(tp);
+    }
 
     // recompute active quarter's team score from all players
     let qFgm = 0, qTpm = 0, qFtm = 0;
