@@ -1,6 +1,6 @@
 import { route } from '../routes.js';
 import { escapeHtml, formatDate, formatTime } from '../ui.js';
-import { openCorrectionDialog, openScoreConsole, openInGameManagement } from '../score-dialogs.js';
+import { openCorrectionDialog, openScoreConsole } from '../score-dialogs.js';
 
 export function render({ store, ui, components, root }) {
   const params = new URLSearchParams(window.location.search);
@@ -309,7 +309,7 @@ export function render({ store, ui, components, root }) {
         <a class="hf-btn" href="${route('gameStats', { match: match.id })}" data-testid="bracket-match-stats">Game stats</a>
         ${canScore ? `<button type="button" class="hf-btn hf-btn--primary" data-open-score data-testid="bracket-enter-score">Enter final score</button>` : ''}
         ${canCorrect ? `<button type="button" class="hf-btn hf-btn--danger" data-open-correction data-testid="bracket-correct-score">Correct score</button>` : ''}
-        ${role === 'organizer' ? `<button type="button" class="hf-btn" data-testid="match-in-game">In-game score & player stats</button>` : ''}
+        ${role === 'organizer' ? `<a class="hf-btn" href="${route('gameManage', { match: match.id })}" data-testid="match-in-game">In-game score & player stats</a>` : ''}
       `,
       onMount(element, close) {
         element.querySelector('[data-close-match]').addEventListener('click', close);
@@ -320,10 +320,6 @@ export function render({ store, ui, components, root }) {
         element.querySelector('[data-open-correction]')?.addEventListener('click', () => {
           close();
           openCorrectionDialog({ store, ui, matchId: match.id, onDone: draw });
-        });
-        element.querySelector('[data-testid="match-in-game"]')?.addEventListener('click', () => {
-          close();
-          openInGameManagement({ store, ui, matchId: match.id, onDone: draw });
         });
       },
     });
