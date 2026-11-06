@@ -221,6 +221,7 @@ function makeBoxScore(team, total) {
     reb: (index * 2 + 2) % 9,
     ast: (index * 3 + 1) % 7,
     stl: 0, blk: 0, to: 0, pf: 0,
+    quarters: [],
   }));
 }
 

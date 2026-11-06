@@ -63,7 +63,22 @@ function buildBoxScore(team, total, quarters = null) {
     reb: (index * 2 + 2) % 9,
     ast: (index * 3 + 1) % 7,
     stl: 0, blk: 0, to: 0, pf: 0,
+    quarters: [],
   }));
+}
+
+function sumPlayerQuarters(qs) {
+  const fields = ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf'];
+  const totals = { points: 0 };
+  for (const f of fields) totals[f] = 0;
+  for (const q of qs || []) {
+    for (const f of fields) totals[f] += Number(q?.[f]) || 0;
+    const pts = Number(q?.points);
+    totals.points += Number.isFinite(pts)
+      ? pts
+      : (Number(q?.fgm) || 0) * 2 + (Number(q?.tpm) || 0) * 3 + (Number(q?.ftm) || 0);
+  }
+  return totals;
 }
 
 function requireText(value, field, label, min = 1) {
@@ -1004,6 +1019,15 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     const stats1 = Array.isArray(payload.stats?.team1) ? payload.stats.team1 : [];
     const stats2 = Array.isArray(payload.stats?.team2) ? payload.stats.team2 : [];
     // validate made <= attempted
+    const validateQuarter = (q, side, index, qi) => {
+      for (const k of ['fgm','fga','tpm','tpa','ftm','fta','reb','ast','stl','blk','to','pf','points']) {
+        const v = Number(q?.[k] ?? 0);
+        if (!Number.isInteger(v) || v < 0) throw new StoreError('VALIDATION', 'Quarter stats must be whole numbers.', `${side}.${index}.quarters.${qi}.${k}`);
+      }
+      if ((q.fgm||0) > (q.fga||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FG).', `${side}.${index}.quarters.${qi}.fgm`);
+      if ((q.tpm||0) > (q.tpa||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (3PT).', `${side}.${index}.quarters.${qi}.tpm`);
+      if ((q.ftm||0) > (q.fta||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FT).', `${side}.${index}.quarters.${qi}.ftm`);
+    };
     const validateStat = (s, side, index) => {
       for (const k of ['fgm','fga','tpm','tpa','ftm','fta','reb','ast','stl','blk','to','pf']) {
         const v = Number(s?.[k] ?? 0);
@@ -1012,6 +1036,9 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       if ((s.fgm||0) > (s.fga||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FG).', `${side}.${index}.fgm`);
       if ((s.tpm||0) > (s.tpa||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (3PT).', `${side}.${index}.tpm`);
       if ((s.ftm||0) > (s.fta||0)) throw new StoreError('VALIDATION', 'Made cannot exceed attempted (FT).', `${side}.${index}.ftm`);
+      if (Array.isArray(s?.quarters)) {
+        s.quarters.forEach((q, qi) => validateQuarter(q, side, index, qi));
+      }
     };
     stats1.forEach((s, i) => validateStat(s, 'team1', i));
     stats2.forEach((s, i) => validateStat(s, 'team2', i));
@@ -1021,9 +1048,23 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
 
     const next = clone(state);
     const target = findMatch(next, matchId);
+    const derived1 = stats1.map((s) => {
+      if (Array.isArray(s?.quarters) && s.quarters.length) {
+        const d = sumPlayerQuarters(s.quarters);
+        return { ...s, ...d, quarters: s.quarters };
+      }
+      return { ...s, quarters: Array.isArray(s?.quarters) ? s.quarters : [] };
+    });
+    const derived2 = stats2.map((s) => {
+      if (Array.isArray(s?.quarters) && s.quarters.length) {
+        const d = sumPlayerQuarters(s.quarters);
+        return { ...s, ...d, quarters: s.quarters };
+      }
+      return { ...s, quarters: Array.isArray(s?.quarters) ? s.quarters : [] };
+    });
     target.boxScore = {
-      team1: stats1.length ? stats1 : target.boxScore?.team1 || [],
-      team2: stats2.length ? stats2 : target.boxScore?.team2 || [],
+      team1: derived1.length ? derived1 : target.boxScore?.team1 || [],
+      team2: derived2.length ? derived2 : target.boxScore?.team2 || [],
       quarters: { team1: quarters1, team2: quarters2 },
     };
     // draft only — do not change status/winner/score
