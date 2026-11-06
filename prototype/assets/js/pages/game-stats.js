@@ -321,6 +321,61 @@ export function render({ store, ui, components, root }) {
             </tfoot>
           </table>
         </div>
+
+        ${rows
+          .map((row) => {
+            const entry = (current.boxScore?.[sideKey] || []).find((e) => e.playerId === row.playerId);
+            const qs = Array.isArray(entry?.quarters) ? entry.quarters : [];
+            if (!qs.length) return '';
+            const labels = qs.map((_, i) => (i < 4 ? `Q${i + 1}` : `OT${i - 3}`));
+            return `
+              <details class="hf-mt-1" data-testid="stats-player-quarters-${sideKey}-${escapeHtml(row.playerId)}">
+                <summary class="hf-small"><strong>${escapeHtml(row.name)}</strong> — by quarter</summary>
+                <div class="hf-table-wrap hf-mt-1">
+                  <table class="hf-table">
+                    <thead>
+                      <tr>
+                        <th>Q</th>
+                        <th>PTS</th>
+                        <th>FG</th>
+                        <th>3PT</th>
+                        <th>FT</th>
+                        <th>REB</th>
+                        <th>AST</th>
+                        <th>STL</th>
+                        <th>BLK</th>
+                        <th>TO</th>
+                        <th>PF</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${qs
+                        .map((q, qi) => {
+                          const pts = (Number(q.fgm) || 0) * 2 + (Number(q.tpm) || 0) * 3 + (Number(q.ftm) || 0);
+                          return `
+                            <tr>
+                              <td><strong>${escapeHtml(labels[qi])}</strong></td>
+                              <td class="is-num">${pts}</td>
+                              <td class="is-num">${Number(q.fgm) || 0}/${Number(q.fga) || 0}</td>
+                              <td class="is-num">${Number(q.tpm) || 0}/${Number(q.tpa) || 0}</td>
+                              <td class="is-num">${Number(q.ftm) || 0}/${Number(q.fta) || 0}</td>
+                              <td class="is-num">${Number(q.reb) || 0}</td>
+                              <td class="is-num">${Number(q.ast) || 0}</td>
+                              <td class="is-num">${Number(q.stl) || 0}</td>
+                              <td class="is-num">${Number(q.blk) || 0}</td>
+                              <td class="is-num">${Number(q.to) || 0}</td>
+                              <td class="is-num">${Number(q.pf) || 0}</td>
+                            </tr>
+                          `;
+                        })
+                        .join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            `;
+          })
+          .join('')}
       </section>
     `;
   }
