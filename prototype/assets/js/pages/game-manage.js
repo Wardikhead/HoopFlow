@@ -1,6 +1,7 @@
 import { route } from '../routes.js';
 import { escapeHtml, formatDate, formatTime } from '../ui.js';
 import { guardRole } from '../guards.js';
+import { sortBoxScore } from '../stats.js';
 
 function normalizeQuarters(value) {
   const arr = Array.isArray(value) ? value : [];
@@ -165,48 +166,62 @@ export function render({ store, ui, components, root, theme }) {
     return;
   }
 
-  const match = store.select.match(matchId);
-  if (!match) {
-    root.innerHTML = ui.emptyState({
-      icon: 'clipboard',
-      title: 'Select a match to manage',
-      message: 'That match could not be found. Choose another matchup.',
-      action: `<a class="hf-btn hf-btn--primary" href="${route('gameManage')}" data-testid="manage-select-match">Browse matchups</a>`,
-    });
-    return;
-  }
-
-  const team1 = match.team1Id ? store.select.team(match.team1Id) : null;
-  const team2 = match.team2Id ? store.select.team(match.team2Id) : null;
-
-  if (!team1 || !team2) {
-    root.innerHTML = ui.emptyState({
-      icon: 'hourglass-split',
-      title: 'Teams still pending',
-      message: 'Both teams must be known before managing this game.',
-      action: `<a class="hf-btn hf-btn--primary" href="${route('matches')}">Browse matchups</a>`,
-    });
-    return;
-  }
-
-  let quarters1 = normalizeQuarters(match.boxScore?.quarters?.team1);
-  let quarters2 = normalizeQuarters(match.boxScore?.quarters?.team2);
-  const maxLen = Math.max(quarters1.length, quarters2.length, 4);
-  quarters1 = padArray(quarters1, maxLen);
-  quarters2 = padArray(quarters2, maxLen);
-
-  const stats1 = normalizeStats(match.boxScore?.team1, team1, match.score1);
-  const stats2 = normalizeStats(match.boxScore?.team2, team2, match.score2);
-
-  const final1Init = Number.isFinite(Number(match.score1))
-    ? Number(match.score1)
-    : quarters1.reduce((sum, value) => sum + value, 0);
-  const final2Init = Number.isFinite(Number(match.score2))
-    ? Number(match.score2)
-    : quarters2.reduce((sum, value) => sum + value, 0);
+  let quarters1 = [];
+  let quarters2 = [];
+  let stats1 = [];
+  let stats2 = [];
+  let team1 = null;
+  let team2 = null;
+  let match = null;
 
   let search1 = '';
   let search2 = '';
+  let teamFilter = 'all';
+
+  function normalizeTeamFilterValue(value) {
+    const v = String(value || '').trim().toLowerCase();
+    if (v === '1' || v === 'team-1' || v === 'team1') return 'team1';
+    if (v === '2' || v === 'team-2' || v === 'team2') return 'team2';
+    return 'all';
+  }
+
+  function applySearch(side) {
+    const term = (side === 1 ? search1 : search2).trim().toLowerCase();
+    const input = root.querySelector(`[data-player-search="${side}"]`);
+    if (input) input.value = side === 1 ? search1 : search2;
+    root.querySelectorAll(`tr[data-ingame-row="${side}"]`).forEach((row) => {
+      const name = row.dataset.playerName || '';
+      row.hidden = Boolean(term) && !name.includes(term);
+    });
+  }
+
+  function applyTeamFilter() {
+    const show1 = teamFilter === 'all' || teamFilter === 'team1';
+    const show2 = teamFilter === 'all' || teamFilter === 'team2';
+    [1, 2].forEach((side) => {
+      const section = root.querySelector(`[data-testid="ingame-stats-${side}"]`);
+      if (!section) return;
+      const hide = side === 1 ? !show1 : !show2;
+      section.hidden = hide;
+      section.style.display = hide ? 'none' : '';
+    });
+
+    const select = root.querySelector('[data-ingame-team-filter], [data-team-filter]');
+    if (select) {
+      select.value = teamFilter === 'team1' ? 'team1' : teamFilter === 'team2' ? 'team2' : 'all';
+    }
+    root.querySelectorAll('[data-side]').forEach((button) => {
+      const active = normalizeTeamFilterValue(button.dataset.side) === teamFilter;
+      button.classList.toggle('hf-chip--primary', active);
+      button.classList.toggle('hf-chip--slate', !active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function setTeamFilter(value) {
+    teamFilter = normalizeTeamFilterValue(value);
+    applyTeamFilter();
+  }
 
   function teamQuarterPanel(side, team, quarters, finalScore) {
     const labels = quarters.map((_, index) => {
@@ -251,6 +266,7 @@ export function render({ store, ui, components, root, theme }) {
         <div class="hf-field hf-mb-2">
           <label class="hf-label" for="ingameSearch${side}">Search player</label>
           <input class="hf-input" id="ingameSearch${side}" type="search" placeholder="Player name"
+                 value="${escapeHtml(side === 1 ? search1 : search2)}"
                  data-testid="ingame-player-search-${side}" data-player-search="${side}" data-ingame-search="${side}">
         </div>
         <div class="hf-table-wrap">
@@ -493,162 +509,235 @@ export function render({ store, ui, components, root, theme }) {
     updateQuarterTotals(2);
   }
 
-  root.innerHTML = `
-    ${components.pageHeader({
-      eyebrow: `${team1.name} vs ${team2.name}`,
-      title: 'In-game score & player stats',
-      description: `${escapeHtml(match.roundLabel)} · Slot ${match.bracketSlot}. Enter quarter scores, final scores, and player stats. Save keeps a draft; Publish finalizes and advances the winner.`,
-      actions: `
-        <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-bracket">Bracket</a>
-        <a class="hf-btn" href="${route('matches', { id: match.tournamentId })}" data-testid="ingame-matches">Matchups</a>
-        <button type="button" class="hf-btn" data-change-match data-testid="ingame-change-match" data-href="${route('gameManage')}">Change match</button>
-      `,
-    })}
+  function draw() {
+    match = store.select.match(matchId);
+    if (!match) {
+      root.innerHTML = ui.emptyState({
+        icon: 'clipboard',
+        title: 'Select a match to manage',
+        message: 'That match could not be found. Choose another matchup.',
+        action: `<a class="hf-btn hf-btn--primary" href="${route('gameManage')}" data-testid="manage-select-match">Browse matchups</a>`,
+      });
+      return;
+    }
 
-    <div class="hf-grid hf-grid--2 hf-mb-3">
-      ${teamQuarterPanel(1, team1, quarters1, final1Init)}
-      ${teamQuarterPanel(2, team2, quarters2, final2Init)}
-    </div>
+    team1 = match.team1Id ? store.select.team(match.team1Id) : null;
+    team2 = match.team2Id ? store.select.team(match.team2Id) : null;
 
-    <div class="hf-btn-row hf-mb-3">
-      <button type="button" class="hf-btn" data-add-overtime data-testid="ingame-add-overtime">Add overtime</button>
-      <button type="button" class="hf-btn" data-remove-overtime data-testid="ingame-remove-overtime">Remove last OT</button>
-    </div>
+    if (!team1 || !team2) {
+      root.innerHTML = ui.emptyState({
+        icon: 'hourglass-split',
+        title: 'Teams still pending',
+        message: 'Both teams must be known before managing this game.',
+        action: `<a class="hf-btn hf-btn--primary" href="${route('matches')}">Browse matchups</a>`,
+      });
+      return;
+    }
 
-    ${teamStatsTable(1, team1, stats1)}
-    ${teamStatsTable(2, team2, stats2)}
+    const quarters1Init = normalizeQuarters(match.boxScore?.quarters?.team1);
+    const quarters2Init = normalizeQuarters(match.boxScore?.quarters?.team2);
+    const maxLen = Math.max(quarters1Init.length, quarters2Init.length, 4);
+    quarters1 = padArray(quarters1Init, maxLen);
+    quarters2 = padArray(quarters2Init, maxLen);
 
-    <p class="hf-field-error hf-mt-1" data-ingame-error hidden></p>
+    stats1 = normalizeStats(match.boxScore?.team1, team1, match.score1);
+    stats2 = normalizeStats(match.boxScore?.team2, team2, match.score2);
 
-    <div class="hf-btn-row hf-mt-2">
-      <button type="button" class="hf-btn" data-save-ingame data-testid="ingame-save">Save</button>
-      <button type="button" class="hf-btn hf-btn--primary" data-publish-ingame data-testid="ingame-publish">Publish result</button>
-      <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-cancel">Cancel</a>
-    </div>
-  `;
+    const final1Init = Number.isFinite(Number(match.score1))
+      ? Number(match.score1)
+      : quarters1.reduce((sum, value) => sum + value, 0);
+    const final2Init = Number.isFinite(Number(match.score2))
+      ? Number(match.score2)
+      : quarters2.reduce((sum, value) => sum + value, 0);
 
-  // Change match
-  root.querySelector('[data-change-match]')?.addEventListener('click', () => {
-    window.location.href = route('gameManage');
-  });
+    root.innerHTML = `
+      ${components.pageHeader({
+        eyebrow: `${team1.name} vs ${team2.name}`,
+        title: 'In-game score & player stats',
+        description: `${escapeHtml(match.roundLabel)} · Slot ${match.bracketSlot}. Enter quarter scores, final scores, and player stats. Save keeps a draft; Publish finalizes and advances the winner.`,
+        actions: `
+          <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-bracket">Bracket</a>
+          <a class="hf-btn" href="${route('matches', { id: match.tournamentId })}" data-testid="ingame-matches">Matchups</a>
+          <button type="button" class="hf-btn" data-change-match data-testid="ingame-change-match" data-href="${route('gameManage')}">Change match</button>
+        `,
+      })}
 
-  // Bind quarter inputs
-  bindQuarterInputs();
+      <div class="hf-grid hf-grid--2 hf-mb-3">
+        ${teamQuarterPanel(1, team1, quarters1, final1Init)}
+        ${teamQuarterPanel(2, team2, quarters2, final2Init)}
+      </div>
 
-  // Bind stat inputs for PTS
-  root.querySelectorAll('[data-stat]').forEach((input) => {
-    if (input.dataset.bound === '1') return;
-    input.dataset.bound = '1';
-    input.addEventListener('input', () => {
-      const side = input.dataset.team;
-      const index = input.dataset.idx;
-      const fgm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="fgm"]`)?.value) || 0;
-      const tpm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="tpm"]`)?.value) || 0;
-      const ftm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="ftm"]`)?.value) || 0;
-      const points = root.querySelector(`[data-points="${side}-${index}"]`);
-      if (points) points.textContent = String(fgm * 2 + tpm * 3 + ftm);
-      setError('');
+      <div class="hf-btn-row hf-mb-3">
+        <button type="button" class="hf-btn" data-add-overtime data-testid="ingame-add-overtime">Add overtime</button>
+        <button type="button" class="hf-btn" data-remove-overtime data-testid="ingame-remove-overtime">Remove last OT</button>
+      </div>
+
+      <div class="hf-card hf-mb-3">
+        <div class="hf-filter-row" data-side-filters data-testid="ingame-side-filters">
+          <button type="button" class="hf-chip ${teamFilter === 'all' ? 'hf-chip--primary' : 'hf-chip--slate'}" data-side="all" aria-pressed="${teamFilter === 'all'}" data-testid="ingame-side-all">All</button>
+          <button type="button" class="hf-chip ${teamFilter === 'team1' ? 'hf-chip--primary' : 'hf-chip--slate'}" data-side="team1" aria-pressed="${teamFilter === 'team1'}" data-testid="ingame-side-team1">Team 1</button>
+          <button type="button" class="hf-chip ${teamFilter === 'team2' ? 'hf-chip--primary' : 'hf-chip--slate'}" data-side="team2" aria-pressed="${teamFilter === 'team2'}" data-testid="ingame-side-team2">Team 2</button>
+        </div>
+        <div class="hf-field hf-mb-2">
+          <label class="hf-label" for="ingameTeamFilter">Team filter</label>
+          <select id="ingameTeamFilter" class="hf-select" data-testid="ingame-team-filter" data-team-filter data-ingame-team-filter>
+            <option value="all" ${teamFilter === 'all' ? 'selected' : ''}>All</option>
+            <option value="team1" ${teamFilter === 'team1' ? 'selected' : ''}>Team 1</option>
+            <option value="team2" ${teamFilter === 'team2' ? 'selected' : ''}>Team 2</option>
+          </select>
+        </div>
+      </div>
+
+      ${teamStatsTable(1, team1, stats1)}
+      ${teamStatsTable(2, team2, stats2)}
+
+      <p class="hf-field-error hf-mt-1" data-ingame-error hidden></p>
+
+      <div class="hf-btn-row hf-mt-2">
+        <button type="button" class="hf-btn" data-save-ingame data-testid="ingame-save">Save</button>
+        <button type="button" class="hf-btn hf-btn--primary" data-publish-ingame data-testid="ingame-publish">Publish result</button>
+        <a class="hf-btn" href="${route('bracket', { id: match.tournamentId })}" data-testid="ingame-cancel">Cancel</a>
+      </div>
+    `;
+
+    // Change match
+    root.querySelector('[data-change-match]')?.addEventListener('click', () => {
+      window.location.href = route('gameManage');
     });
-  });
 
-  // Bind search inputs
-  [1, 2].forEach((side) => {
-    const input = root.querySelector(`[data-player-search="${side}"]`);
-    if (!input) return;
-    const handler = ui.debounce(() => {
-      if (side === 1) search1 = input.value;
-      else search2 = input.value;
-      const term = input.value.trim().toLowerCase();
-      root.querySelectorAll(`tr[data-ingame-row="${side}"]`).forEach((row) => {
-        const name = row.dataset.playerName || '';
-        row.hidden = Boolean(term) && !name.includes(term);
+    // Bind quarter inputs
+    bindQuarterInputs();
+
+    // Bind stat inputs for PTS
+    root.querySelectorAll('[data-stat]').forEach((input) => {
+      if (input.dataset.bound === '1') return;
+      input.dataset.bound = '1';
+      input.addEventListener('input', () => {
+        const side = input.dataset.team;
+        const index = input.dataset.idx;
+        const fgm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="fgm"]`)?.value) || 0;
+        const tpm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="tpm"]`)?.value) || 0;
+        const ftm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="ftm"]`)?.value) || 0;
+        const points = root.querySelector(`[data-points="${side}-${index}"]`);
+        if (points) points.textContent = String(fgm * 2 + tpm * 3 + ftm);
+        setError('');
       });
-    }, 120);
-    input.addEventListener('input', handler);
-  });
+    });
 
-  // OT buttons
-  root.querySelector('[data-add-overtime]')?.addEventListener('click', addOvertime);
-  root.querySelector('[data-remove-overtime]')?.addEventListener('click', removeLastOvertime);
+    // Bind search inputs
+    [1, 2].forEach((side) => {
+      const input = root.querySelector(`[data-player-search="${side}"]`);
+      if (!input) return;
+      input.value = side === 1 ? search1 : search2;
+      const handler = ui.debounce(() => {
+        if (side === 1) search1 = input.value;
+        else search2 = input.value;
+        applySearch(side);
+      }, 120);
+      input.addEventListener('input', handler);
+    });
 
-  // Save
-  const save = root.querySelector('[data-save-ingame]');
-  const publish = root.querySelector('[data-publish-ingame]');
-  const errorElement = root.querySelector('[data-ingame-error]');
-
-  save?.addEventListener('click', () => {
-    setError('');
-    const q1 = collectQuarters(1);
-    if (!q1) return;
-    const q2 = collectQuarters(2);
-    if (!q2) return;
-    const s1 = collectStats(1);
-    if (!s1) return;
-    const s2 = collectStats(2);
-    if (!s2) return;
-
-    try {
-      store.actions.saveGameStats(matchId, {
-        quarters: { team1: q1, team2: q2 },
-        stats: { team1: s1, team2: s2 },
-      });
-      ui.toast('Saved', { tone: 'success' });
-    } catch (error) {
-      applyStoreError(error);
-      ui.toast(error?.message || 'Save failed.', { tone: 'danger' });
+    // Team filter controls
+    const teamFilterSelect = root.querySelector('[data-ingame-team-filter], [data-team-filter]');
+    if (teamFilterSelect) {
+      teamFilterSelect.value = teamFilter === 'team1' ? 'team1' : teamFilter === 'team2' ? 'team2' : 'all';
+      teamFilterSelect.addEventListener('change', () => setTeamFilter(teamFilterSelect.value));
     }
-  });
+    root.querySelectorAll('[data-side]').forEach((button) => {
+      button.addEventListener('click', () => setTeamFilter(button.dataset.side));
+    });
 
-  publish?.addEventListener('click', async () => {
-    setError('');
-    const q1 = collectQuarters(1);
-    if (!q1) return;
-    const q2 = collectQuarters(2);
-    if (!q2) return;
-    const final1 = collectFinal(1);
-    if (final1 === null) return;
-    const final2 = collectFinal(2);
-    if (final2 === null) return;
-    const s1 = collectStats(1);
-    if (!s1) return;
-    const s2 = collectStats(2);
-    if (!s2) return;
+    // OT buttons
+    root.querySelector('[data-add-overtime]')?.addEventListener('click', addOvertime);
+    root.querySelector('[data-remove-overtime]')?.addEventListener('click', removeLastOvertime);
 
-    const sum1 = q1.reduce((sum, value) => sum + value, 0);
-    const sum2 = q2.reduce((sum, value) => sum + value, 0);
-    if (sum1 !== final1) {
-      const input = root.querySelector('[data-final="1"]');
-      ui.setFieldError(input, 'Final score must equal the sum of the quarters.');
-      ui.toast('Quarter totals must match final scores.', { tone: 'danger' });
-      return;
-    }
-    if (sum2 !== final2) {
-      const input = root.querySelector('[data-final="2"]');
-      ui.setFieldError(input, 'Final score must equal the sum of the quarters.');
-      ui.toast('Quarter totals must match final scores.', { tone: 'danger' });
-      return;
-    }
+    // Save
+    const save = root.querySelector('[data-save-ingame]');
+    const publish = root.querySelector('[data-publish-ingame]');
 
-    ui.setBusy(publish, true, 'Publishing...');
-    try {
-      store.actions.saveGameStats(matchId, {
-        quarters: { team1: q1, team2: q2 },
-        stats: { team1: s1, team2: s2 },
-      });
-      store.actions.saveScore(matchId, sum1, sum2, {
-        boxScore: {
-          team1: s1,
-          team2: s2,
+    save?.addEventListener('click', () => {
+      setError('');
+      const q1 = collectQuarters(1);
+      if (!q1) return;
+      const q2 = collectQuarters(2);
+      if (!q2) return;
+      const s1 = collectStats(1);
+      if (!s1) return;
+      const s2 = collectStats(2);
+      if (!s2) return;
+
+      try {
+        store.actions.saveGameStats(matchId, {
           quarters: { team1: q1, team2: q2 },
-        },
-      });
-      ui.setBusy(publish, false);
-      ui.toast('Result published.', { tone: 'success', title: 'Score finalized' });
-      render({ store, ui, components, root, theme });
-    } catch (error) {
-      ui.setBusy(publish, false);
-      applyStoreError(error);
-      ui.toast(error?.message || 'Publish failed.', { tone: 'danger' });
-    }
-  });
+          stats: { team1: s1, team2: s2 },
+        });
+        ui.toast('Saved', { tone: 'success' });
+      } catch (error) {
+        applyStoreError(error);
+        ui.toast(error?.message || 'Save failed.', { tone: 'danger' });
+      }
+    });
+
+    publish?.addEventListener('click', async () => {
+      setError('');
+      const q1 = collectQuarters(1);
+      if (!q1) return;
+      const q2 = collectQuarters(2);
+      if (!q2) return;
+      const final1 = collectFinal(1);
+      if (final1 === null) return;
+      const final2 = collectFinal(2);
+      if (final2 === null) return;
+      const s1 = collectStats(1);
+      if (!s1) return;
+      const s2 = collectStats(2);
+      if (!s2) return;
+
+      const sum1 = q1.reduce((sum, value) => sum + value, 0);
+      const sum2 = q2.reduce((sum, value) => sum + value, 0);
+      if (sum1 !== final1) {
+        const input = root.querySelector('[data-final="1"]');
+        ui.setFieldError(input, 'Final score must equal the sum of the quarters.');
+        ui.toast('Quarter totals must match final scores.', { tone: 'danger' });
+        return;
+      }
+      if (sum2 !== final2) {
+        const input = root.querySelector('[data-final="2"]');
+        ui.setFieldError(input, 'Final score must equal the sum of the quarters.');
+        ui.toast('Quarter totals must match final scores.', { tone: 'danger' });
+        return;
+      }
+
+      ui.setBusy(publish, true, 'Publishing...');
+      try {
+        store.actions.saveGameStats(matchId, {
+          quarters: { team1: q1, team2: q2 },
+          stats: { team1: s1, team2: s2 },
+        });
+        store.actions.saveScore(matchId, sum1, sum2, {
+          boxScore: {
+            team1: s1,
+            team2: s2,
+            quarters: { team1: q1, team2: q2 },
+          },
+        });
+        ui.setBusy(publish, false);
+        ui.toast('Result published.', { tone: 'success', title: 'Score finalized' });
+        draw();
+      } catch (error) {
+        ui.setBusy(publish, false);
+        applyStoreError(error);
+        ui.toast(error?.message || 'Publish failed.', { tone: 'danger' });
+      }
+    });
+
+    // Re-apply current filters after render.
+    applySearch(1);
+    applySearch(2);
+    applyTeamFilter();
+  }
+
+  draw();
+
+  void sortBoxScore;
 }
