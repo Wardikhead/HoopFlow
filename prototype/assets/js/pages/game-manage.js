@@ -187,6 +187,8 @@ export function render({ store, ui, components, root, theme }) {
   let search1 = '';
   let search2 = '';
   let teamFilter = 'all';
+  let activeQuarter = 0;
+  let loaded = false;
 
   function normalizeTeamFilterValue(value) {
     const v = String(value || '').trim().toLowerCase();
@@ -270,12 +272,49 @@ export function render({ store, ui, components, root, theme }) {
 
   function teamStatsTable(side, team, stats, quarters) {
     const quarterCount = Math.max(4, quarters?.length || 4);
-    const quarterLabels = Array.from({ length: quarterCount }, (_, i) =>
-      i < 4 ? `Q${i + 1}` : `OT${i - 3}`
-    );
+    const qLabel = (i) => (i < 4 ? `Q${i + 1}` : `OT${i - 3}`);
+    const activeQ = Math.min(activeQuarter, quarterCount - 1);
+    const activeLabel = qLabel(activeQ);
+
+    const rowsHtml = stats
+      .map((entry, index) => {
+        const player = (team.players || [])[index];
+        const qStats = Array.isArray(entry.quarters) && entry.quarters.length
+          ? entry.quarters
+          : [];
+        const q = qStats[activeQ] || { fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 };
+        const pts = (Number(q.fgm) || 0) * 2 + (Number(q.tpm) || 0) * 3 + (Number(q.ftm) || 0);
+        const totalPts = (Number(entry.fgm) || 0) * 2 + (Number(entry.tpm) || 0) * 3 + (Number(entry.ftm) || 0);
+        return `
+          <tr data-ingame-row="${side}" data-player-name="${escapeHtml(String(player?.name || '').toLowerCase())}" data-testid="ingame-stat-row-${side}-${index}">
+            <td><strong>${escapeHtml(player?.name || 'Unknown player')}</strong></td>
+            <td>
+              ${statInput(side, index, 'fgm', q.fgm, activeQ)} / ${statInput(side, index, 'fga', q.fga, activeQ)}
+            </td>
+            <td>
+              ${statInput(side, index, 'tpm', q.tpm, activeQ)} / ${statInput(side, index, 'tpa', q.tpa, activeQ)}
+            </td>
+            <td>
+              ${statInput(side, index, 'ftm', q.ftm, activeQ)} / ${statInput(side, index, 'fta', q.fta, activeQ)}
+            </td>
+            <td>${statInput(side, index, 'reb', q.reb, activeQ)}</td>
+            <td>${statInput(side, index, 'ast', q.ast, activeQ)}</td>
+            <td>${statInput(side, index, 'stl', q.stl, activeQ)}</td>
+            <td>${statInput(side, index, 'blk', q.blk, activeQ)}</td>
+            <td>${statInput(side, index, 'to', q.to, activeQ)}</td>
+            <td>${statInput(side, index, 'pf', q.pf, activeQ)}</td>
+            <td class="is-num"><span data-points="${side}-${index}">${pts}</span></td>
+            <td class="is-num hf-muted">${totalPts}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
     return `
       <section class="hf-card hf-mb-3" data-testid="ingame-stats-${side}">
-        <h3 class="hf-section-title hf-mb-2">${escapeHtml(team.name)} player stats</h3>
+        <div class="hf-between hf-wrap hf-mb-2">
+          <h3 class="hf-section-title hf-mb-0">${escapeHtml(team.name)} player stats — ${escapeHtml(activeLabel)}</h3>
+        </div>
         <div class="hf-field hf-mb-2">
           <label class="hf-label" for="ingameSearch${side}">Search player</label>
           <input class="hf-input" id="ingameSearch${side}" type="search" placeholder="Player name"
@@ -296,109 +335,19 @@ export function render({ store, ui, components, root, theme }) {
                 <th>BLK</th>
                 <th>TO</th>
                 <th>PF</th>
-                <th>PTS</th>
+                <th>PTS (${escapeHtml(activeLabel)})</th>
+                <th>Totals</th>
               </tr>
             </thead>
             <tbody>
-              ${stats
-                .map((entry, index) => {
-                  const player = (team.players || [])[index];
-                  const points = entry.fgm * 2 + entry.tpm * 3 + entry.ftm;
-                  return `
-                    <tr data-ingame-row="${side}" data-player-name="${escapeHtml(String(player?.name || '').toLowerCase())}" data-testid="ingame-stat-row-${side}-${index}">
-                      <td><strong>${escapeHtml(player?.name || 'Unknown player')}</strong></td>
-                      <td>
-                        ${statInput(side, index, 'fgm', entry.fgm)} / ${statInput(side, index, 'fga', entry.fga)}
-                      </td>
-                      <td>
-                        ${statInput(side, index, 'tpm', entry.tpm)} / ${statInput(side, index, 'tpa', entry.tpa)}
-                      </td>
-                      <td>
-                        ${statInput(side, index, 'ftm', entry.ftm)} / ${statInput(side, index, 'fta', entry.fta)}
-                      </td>
-                      <td>${statInput(side, index, 'reb', entry.reb)}</td>
-                      <td>${statInput(side, index, 'ast', entry.ast)}</td>
-                      <td>${statInput(side, index, 'stl', entry.stl)}</td>
-                      <td>${statInput(side, index, 'blk', entry.blk)}</td>
-                      <td>${statInput(side, index, 'to', entry.to)}</td>
-                      <td>${statInput(side, index, 'pf', entry.pf)}</td>
-                      <td class="is-num"><span data-points="${side}-${index}">${points}</span></td>
-                    </tr>
-                  `;
-                })
-                .join('')}
+              ${rowsHtml}
             </tbody>
           </table>
         </div>
-
-        <details class="hf-mt-2" data-testid="ingame-pq-${side}">
-          <summary class="hf-btn hf-btn--sm">Per-player quarters (full stats)</summary>
-          ${(team.players || [])
-            .map((player, index) => {
-              const entry = stats[index] || {};
-              const qs = Array.isArray(entry.quarters) && entry.quarters.length
-                ? entry.quarters
-                : Array.from({ length: quarterCount }, () => ({
-                    fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0,
-                    reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0,
-                  }));
-              const padded = [...qs];
-              while (padded.length < quarterCount) {
-                padded.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
-              }
-              return `
-                <details class="hf-mt-1" data-testid="ingame-pq-player-${side}-${index}">
-                  <summary class="hf-small"><strong>${escapeHtml(player?.name || 'Unknown player')}</strong> — by quarter</summary>
-                  <div class="hf-table-wrap hf-mt-1">
-                    <table class="hf-table">
-                      <thead>
-                        <tr>
-                          <th>Q</th>
-                          <th>PTS</th>
-                          <th>FG (M/A)</th>
-                          <th>3PT (M/A)</th>
-                          <th>FT (M/A)</th>
-                          <th>REB</th>
-                          <th>AST</th>
-                          <th>STL</th>
-                          <th>BLK</th>
-                          <th>TO</th>
-                          <th>PF</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${padded
-                          .map((q, qi) => {
-                            const pts = (Number(q.fgm) || 0) * 2 + (Number(q.tpm) || 0) * 3 + (Number(q.ftm) || 0);
-                            return `
-                              <tr data-pq-row="${side}-${index}" data-pq-q="${qi}">
-                                <td><strong>${escapeHtml(quarterLabels[qi] || `Q${qi + 1}`)}</strong></td>
-                                <td class="is-num"><span data-pq-points="${side}-${index}-${qi}">${pts}</span></td>
-                                <td>${statInput(side, index, 'pq-fgm', q.fgm, qi)} / ${statInput(side, index, 'pq-fga', q.fga, qi)}</td>
-                                <td>${statInput(side, index, 'pq-tpm', q.tpm, qi)} / ${statInput(side, index, 'pq-tpa', q.tpa, qi)}</td>
-                                <td>${statInput(side, index, 'pq-ftm', q.ftm, qi)} / ${statInput(side, index, 'pq-fta', q.fta, qi)}</td>
-                                <td>${statInput(side, index, 'pq-reb', q.reb, qi)}</td>
-                                <td>${statInput(side, index, 'pq-ast', q.ast, qi)}</td>
-                                <td>${statInput(side, index, 'pq-stl', q.stl, qi)}</td>
-                                <td>${statInput(side, index, 'pq-blk', q.blk, qi)}</td>
-                                <td>${statInput(side, index, 'pq-to', q.to, qi)}</td>
-                                <td>${statInput(side, index, 'pq-pf', q.pf, qi)}</td>
-                              </tr>
-                            `;
-                          })
-                          .join('')}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
-              `;
-            })
-            .join('')}
-        </details>
+        <p class="hf-small hf-muted hf-mt-1">Totals are the sum of all quarters. Editing a total field switches to manual mode.</p>
       </section>
     `;
   }
-
   function setError(message) {
     const errorElement = root.querySelector('[data-ingame-error]');
     if (!errorElement) return;
@@ -457,88 +406,41 @@ export function render({ store, ui, components, root, theme }) {
   }
 
   function collectStats(side) {
-    const team = side === 1 ? team1 : team2;
-    const players = team.players || [];
-    const values = [];
-    for (let index = 0; index < players.length; index += 1) {
-      const fields = ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf'];
-      const entry = { playerId: players[index].id, points: 0 };
-      for (const field of fields) {
-        const input = root.querySelector(
-          `[data-team="${side}"][data-idx="${index}"][data-stat="${field}"]`
-        );
-        ui.clearFieldError(input);
-        const value = toInt(input?.value);
-        if (value === null) {
-          ui.setFieldError(input, 'Enter a whole number.');
+    const arr = side === 1 ? stats1 : stats2;
+    // validate each entry
+    for (let index = 0; index < arr.length; index += 1) {
+      const s = arr[index];
+      for (const k of ['fgm','fga','tpm','tpa','ftm','fta','reb','ast','stl','blk','to','pf']) {
+        const v = Number(s?.[k] ?? 0);
+        if (!Number.isInteger(v) || v < 0) {
+          const input = root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="0"][data-pq-stat="${k}"]`);
+          if (input) ui.setFieldError(input, 'Enter a whole number.');
+          setError('Stats must be whole numbers.');
           return null;
         }
-        entry[field] = value;
       }
-      if (entry.fgm > entry.fga) {
-        const input = root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="fgm"]`);
-        ui.setFieldError(input, 'Made cannot exceed attempted (FG).');
-        return null;
-      }
-      if (entry.tpm > entry.tpa) {
-        const input = root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="tpm"]`);
-        ui.setFieldError(input, 'Made cannot exceed attempted (3PT).');
-        return null;
-      }
-      if (entry.ftm > entry.fta) {
-        const input = root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="ftm"]`);
-        ui.setFieldError(input, 'Made cannot exceed attempted (FT).');
-        return null;
-      }
-      entry.points = entry.fgm * 2 + entry.tpm * 3 + entry.ftm;
-
-      // Collect per-player per-quarter stats (optional).
-      const pqInputs = [...root.querySelectorAll(`[data-pq-side="${side}"][data-pq-player="${index}"]`)];
-      const qCount = Math.max(4, (team1 && side === 1 ? quarters1 : quarters2).length || 4);
-      const quarterMap = new Map();
-      for (const input of pqInputs) {
-        const qi = Number(input.dataset.pqQ);
-        const stat = input.dataset.pqStat;
-        if (!Number.isFinite(qi)) continue;
-        if (!quarterMap.has(qi)) {
-          quarterMap.set(qi, { fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      if ((s.fgm||0) > (s.fga||0)) { setError('Made cannot exceed attempted (FG).'); return null; }
+      if ((s.tpm||0) > (s.tpa||0)) { setError('Made cannot exceed attempted (3PT).'); return null; }
+      if ((s.ftm||0) > (s.fta||0)) { setError('Made cannot exceed attempted (FT).'); return null; }
+      if (Array.isArray(s?.quarters)) {
+        for (let qi = 0; qi < s.quarters.length; qi += 1) {
+          const q = s.quarters[qi] || {};
+          for (const k of ['fgm','fga','tpm','tpa','ftm','fta','reb','ast','stl','blk','to','pf']) {
+            const v = Number(q?.[k] ?? 0);
+            if (!Number.isInteger(v) || v < 0) { setError('Quarter stats must be whole numbers.'); return null; }
+          }
+          if ((q.fgm||0) > (q.fga||0) || (q.tpm||0) > (q.tpa||0) || (q.ftm||0) > (q.fta||0)) {
+            setError('Made cannot exceed attempted.'); return null;
+          }
         }
-        const q = quarterMap.get(qi);
-        const v = toInt(input.value);
-        if (v === null) {
-          ui.setFieldError(input, 'Enter a whole number.');
-          return null;
-        }
-        q[stat] = v;
       }
-      const quarters = [];
-      for (let qi = 0; qi < qCount; qi += 1) {
-        const q = quarterMap.get(qi) || { fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 };
-        q.points = q.fgm * 2 + q.tpm * 3 + q.ftm;
-        const hasData = Object.values(q).some((v) => Number(v) !== 0);
-        if (hasData) quarters.push(q);
-        else quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
-      }
-      const hasAny = quarters.some((q) => Object.values(q).some((v) => Number(v) !== 0));
-      entry.quarters = hasAny ? quarters : [];
-
-      // If per-quarter data present, derive totals from quarters.
-      if (entry.quarters.length) {
-        const d = sumPlayerQuarters(entry.quarters);
-        entry.points = d.points;
-        entry.fgm = d.fgm; entry.fga = d.fga;
-        entry.tpm = d.tpm; entry.tpa = d.tpa;
-        entry.ftm = d.ftm; entry.fta = d.fta;
-        entry.reb = d.reb; entry.ast = d.ast;
-        entry.stl = d.stl; entry.blk = d.blk;
-        entry.to = d.to; entry.pf = d.pf;
-      }
-
-      values.push(entry);
     }
-    return values;
+    // return deep clone
+    return arr.map((s) => ({
+      ...s,
+      quarters: Array.isArray(s.quarters) ? s.quarters.map((q) => ({ ...q })) : [],
+    }));
   }
-
   function updateQuarterTotals(side) {
     const inputs = [...root.querySelectorAll(`[data-q="${side}"]`)];
     const sum = inputs.reduce((acc, input) => {
@@ -605,42 +507,42 @@ export function render({ store, ui, components, root, theme }) {
   function recomputePlayerTotals(side, playerIndex) {
     const team = side === 1 ? team1 : team2;
     const players = team?.players || [];
-    // sum all quarter inputs for this player
-    const statFields = ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf'];
-    const totals = { fgm:0, fga:0, tpm:0, tpa:0, ftm:0, fta:0, reb:0, ast:0, stl:0, blk:0, to:0, pf:0 };
-    const qInputs = [...root.querySelectorAll(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"]`)];
-    const qCount = new Set(qInputs.map((i) => i.dataset.pqQ)).size;
-    for (let qi = 0; qi < qCount; qi += 1) {
-      for (const f of statFields) {
-        const inp = root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${qi}"][data-pq-stat="${f}"]`);
-        totals[f] += Number(inp?.value) || 0;
-      }
+    const statsArr = side === 1 ? stats1 : stats2;
+    const entry = statsArr[playerIndex];
+    // update in-memory entry.quarters[activeQuarter] from DOM (already done in input handler, but recompute totals)
+    if (entry && Array.isArray(entry.quarters) && entry.quarters[activeQuarter]) {
+      const q = entry.quarters[activeQuarter];
+      q.points = (Number(q.fgm) || 0) * 2 + (Number(q.tpm) || 0) * 3 + (Number(q.ftm) || 0);
     }
-    // write back to main stat inputs
-    for (const f of statFields) {
-      const mainInput = root.querySelector(`[data-team="${side}"][data-idx="${playerIndex}"][data-stat="${f}"]`);
-      if (mainInput) mainInput.value = String(totals[f]);
+    // recompute player totals from all quarters in memory
+    if (entry && Array.isArray(entry.quarters) && entry.quarters.length) {
+      const d = sumPlayerQuarters(entry.quarters);
+      entry.points = d.points;
+      entry.fgm = d.fgm; entry.fga = d.fga;
+      entry.tpm = d.tpm; entry.tpa = d.tpa;
+      entry.ftm = d.ftm; entry.fta = d.fta;
+      entry.reb = d.reb; entry.ast = d.ast;
+      entry.stl = d.stl; entry.blk = d.blk;
+      entry.to = d.to; entry.pf = d.pf;
     }
-    const fgm = totals.fgm, tpm = totals.tpm, ftm = totals.ftm;
+    // update this player's PTS display (active quarter)
+    const pqFgm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${activeQuarter}"][data-pq-stat="fgm"]`)?.value) || 0;
+    const pqTpm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${activeQuarter}"][data-pq-stat="tpm"]`)?.value) || 0;
+    const pqFtm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${activeQuarter}"][data-pq-stat="ftm"]`)?.value) || 0;
     const pointsEl = root.querySelector(`[data-points="${side}-${playerIndex}"]`);
-    if (pointsEl) pointsEl.textContent = String(fgm * 2 + tpm * 3 + ftm);
-    // recompute team quarter totals + final score
-    for (let qi = 0; qi < qCount; qi += 1) {
-      let qSum = 0;
-      root.querySelectorAll(`[data-pq-side="${side}"][data-pq-player][data-pq-q="${qi}"][data-pq-stat="fgm"]`).forEach(() => {});
-      // sum fgm/tpm/ftm across players for this quarter
-      let qFgm = 0, qTpm = 0, qFtm = 0;
-      (team?.players || []).forEach((_, pIdx) => {
-        qFgm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${qi}"][data-pq-stat="fgm"]`)?.value) || 0;
-        qTpm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${qi}"][data-pq-stat="tpm"]`)?.value) || 0;
-        qFtm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${qi}"][data-pq-stat="ftm"]`)?.value) || 0;
-      });
-      qSum = qFgm * 2 + qTpm * 3 + qFtm;
-      const qTotalEl = root.querySelector(`[data-qtotal="${side}"]`);
-      // update the team quarter input for this quarter
-      const qInput = root.querySelector(`[data-q="${side}"][data-qi="${qi}"]`);
-      if (qInput) qInput.value = String(qSum);
-    }
+    if (pointsEl) pointsEl.textContent = String(pqFgm * 2 + pqTpm * 3 + pqFtm);
+
+    // recompute active quarter's team score from all players
+    let qFgm = 0, qTpm = 0, qFtm = 0;
+    (team?.players || []).forEach((_, pIdx) => {
+      qFgm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${activeQuarter}"][data-pq-stat="fgm"]`)?.value) || 0;
+      qTpm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${activeQuarter}"][data-pq-stat="tpm"]`)?.value) || 0;
+      qFtm += Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${pIdx}"][data-pq-q="${activeQuarter}"][data-pq-stat="ftm"]`)?.value) || 0;
+    });
+    const qSum = qFgm * 2 + qTpm * 3 + qFtm;
+    const qInput = root.querySelector(`[data-q="${side}"][data-qi="${activeQuarter}"]`);
+    if (qInput) qInput.value = String(qSum);
+
     updateQuarterTotals(side);
   }
 
@@ -718,14 +620,17 @@ export function render({ store, ui, components, root, theme }) {
       return;
     }
 
-    const quarters1Init = normalizeQuarters(match.boxScore?.quarters?.team1);
-    const quarters2Init = normalizeQuarters(match.boxScore?.quarters?.team2);
-    const maxLen = Math.max(quarters1Init.length, quarters2Init.length, 4);
-    quarters1 = padArray(quarters1Init, maxLen);
-    quarters2 = padArray(quarters2Init, maxLen);
+    if (!loaded) {
+      const quarters1Init = normalizeQuarters(match.boxScore?.quarters?.team1);
+      const quarters2Init = normalizeQuarters(match.boxScore?.quarters?.team2);
+      const maxLen = Math.max(quarters1Init.length, quarters2Init.length, 4);
+      quarters1 = padArray(quarters1Init, maxLen);
+      quarters2 = padArray(quarters2Init, maxLen);
 
-    stats1 = normalizeStats(match.boxScore?.team1, team1, match.score1);
-    stats2 = normalizeStats(match.boxScore?.team2, team2, match.score2);
+      stats1 = normalizeStats(match.boxScore?.team1, team1, match.score1);
+      stats2 = normalizeStats(match.boxScore?.team2, team2, match.score2);
+      loaded = true;
+    }
 
     const final1Init = Number.isFinite(Number(match.score1))
       ? Number(match.score1)
@@ -745,6 +650,19 @@ export function render({ store, ui, components, root, theme }) {
           <button type="button" class="hf-btn" data-change-match data-testid="ingame-change-match" data-href="${route('gameManage')}">Change match</button>
         `,
       })}
+
+      <div class="hf-card hf-mb-3" data-testid="ingame-quarter-tabs">
+        <div class="hf-between hf-wrap">
+          <span class="hf-kpi-label">Editing quarter</span>
+          <div class="hf-btn-row">
+            ${quarters1.map((_, index) => {
+              const label = index < 4 ? `Q${index + 1}` : `OT${index - 3}`;
+              const active = index === activeQuarter;
+              return `<button type="button" class="hf-btn hf-btn--sm ${active ? 'hf-btn--primary' : ''}" data-quarter-tab="${index}" data-testid="ingame-quarter-tab-${index}" aria-pressed="${active}">${escapeHtml(label)}</button>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
 
       <div class="hf-grid hf-grid--2 hf-mb-3">
         ${teamQuarterPanel(1, team1, quarters1, final1Init)}
@@ -789,26 +707,45 @@ export function render({ store, ui, components, root, theme }) {
       window.location.href = route('gameManage');
     });
 
+    // Bind quarter tabs
+    root.querySelectorAll('[data-quarter-tab]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const idx = Number(button.dataset.quarterTab);
+        if (Number.isFinite(idx)) {
+          activeQuarter = idx;
+          draw();
+        }
+      });
+    });
+
     // Bind quarter inputs
     bindQuarterInputs();
     bindPlayerQuarterInputs();
 
     // Bind stat inputs for PTS
-    root.querySelectorAll('[data-stat]').forEach((input) => {
+    root.querySelectorAll('[data-pq-stat]').forEach((input) => {
       if (input.dataset.bound === '1') return;
       input.dataset.bound = '1';
       input.addEventListener('input', () => {
-        const side = input.dataset.team;
-        const index = input.dataset.idx;
-        const fgm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="fgm"]`)?.value) || 0;
-        const tpm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="tpm"]`)?.value) || 0;
-        const ftm = Number(root.querySelector(`[data-team="${side}"][data-idx="${index}"][data-stat="ftm"]`)?.value) || 0;
-        const points = root.querySelector(`[data-points="${side}-${index}"]`);
+        const side = input.dataset.pqSide;
+        const index = input.dataset.pqPlayer;
+        const qi = input.dataset.pqQ;
+        const stat = input.dataset.pqStat;
+        const value = toInt(input.value) ?? 0;
+        const statsArr = side === '1' ? stats1 : stats2;
+        const entry = statsArr[Number(index)];
+        if (entry) {
+          if (!Array.isArray(entry.quarters)) entry.quarters = [];
+          while (entry.quarters.length <= Number(qi)) entry.quarters.push({ fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,to:0,pf:0,points:0 });
+          entry.quarters[Number(qi)][stat] = value;
+        }
+        const fgm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="fgm"]`)?.value) || 0;
+        const tpm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="tpm"]`)?.value) || 0;
+        const ftm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="ftm"]`)?.value) || 0;
+        const points = root.querySelector(`[data-pq-points="${side}-${index}-${qi}"]`);
         if (points) points.textContent = String(fgm * 2 + tpm * 3 + ftm);
-        // Manual override: editing a total stat clears per-player quarters.
-        root.querySelectorAll(`[data-pq-side="${side}"][data-pq-player="${index}"]`).forEach((qInput) => {
-          qInput.value = '0';
-        });
+        // re-sum this player's totals + team quarter + final
+        recomputePlayerTotals(side, index);
         setError('');
       });
     });
@@ -911,6 +848,7 @@ export function render({ store, ui, components, root, theme }) {
           },
         });
         ui.setBusy(publish, false);
+        loaded = false;
         ui.toast('Result published.', { tone: 'success', title: 'Score finalized' });
         draw();
       } catch (error) {
