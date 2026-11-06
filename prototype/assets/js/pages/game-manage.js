@@ -69,6 +69,20 @@ function toInt(value) {
   return number;
 }
 
+function sumPlayerQuarters(qs) {
+  const fields = ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf'];
+  const totals = { points: 0 };
+  for (const f of fields) totals[f] = 0;
+  for (const q of qs || []) {
+    for (const f of fields) totals[f] += Number(q?.[f]) || 0;
+    const pts = Number(q?.points);
+    totals.points += (q?.points != null && Number.isFinite(pts))
+      ? pts
+      : (Number(q?.fgm) || 0) * 2 + (Number(q?.tpm) || 0) * 3 + (Number(q?.ftm) || 0);
+  }
+  return totals;
+}
+
 function statInput(side, index, field, value, qIndex = null) {
   const idSuffix = qIndex === null ? `${side}-${index}` : `pq-${side}-${index}-${qIndex}`;
   const dataAttrs = qIndex === null
@@ -509,7 +523,15 @@ export function render({ store, ui, components, root, theme }) {
     const players = team?.players || [];
     const statsArr = side === 1 ? stats1 : stats2;
     const entry = statsArr[playerIndex];
-    // update in-memory entry.quarters[activeQuarter] from DOM (already done in input handler, but recompute totals)
+    const quarterCount = Math.max(4, (side === 1 ? quarters1 : quarters2).length || 4);
+    // ensure quarters array is padded
+    if (entry) {
+      if (!Array.isArray(entry.quarters)) entry.quarters = [];
+      while (entry.quarters.length < quarterCount) {
+        entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      }
+    }
+    // update in-memory entry.quarters[activeQuarter] from DOM
     if (entry && Array.isArray(entry.quarters) && entry.quarters[activeQuarter]) {
       const q = entry.quarters[activeQuarter];
       q.points = (Number(q.fgm) || 0) * 2 + (Number(q.tpm) || 0) * 3 + (Number(q.ftm) || 0);
@@ -542,6 +564,11 @@ export function render({ store, ui, components, root, theme }) {
     const qSum = qFgm * 2 + qTpm * 3 + qFtm;
     const qInput = root.querySelector(`[data-q="${side}"][data-qi="${activeQuarter}"]`);
     if (qInput) qInput.value = String(qSum);
+    // keep in-memory team quarters in sync
+    const teamQuarters = side === 1 ? quarters1 : quarters2;
+    if (teamQuarters && teamQuarters[activeQuarter] !== undefined) {
+      teamQuarters[activeQuarter] = qSum;
+    }
 
     updateQuarterTotals(side);
   }
@@ -564,11 +591,17 @@ export function render({ store, ui, components, root, theme }) {
     }
     q1.push(0);
     q2.push(0);
-    rebuildQuarterGrid(1, q1);
-    rebuildQuarterGrid(2, q2);
-    bindQuarterInputs();
-    updateQuarterTotals(1);
-    updateQuarterTotals(2);
+    // extend per-player quarter arrays
+    for (const entry of stats1) {
+      if (!Array.isArray(entry.quarters)) entry.quarters = [];
+      entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+    }
+    for (const entry of stats2) {
+      if (!Array.isArray(entry.quarters)) entry.quarters = [];
+      entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+    }
+    // re-render to show new OT tab + inputs
+    draw();
   }
 
   async function removeLastOvertime() {
@@ -588,11 +621,15 @@ export function render({ store, ui, components, root, theme }) {
     }
     q1.pop();
     q2.pop();
-    rebuildQuarterGrid(1, q1);
-    rebuildQuarterGrid(2, q2);
-    bindQuarterInputs();
-    updateQuarterTotals(1);
-    updateQuarterTotals(2);
+    for (const entry of stats1) {
+      if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
+    }
+    for (const entry of stats2) {
+      if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
+    }
+    // clamp activeQuarter if needed
+    if (activeQuarter >= q1.length) activeQuarter = q1.length - 1;
+    draw();
   }
 
   function draw() {
@@ -631,6 +668,9 @@ export function render({ store, ui, components, root, theme }) {
       stats2 = normalizeStats(match.boxScore?.team2, team2, match.score2);
       loaded = true;
     }
+
+    if (quarters1.length) activeQuarter = Math.min(activeQuarter, quarters1.length - 1);
+    if (activeQuarter < 0) activeQuarter = 0;
 
     const final1Init = Number.isFinite(Number(match.score1))
       ? Number(match.score1)
