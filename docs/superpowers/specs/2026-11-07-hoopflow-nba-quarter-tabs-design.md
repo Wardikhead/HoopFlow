@@ -63,10 +63,10 @@ The current in-game page shows per-player quarter stats in collapsible "By quart
 - All existing tests pass.
 - `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- Should the totals be editable (manual override clears quarters) or read-only (always derived)? (Recommend: editable with manual override, consistent with existing rule.)
-- Should the active quarter persist across Save/Publish re-renders? (Recommend: yes, preserve `activeQuarter`.)
+- **Totals editable?** Editable with manual override (editing a total clears per-quarter data). Resolved: yes.
+- **Active quarter persists?** Yes — `activeQuarter` is preserved across Save/Publish re-renders. Resolved: yes.
 
 ---
 
