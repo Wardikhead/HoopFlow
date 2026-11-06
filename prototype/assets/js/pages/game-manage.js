@@ -519,7 +519,7 @@ export function render({ store, ui, components, root, theme }) {
   }
 
   function recomputePlayerTotals(side, playerIndex) {
-    const team = side === 1 ? team1 : team2;
+    const team = side === '1' ? team1 : team2;
     const players = team?.players || [];
     const statsArr = side === 1 ? stats1 : stats2;
     const entry = statsArr[playerIndex];
