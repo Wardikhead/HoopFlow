@@ -933,7 +933,16 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     target.score1 = first;
     target.score2 = second;
     if (options.boxScore) {
-      target.boxScore = options.boxScore;
+      // Derive per-player totals from quarters when present (keeps stats consistent).
+      const deriveEntry = (entry) => {
+        if (!entry || !Array.isArray(entry.quarters) || !entry.quarters.length) return entry;
+        const d = sumPlayerQuarters(entry.quarters);
+        return { ...entry, ...d, quarters: entry.quarters };
+      };
+      const box = { ...options.boxScore };
+      if (Array.isArray(box.team1)) box.team1 = box.team1.map(deriveEntry);
+      if (Array.isArray(box.team2)) box.team2 = box.team2.map(deriveEntry);
+      target.boxScore = box;
     } else {
       target.boxScore = {
         team1: buildBoxScore(team1, first),
