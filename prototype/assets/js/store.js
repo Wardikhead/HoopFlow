@@ -309,7 +309,11 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     if (![8, 16].includes(slots)) {
       throw new StoreError('VALIDATION', 'Slots must be 8 or 16.', 'slots');
     }
-    requireChoice(input.format || 'single-elimination', 'format', 'Format', ['single-elimination']);
+    const format = requireChoice(input.format || 'single-elimination', 'format', 'Format', [
+      'single-elimination',
+      'double-elimination',
+      'round-robin',
+    ]);
     const venue = requireText(input.venue, 'venue', 'Venue', 3);
     const courts = Array.isArray(input.courts)
       ? input.courts.map((court, index) => {
@@ -341,7 +345,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       id,
       name,
       division,
-      format: 'single-elimination',
+      format,
       slots,
       status: 'registration-open',
       startDate,
