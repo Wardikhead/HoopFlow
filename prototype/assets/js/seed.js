@@ -182,7 +182,7 @@ function makeMatch({
   id, round, roundLabel, bracketSlot, team1Id, team2Id,
   score1 = null, score2 = null, winnerId = null, status = 'scheduled',
   courtId = null, scheduledAt = null, nextMatchId = null, nextSlot = null,
-  isBye = false, correction = null, boxScore = null,
+  isBye = false, correction = null, boxScore = null, bracket = null,
 }) {
   return {
     id,
@@ -202,6 +202,7 @@ function makeMatch({
     nextSlot,
     isBye,
     correction,
+    bracket: bracket || null,
     boxScore: boxScore || { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
   };
 }

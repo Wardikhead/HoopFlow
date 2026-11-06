@@ -743,6 +743,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
           nextSlot: nextRound ? (slot % 2 === 1 ? 1 : 2) : null,
           isBye: false,
           correction: null,
+          bracket: null,
           boxScore: { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
         });
       }
