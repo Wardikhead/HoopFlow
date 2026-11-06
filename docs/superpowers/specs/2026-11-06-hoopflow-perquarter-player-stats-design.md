@@ -81,10 +81,10 @@ Extend each player entry in `match.boxScore.team1/team2`:
 - All existing tests pass; new tests for per-quarter summing pass.
 - `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- **UI density:** Per-player × per-quarter × 10 stats is a very wide table. Recommend a compact per-quarter points grid in the main table (Q1..OT columns) plus an expandable "full stats" toggle per player for the detailed stat line. Or full grid always visible. Which do you prefer? (I lean compact points grid + expandable full stats.)
-- Should per-quarter stats be **required** to publish, or always optional (totals suffice)? (Recommend: optional — totals suffice; per-quarter is bonus data.)
+- **UI density:** Compact per-quarter points grid (Q1..OT columns) in the main table per player, plus an expandable "full stats" toggle for the detailed per-quarter stat line. (Resolved: option 1.)
+- **Required or optional:** Per-quarter stats are **optional** — totals suffice; per-quarter is bonus data. (Resolved: option a.)
 
 ---
 
