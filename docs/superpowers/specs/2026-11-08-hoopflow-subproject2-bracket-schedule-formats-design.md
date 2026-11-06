@@ -91,11 +91,11 @@ Match gains (for RR):
 - All existing tests pass; new tests for DE/RR generation and manual editing pass.
 - `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- **DE grand final bracket reset:** include the "if losers champion wins, play a reset match" rule? (Recommend: yes, standard DE.)
-- **RR scheduling:** should RR matches be scheduled across courts/days like SE, or shown as a simple matchday list? (Recommend: reuse the existing schedule engine.)
-- **Manual reassignment after partial results:** block entirely, or allow reassigning only unplayed slots? (Recommend: block entirely when any result exists, consistent with existing lock.)
+- **DE grand final bracket reset:** yes — standard DE with bracket reset match if losers champion wins. (Resolved.)
+- **RR scheduling:** reuse the existing schedule engine (courts/days). (Resolved.)
+- **Manual reassignment after partial results:** block entirely when any result exists. (Resolved.)
 
 ---
 
