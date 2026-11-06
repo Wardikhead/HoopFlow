@@ -583,22 +583,29 @@ export function render({ store, ui, components, root, theme }) {
   }
 
   async function addOvertime() {
-    const q1 = currentQuarters(1);
-    const q2 = currentQuarters(2);
-    if (q1.length >= 9) {
+    if (quarters1.length >= 9) {
       ui.toast('Maximum of 5 overtime periods.', { tone: 'warning', title: 'Overtime limit' });
       return;
     }
-    q1.push(0);
-    q2.push(0);
+    // sync in-memory team quarters from current DOM first
+    const domQ1 = currentQuarters(1);
+    const domQ2 = currentQuarters(2);
+    quarters1 = domQ1;
+    quarters2 = domQ2;
+    quarters1.push(0);
+    quarters2.push(0);
     // extend per-player quarter arrays
     for (const entry of stats1) {
       if (!Array.isArray(entry.quarters)) entry.quarters = [];
-      entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      while (entry.quarters.length < quarters1.length) {
+        entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      }
     }
     for (const entry of stats2) {
       if (!Array.isArray(entry.quarters)) entry.quarters = [];
-      entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      while (entry.quarters.length < quarters2.length) {
+        entry.quarters.push({ fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0, pf: 0, points: 0 });
+      }
     }
     // re-render to show new OT tab + inputs
     draw();
@@ -619,8 +626,11 @@ export function render({ store, ui, components, root, theme }) {
       });
       if (!ok) return;
     }
-    q1.pop();
-    q2.pop();
+    // sync in-memory from DOM
+    quarters1 = [...q1];
+    quarters2 = [...q2];
+    quarters1.pop();
+    quarters2.pop();
     for (const entry of stats1) {
       if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
     }
@@ -628,7 +638,8 @@ export function render({ store, ui, components, root, theme }) {
       if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
     }
     // clamp activeQuarter if needed
-    if (activeQuarter >= q1.length) activeQuarter = q1.length - 1;
+    if (activeQuarter >= quarters1.length) activeQuarter = quarters1.length - 1;
+    if (activeQuarter < 0) activeQuarter = 0;
     draw();
   }
 
