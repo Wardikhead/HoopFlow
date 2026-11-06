@@ -1,7 +1,9 @@
 import { route } from '../routes.js';
 import { escapeHtml, formatDate, formatTime } from '../ui.js';
 import { guardRole } from '../guards.js';
-import { sortBoxScore } from '../stats.js';
+// Note: sortBoxScore is intentionally not used here. The in-game stats tables are
+// editable forms indexed by player position, so reordering rows would scramble the
+// input-to-player mapping. Sorting remains available on the read-only game-stats page.
 
 function normalizeQuarters(value) {
   const arr = Array.isArray(value) ? value : [];
@@ -203,7 +205,6 @@ export function render({ store, ui, components, root, theme }) {
       if (!section) return;
       const hide = side === 1 ? !show1 : !show2;
       section.hidden = hide;
-      section.style.display = hide ? 'none' : '';
     });
 
     const select = root.querySelector('[data-ingame-team-filter], [data-team-filter]');
@@ -739,5 +740,4 @@ export function render({ store, ui, components, root, theme }) {
 
   draw();
 
-  void sortBoxScore;
 }
