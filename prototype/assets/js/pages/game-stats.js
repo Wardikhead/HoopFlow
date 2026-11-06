@@ -170,16 +170,26 @@ export function render({ store, ui, components, root }) {
             <h2 class="hf-section-title hf-mb-0">Player stats</h2>
           </div>
           <div class="hf-filter-row" data-side-filters data-testid="stats-side-filters">
-            <button type="button" class="hf-chip hf-chip--primary" data-side="all" aria-pressed="true" data-testid="stats-side-all">Both teams</button>
-            ${team1 ? `<button type="button" class="hf-chip hf-chip--slate" data-side="team1" aria-pressed="false" data-testid="stats-side-team1">${escapeHtml(team1.shortName)}</button>` : ''}
-            ${team2 ? `<button type="button" class="hf-chip hf-chip--slate" data-side="team2" aria-pressed="false" data-testid="stats-side-team2">${escapeHtml(team2.shortName)}</button>` : ''}
+            <button type="button" class="hf-chip hf-chip--primary" data-side="all" aria-pressed="true" data-testid="stats-side-all">All</button>
+            ${team1 ? `<button type="button" class="hf-chip hf-chip--slate" data-side="team1" aria-pressed="false" data-testid="stats-side-team1">Team 1</button>` : ''}
+            ${team2 ? `<button type="button" class="hf-chip hf-chip--slate" data-side="team2" aria-pressed="false" data-testid="stats-side-team2">Team 2</button>` : ''}
           </div>
         </div>
 
         <div class="hf-field hf-mb-2">
           <label class="hf-label" for="statsSearch">Search player</label>
           <input class="hf-input" id="statsSearch" type="search" placeholder="Player name"
-                 value="${escapeHtml(searchTerm)}" data-testid="stats-player-search">
+                 value="${escapeHtml(searchTerm)}" data-testid="stats-player-search"
+                 data-player-search="all" data-stats-search>
+        </div>
+
+        <div class="hf-field hf-mb-2">
+          <label class="hf-label" for="statsTeamFilter">Team filter</label>
+          <select id="statsTeamFilter" class="hf-select" data-testid="stats-team-filter" data-team-filter data-stats-team-filter>
+            <option value="all" ${side === 'all' ? 'selected' : ''}>All</option>
+            <option value="team1" ${side === 'team1' ? 'selected' : ''}>Team 1</option>
+            <option value="team2" ${side === 'team2' ? 'selected' : ''}>Team 2</option>
+          </select>
         </div>
 
         <div id="statsBody" data-testid="stats-body"></div>
@@ -203,10 +213,19 @@ export function render({ store, ui, components, root }) {
 
     root.querySelectorAll('[data-side]').forEach((button) => {
       button.addEventListener('click', () => {
-        side = button.dataset.side;
+        side = normalizeTeamFilterValue(button.dataset.side);
         paintStats();
       });
     });
+
+    const teamFilterSelect = root.querySelector('[data-stats-team-filter], [data-team-filter]');
+    if (teamFilterSelect) {
+      teamFilterSelect.value = side === 'team1' ? 'team1' : side === 'team2' ? 'team2' : 'all';
+      teamFilterSelect.addEventListener('change', () => {
+        side = normalizeTeamFilterValue(teamFilterSelect.value);
+        paintStats();
+      });
+    }
 
     paintStats();
   }
@@ -214,6 +233,13 @@ export function render({ store, ui, components, root }) {
   function sortMark(key) {
     if (sortKey !== key) return '<i class="bi bi-arrow-down-up hf-muted" aria-hidden="true"></i>';
     return `<i class="bi bi-caret-${sortDir === 'asc' ? 'up' : 'down'}-fill" aria-hidden="true"></i>`;
+  }
+
+  function normalizeTeamFilterValue(value) {
+    const v = String(value || '').trim().toLowerCase();
+    if (v === '1' || v === 'team-1' || v === 'team1') return 'team1';
+    if (v === '2' || v === 'team-2' || v === 'team2') return 'team2';
+    return 'all';
   }
 
   function tableFor(team, sideKey) {
@@ -306,11 +332,16 @@ export function render({ store, ui, components, root }) {
     const team2 = current.team2Id ? store.select.team(current.team2Id) : null;
 
     root.querySelectorAll('[data-side]').forEach((button) => {
-      const active = button.dataset.side === side;
+      const active = normalizeTeamFilterValue(button.dataset.side) === side;
       button.classList.toggle('hf-chip--primary', active);
       button.classList.toggle('hf-chip--slate', !active);
       button.setAttribute('aria-pressed', String(active));
     });
+
+    const teamFilterSelect = root.querySelector('[data-stats-team-filter], [data-team-filter]');
+    if (teamFilterSelect) {
+      teamFilterSelect.value = side === 'team1' ? 'team1' : side === 'team2' ? 'team2' : 'all';
+    }
 
     const body = root.querySelector('#statsBody');
     if (!body) return;
