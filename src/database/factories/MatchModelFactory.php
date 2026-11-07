@@ -16,10 +16,12 @@ class MatchModelFactory extends Factory
 {
     public function definition(): array
     {
+        $id = DB::getDriverName() === 'pgsql'
+            ? DB::selectOne("select nextval('matches_id_seq') as v")->v
+            : ((MatchModel::max('id') ?? 0) + 1);
+
         return [
-            'id' => DB::getDriverName() === 'pgsql'
-                ? DB::selectOne("select nextval('matches_id_seq') as v")->v
-                : null,
+            'id' => $id,
             'bracket_id' => Bracket::factory(),
             'tournament_id' => fn (array $attributes) => Bracket::find($attributes['bracket_id'])->division->tournament_id ?? Tournament::factory(),
             'round_number' => 1,
@@ -35,3 +37,4 @@ class MatchModelFactory extends Factory
         ];
     }
 }
+PHP

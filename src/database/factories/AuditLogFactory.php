@@ -14,10 +14,12 @@ class AuditLogFactory extends Factory
 {
     public function definition(): array
     {
+        $id = DB::getDriverName() === 'pgsql'
+            ? DB::selectOne("select nextval('audit_logs_id_seq') as v")->v
+            : ((AuditLog::max('id') ?? 0) + 1);
+
         return [
-            'id' => DB::getDriverName() === 'pgsql'
-                ? DB::selectOne("select nextval('audit_logs_id_seq') as v")->v
-                : null,
+            'id' => $id,
             'organization_id' => null,
             'actor_user_id' => User::factory(),
             'action' => fake()->word(),
@@ -31,3 +33,4 @@ class AuditLogFactory extends Factory
         ];
     }
 }
+PHP
