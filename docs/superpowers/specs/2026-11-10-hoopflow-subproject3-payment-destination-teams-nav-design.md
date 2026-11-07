@@ -65,10 +65,10 @@ Validation in `createTournament`: both required, account 6–24 chars (letters, 
 - Teams page prompts for tournament selection when no `?tournament=` param.
 - All existing tests pass; `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- Should the payment destination also appear on the submissions/payments organizer pages? (Recommend: yes, in the payments ledger header.)
-- Should fans see payment destinations? (Recommend: no — payment details stay private to organizers/coaches.)
+- **Payment destination on organizer pages?** Yes — shown in the payments ledger header. Resolved.
+- **Fans see payment destinations?** No — payment details stay private to organizers/coaches. Resolved.
 
 ---
 
