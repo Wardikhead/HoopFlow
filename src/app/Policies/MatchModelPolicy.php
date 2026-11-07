@@ -11,4 +11,14 @@ class MatchModelPolicy extends BasePolicy
     {
         return $user->hasRole('organizer');
     }
+
+    public function correctScore(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function enterStats(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }

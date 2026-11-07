@@ -11,4 +11,14 @@ class RegistrationPolicy extends BasePolicy
     {
         return $user->hasRole('organizer');
     }
+
+    public function approve(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function reject(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }

@@ -13,4 +13,9 @@ class TeamPolicy extends BasePolicy
         return $user->hasRole('organizer')
             || ($model instanceof Team && $model->coach_user_id === $user->id);
     }
+
+    public function approve(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }

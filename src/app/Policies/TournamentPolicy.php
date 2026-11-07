@@ -13,4 +13,19 @@ class TournamentPolicy extends BasePolicy
         return $user->hasRole('organizer')
             || ($model instanceof Tournament && $model->created_by === $user->id);
     }
+
+    public function generateBracket(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function generateSchedule(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function publish(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }
