@@ -182,6 +182,7 @@ function makeMatch({
   id, round, roundLabel, bracketSlot, team1Id, team2Id,
   score1 = null, score2 = null, winnerId = null, status = 'scheduled',
   courtId = null, scheduledAt = null, nextMatchId = null, nextSlot = null,
+  loserMatchId = null, loserSlot = null,
   isBye = false, correction = null, boxScore = null, bracket = null,
 }) {
   return {
@@ -200,6 +201,8 @@ function makeMatch({
     scheduledAt,
     nextMatchId,
     nextSlot,
+    loserMatchId: loserMatchId || null,
+    loserSlot: loserSlot || null,
     isBye,
     correction,
     bracket: bracket || null,

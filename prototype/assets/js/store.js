@@ -992,18 +992,6 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       // loser of a bye doesn't drop (no loser)
     });
 
-    next.matches.push(...created);
-    const targetTournament = findTournament(next, tournament.id);
-    targetTournament.seedLocked = true;
-    if (targetTournament.status === 'draft') targetTournament.status = 'upcoming';
-    appendAudit(next, {
-      action: 'bracket.generate',
-      entityType: 'tournament',
-      entityId: tournament.id,
-      summary: `Generated a ${size}-slot double-elimination bracket`,
-      changes: { teams: approved.length, byes: wbR1.filter((match) => match.isBye).length, format: 'double-elimination' },
-    });
-    commit(next, 'bracket.generate');
     return { matches: created.length, byes: wbR1.filter((match) => match.isBye).length };
   }
   function generateBracket(tournamentId) {
@@ -1072,6 +1060,126 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     commit(next, 'bracket.generate');
     return { matches: created.length, byes };
   }
+
+  function regenerateBracket(tournamentId) {
+    requirePermission(state, 'bracket.generate');
+    const tournament = findTournament(state, tournamentId);
+    const hasResults = state.matches.some(
+      (match) =>
+        match.tournamentId === tournamentId &&
+        !match.isBye &&
+        (match.status === 'final' || match.status === 'forfeit')
+    );
+    if (hasResults) {
+      throw new StoreError('BRACKET_LOCKED', 'This bracket already has recorded results. Reset scores first.');
+    }
+    // wipe matches
+    const next = clone(state);
+    next.matches = next.matches.filter((match) => match.tournamentId !== tournamentId);
+    commit(next, 'bracket.wipe');
+    // regenerate
+    const result = generateBracket(tournamentId);
+    // audit
+    const next2 = clone(state);
+    appendAudit(next2, {
+      action: 'bracket.regenerate',
+      entityType: 'tournament',
+      entityId: tournamentId,
+      summary: `Regenerated the ${tournament.format} bracket`,
+      changes: { matches: result.matches },
+    });
+    commit(next2, 'bracket.regenerate');
+    return result;
+  }
+
+  function rescheduleMatch(matchId, options = {}) {
+    requirePermission(state, 'schedule.generate');
+    const match = findMatch(state, matchId);
+    const tournament = findTournament(state, match.tournamentId);
+    const courtId = options.courtId || match.courtId;
+    const scheduledAt = options.scheduledAt || match.scheduledAt;
+    if (courtId && !tournament.courts.some((c) => c.id === courtId)) {
+      throw new StoreError('VALIDATION', 'Unknown court.', 'courtId');
+    }
+    if (scheduledAt && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(scheduledAt)) {
+      throw new StoreError('VALIDATION', 'Invalid date/time.', 'scheduledAt');
+    }
+    // conflict check: no other match on same court overlapping
+    const slotMinutes = tournament.slotMinutes || 30;
+    const restMinutes = tournament.restMinutes || 15;
+    const newStart = new Date(scheduledAt).getTime();
+    const newEnd = newStart + (slotMinutes + restMinutes) * 60 * 1000;
+    const conflict = state.matches.some((m) => {
+      if (m.id === matchId || m.tournamentId !== match.tournamentId) return false;
+      if (m.courtId !== courtId || !m.scheduledAt) return false;
+      const otherStart = new Date(m.scheduledAt).getTime();
+      const otherEnd = otherStart + (slotMinutes + restMinutes) * 60 * 1000;
+      return newStart < otherEnd && otherStart < newEnd;
+    });
+    if (conflict) {
+      throw new StoreError('SCHEDULE_CONFLICT', 'This court is already booked at that time.', 'scheduledAt');
+    }
+    const next = clone(state);
+    const target = findMatch(next, matchId);
+    target.courtId = courtId;
+    target.scheduledAt = scheduledAt;
+    appendAudit(next, {
+      action: 'schedule.reschedule',
+      entityType: 'match',
+      entityId: matchId,
+      summary: `Rescheduled ${target.roundLabel} to ${courtId} at ${scheduledAt}`,
+      changes: { courtId, scheduledAt },
+    });
+    commit(next, 'schedule.reschedule');
+    return clone(target);
+  }
+
+  function setBracketSlots(tournamentId, assignments = []) {
+    requirePermission(state, 'bracket.generate');
+    const tournament = findTournament(state, tournamentId);
+    const hasResults = state.matches.some(
+      (match) =>
+        match.tournamentId === tournamentId &&
+        !match.isBye &&
+        (match.status === 'final' || match.status === 'forfeit')
+    );
+    if (hasResults) {
+      throw new StoreError('BRACKET_LOCKED', 'Cannot reassign slots after results are recorded.');
+    }
+    if (!Array.isArray(assignments)) {
+      throw new StoreError('VALIDATION', 'Assignments must be an array.', 'assignments');
+    }
+    const next = clone(state);
+    const teamIds = [];
+    for (const a of assignments) {
+      if (!a || !a.matchId) throw new StoreError('VALIDATION', 'Each assignment needs a matchId.', 'assignments');
+      const match = findMatch(next, a.matchId);
+      if (!match || match.tournamentId !== tournamentId) {
+        throw new StoreError('NOT_FOUND', 'Match not found in this tournament.', 'assignments');
+      }
+      if (a.slot !== 1 && a.slot !== 2) {
+        throw new StoreError('VALIDATION', 'Slot must be 1 or 2.', 'assignments');
+      }
+      if (a.teamId != null) {
+        if (teamIds.includes(a.teamId)) {
+          throw new StoreError('DUPLICATE_TEAM', 'A team cannot be assigned to two slots.', 'assignments');
+        }
+        teamIds.push(a.teamId);
+      }
+      if (a.slot === 1) match.team1Id = a.teamId || null;
+      else match.team2Id = a.teamId || null;
+    }
+    appendAudit(next, {
+      action: 'bracket.slots',
+      entityType: 'tournament',
+      entityId: tournamentId,
+      summary: `Manually reassigned bracket slots`,
+      changes: { assignments },
+    });
+    commit(next, 'bracket.slots');
+    return { updated: assignments.length };
+  }
+
   function planSchedule(tournamentId, options = {}) {
     const tournament = findTournament(state, tournamentId);
     const matches = state.matches.filter(
@@ -1649,6 +1757,9 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       submitPayment,
       markAnnouncementsSeen,
       generateBracket,
+      regenerateBracket,
+      rescheduleMatch,
+      setBracketSlots,
       generateSchedule,
       saveScore,
       correctScore,
