@@ -21,12 +21,12 @@ const PERMISSIONS = {
 
 const PAYMENT_METHODS = ['GCash', 'Maya', 'Bank transfer', 'Cash'];
 const ANNOUNCEMENT_CATEGORIES = ['schedule', 'venue', 'eligibility', 'general'];
-const ANNOUNCEMENT_AUDIENCES = ['all', 'coaches', 'organizers'];
+const ANNOUNCEMENT_AUDIENCES = ['all', 'coaches', 'organizers', 'fans', 'specific'];
 
 export const AUDIENCE_BY_ROLE = {
-  organizer: ['all', 'coaches', 'organizers'],
-  coach: ['all', 'coaches'],
-  fan: ['all'],
+  organizer: ['all', 'coaches', 'organizers', 'fans', 'specific'],
+  coach: ['all', 'coaches', 'fans'],
+  fan: ['all', 'fans'],
 };
 
 const ROUND_LABELS = {
@@ -531,6 +531,12 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       'Audience',
       ANNOUNCEMENT_AUDIENCES
     );
+    const targetUserIds = Array.isArray(input.targetUserIds)
+      ? input.targetUserIds.filter((id) => state.users.some((u) => u.id === id))
+      : [];
+    if (audience === 'specific' && !targetUserIds.length) {
+      throw new StoreError('VALIDATION', 'Select at least one target user.', 'targetUserIds');
+    }
     const next = clone(state);
     const id = nextId('announcement', next.announcements);
     const author = currentUser(state);
@@ -541,6 +547,7 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       body,
       category,
       audience,
+      targetUserIds,
       pinned: Boolean(input.pinned),
       author: author.organization || author.name,
       createdAt: isoNow(),
@@ -555,6 +562,45 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     });
     commit(next, 'announcement.publish');
     return id;
+  }
+
+  function deleteAnnouncement(id) {
+    requirePermission(state, 'announcement.publish');
+    const announcement = state.announcements.find((item) => item.id === id);
+    if (!announcement) {
+      throw new StoreError('NOT_FOUND', 'Announcement not found.', 'id');
+    }
+    const next = clone(state);
+    next.announcements = next.announcements.filter((item) => item.id !== id);
+    appendAudit(next, {
+      action: 'announcement.delete',
+      entityType: 'announcement',
+      entityId: id,
+      summary: `Deleted ${announcement.title}`,
+      changes: { title: announcement.title },
+    });
+    commit(next, 'announcement.delete');
+    return true;
+  }
+
+  function pinAnnouncement(id, pinned) {
+    requirePermission(state, 'announcement.publish');
+    const announcement = state.announcements.find((item) => item.id === id);
+    if (!announcement) {
+      throw new StoreError('NOT_FOUND', 'Announcement not found.', 'id');
+    }
+    const next = clone(state);
+    const target = next.announcements.find((item) => item.id === id);
+    target.pinned = Boolean(pinned);
+    appendAudit(next, {
+      action: pinned ? 'announcement.pin' : 'announcement.unpin',
+      entityType: 'announcement',
+      entityId: id,
+      summary: `${pinned ? 'Pinned' : 'Unpinned'} ${announcement.title}`,
+      changes: { pinned: Boolean(pinned) },
+    });
+    commit(next, pinned ? 'announcement.pin' : 'announcement.unpin');
+    return clone(target);
   }
 
   function assertRosterEditable(team) {
@@ -1505,11 +1551,17 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
 
   function notificationsFor() {
     const lastSeen = state.meta?.lastSeenAnnouncementsAt || '1970-01-01T00:00:00+08:00';
-    const allowed = AUDIENCE_BY_ROLE[getRole()] || ['all'];
+    const role = getRole();
+    const userId = currentUser(state)?.id;
+    const allowed = AUDIENCE_BY_ROLE[role] || ['all'];
     return clone(
-      state.announcements.filter(
-        (item) => allowed.includes(item.audience) && item.createdAt > lastSeen
-      )
+      state.announcements.filter((item) => {
+        if (item.createdAt <= lastSeen) return false;
+        if (item.audience === 'specific') {
+          return Array.isArray(item.targetUserIds) && item.targetUserIds.includes(userId);
+        }
+        return allowed.includes(item.audience);
+      })
     );
   }
 
@@ -1771,6 +1823,8 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       reviewTeam,
       verifyPayment,
       publishAnnouncement,
+      deleteAnnouncement,
+      pinAnnouncement,
       addPlayer,
       updatePlayer,
       removePlayer,
