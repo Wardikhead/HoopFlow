@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TournamentController;
+use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentsIndex;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/tournaments/create', TournamentCreate::class)->name('tournamentCreate')->middleware('role:organizer');
     Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournamentShow');
 
+    Route::get('/team-register', TeamRegister::class)->name('teamRegister')->middleware('role:coach');
+
     // Shell navigation destinations (full pages land in later phases).
     foreach ([
         'teams' => '/teams',
@@ -32,7 +35,6 @@ Route::middleware('auth')->group(function () {
         'payments' => '/payments',
         'audit' => '/audit',
         'myTeam' => '/my-team',
-        'teamRegister' => '/team-register',
         'gameStats' => '/game-stats',
         'profile' => '/profile',
     ] as $name => $uri) {
