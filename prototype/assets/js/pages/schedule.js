@@ -101,6 +101,7 @@ export function render({ store, ui, components, root }) {
           <a class="hf-btn" href="${route('tournamentShow', { id: tournamentId })}" data-testid="schedule-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
           <a class="hf-btn" href="${route('bracket', { id: tournamentId })}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
           <a class="hf-btn" href="${route('matches', { id: tournamentId })}" data-testid="schedule-matches"><i class="bi bi-list-ul"></i> Matchups</a>
+          ${role === 'organizer' && allMatches.some((m) => m.courtId) && !kpis.matchesPlayed ? `<button type="button" class="hf-btn" data-regenerate-schedule data-testid="schedule-regenerate">Regenerate schedule</button>` : ''}
         `,
       })}
 
@@ -397,6 +398,28 @@ export function render({ store, ui, components, root }) {
     const generate = event.target.closest('[data-generate-schedule]');
     if (generate) {
       openPreview(generate);
+      return;
+    }
+    const regenerate = event.target.closest('[data-regenerate-schedule]');
+    if (regenerate) {
+      ui.confirm({
+        title: 'Regenerate schedule?',
+        message: 'This wipes the current schedule and rebuilds. Recorded results will be lost.',
+        confirmLabel: 'Regenerate',
+        tone: 'danger',
+      }).then((ok) => {
+        if (!ok) return;
+        ui.setBusy(regenerate, true, 'Regenerating...');
+        try {
+          const count = store.actions.generateSchedule(tournamentId);
+          ui.setBusy(regenerate, false);
+          ui.toast(`${count} games scheduled.`, { tone: 'success', title: 'Schedule regenerated' });
+          draw();
+        } catch (error) {
+          ui.setBusy(regenerate, false);
+          ui.toast(error.message, { tone: 'danger', title: 'Could not regenerate' });
+        }
+      });
     }
   });
 

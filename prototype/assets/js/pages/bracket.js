@@ -32,12 +32,13 @@ export function render({ store, ui, components, root }) {
       eyebrow: `${tournament.division} · ${tournament.status}`,
       title: bracket.hasBracket ? 'Bracket' : 'Build the bracket',
       description: bracket.hasBracket
-        ? `${tournament.name} · ${bracket.rounds.length} rounds · winners advance automatically.`
-        : `${tournament.name} · ${approved.length} approved teams ready to seed into a ${tournament.slots}-slot single-elimination bracket.`,
+        ? `${tournament.name} · ${tournament.format} · ${bracket.rounds.length} rounds`
+        : `${tournament.name} · ${approved.length} approved teams ready to seed into a ${tournament.slots}-slot ${tournament.format} bracket.`,
       actions: `
         <a class="hf-btn" href="${route('tournamentShow', { id: tournamentId })}" data-testid="bracket-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
         <a class="hf-btn" href="${route('schedule', { id: tournamentId })}" data-testid="bracket-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
         <a class="hf-btn" href="${route('standings', { id: tournamentId })}" data-testid="bracket-standings"><i class="bi bi-bar-chart"></i> Standings</a>
+        ${role === 'organizer' && bracket.hasBracket && !kpis.matchesPlayed ? `<button type="button" class="hf-btn" data-regenerate-bracket data-testid="bracket-regenerate">Regenerate bracket</button>` : ''}
       `,
     });
 
@@ -118,18 +119,88 @@ export function render({ store, ui, components, root }) {
         <span>${canScore ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.'}</span>
       </div>
 
-      <div class="hf-bracket" data-testid="bracket-tree">
-        ${rounds
-          .map(
-            (round) => `
-              <div class="hf-bracket-round">
-                <div class="hf-bracket-round-title">${escapeHtml(round.label)} <span class="hf-small hf-muted">${round.matches.length}</span></div>
-                ${round.matches.map((match) => components.bracketMatch(match)).join('')}
+      ${
+        tournament.format === 'round-robin'
+          ? `<div class="hf-card hf-mb-3" data-testid="bracket-matchdays">
+              <h2 class="hf-section-title">Matchdays</h2>
+              <div class="hf-grid hf-grid--1">
+                ${rounds
+                  .map(
+                    (round) => `
+                      <div class="hf-card hf-card--flat hf-mb-2">
+                        <div class="hf-between hf-mb-1">
+                          <strong>${escapeHtml(round.label)}</strong>
+                          <span class="hf-small hf-muted">${round.matches.length} games</span>
+                        </div>
+                        <div class="hf-grid hf-grid--2">
+                          ${round.matches
+                            .map((match) => components.matchCard(match, { href: route('gameStats', { match: match.id }) }))
+                            .join('')}
+                        </div>
+                      </div>
+                    `
+                  )
+                  .join('')}
               </div>
-            `
-          )
-          .join('')}
-      </div>
+              <div class="hf-btn-row hf-mt-2">
+                <a class="hf-btn" href="${route('standings', { id: tournamentId })}" data-testid="bracket-rr-standings">Standings</a>
+              </div>
+            </div>`
+          : tournament.format === 'double-elimination'
+            ? `<div class="hf-bracket" data-testid="bracket-tree">
+                <div class="hf-bracket-round">
+                  <div class="hf-bracket-round-title">Winners bracket</div>
+                  ${rounds
+                    .filter((r) => r.round.startsWith('W'))
+                    .map(
+                      (round) => `
+                        <div class="hf-bracket-round">
+                          <div class="hf-bracket-round-title">${escapeHtml(round.label)} <span class="hf-small hf-muted">${round.matches.length}</span></div>
+                          ${round.matches.map((match) => components.bracketMatch(match)).join('')}
+                        </div>
+                      `
+                    )
+                    .join('')}
+                </div>
+                <div class="hf-bracket-round">
+                  <div class="hf-bracket-round-title">Losers bracket</div>
+                  ${rounds
+                    .filter((r) => r.round.startsWith('L'))
+                    .map(
+                      (round) => `
+                        <div class="hf-bracket-round">
+                          <div class="hf-bracket-round-title">${escapeHtml(round.label)} <span class="hf-small hf-muted">${round.matches.length}</span></div>
+                          ${round.matches.map((match) => components.bracketMatch(match)).join('')}
+                        </div>
+                      `
+                    )
+                    .join('')}
+                </div>
+                ${rounds
+                  .filter((r) => r.round === 'GF')
+                  .map(
+                    (round) => `
+                      <div class="hf-bracket-round">
+                        <div class="hf-bracket-round-title">Grand Final</div>
+                        ${round.matches.map((match) => components.bracketMatch(match)).join('')}
+                      </div>
+                    `
+                  )
+                  .join('')}
+              </div>`
+            : `<div class="hf-bracket" data-testid="bracket-tree">
+                ${rounds
+                  .map(
+                    (round) => `
+                      <div class="hf-bracket-round">
+                        <div class="hf-bracket-round-title">${escapeHtml(round.label)} <span class="hf-small hf-muted">${round.matches.length}</span></div>
+                        ${round.matches.map((match) => components.bracketMatch(match)).join('')}
+                      </div>
+                    `
+                  )
+                  .join('')}
+              </div>`
+      }
 
       <div class="hf-bracket-mobile" data-testid="bracket-mobile">
         <div class="hf-round-pager" data-round-pager>
@@ -161,6 +232,7 @@ export function render({ store, ui, components, root }) {
     `;
 
     attachBracket(rounds);
+    attachRegenerate();
     if (requestedMatch && !openedFromQuery) {
       openedFromQuery = true;
       openMatch(requestedMatch);
@@ -211,6 +283,29 @@ export function render({ store, ui, components, root }) {
           ui.toast(error.message, { tone: 'danger', title: 'Could not generate bracket' });
         }
       }, 450);
+    });
+  }
+
+  function attachRegenerate() {
+    const button = root.querySelector('[data-regenerate-bracket]');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+      const ok = await ui.confirm({
+        title: 'Regenerate bracket?',
+        message: 'This wipes the current bracket and rebuilds from approved teams. Recorded results will be lost.',
+        confirmLabel: 'Regenerate',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      ui.setBusy(button, true, 'Regenerating...');
+      try {
+        const result = store.actions.regenerateBracket(tournamentId);
+        ui.toast(`${result.matches} matches regenerated.`, { tone: 'success', title: 'Bracket regenerated' });
+        draw();
+      } catch (error) {
+        ui.setBusy(button, false);
+        ui.toast(error.message, { tone: 'danger', title: 'Could not regenerate' });
+      }
     });
   }
 

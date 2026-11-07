@@ -1508,9 +1508,22 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
 
   function bracketFor(tournamentId) {
     const matches = state.matches.filter((match) => match.tournamentId === tournamentId);
-    const rounds = [...new Set(matches.map((match) => match.round))].sort(
-      (a, b) => Number(b) - Number(a)
-    );
+    const tournament = state.tournaments.find((item) => item.id === tournamentId);
+    const format = tournament?.format || 'single-elimination';
+    let rounds = [...new Set(matches.map((match) => match.round))];
+    if (format === 'double-elimination') {
+      const order = (r) => {
+        if (/^W\d+$/.test(r)) return 0 * 100 + Number(r.slice(1));
+        if (/^L\d+$/.test(r)) return 1 * 100 + Number(r.slice(1));
+        if (r === 'GF' || r === 'GFR') return 2 * 100;
+        return 3 * 100;
+      };
+      rounds = rounds.sort((a, b) => order(a) - order(b));
+    } else if (format === 'round-robin') {
+      rounds = rounds.sort((a, b) => Number(a) - Number(b));
+    } else {
+      rounds = rounds.sort((a, b) => Number(b) - Number(a));
+    }
     const finalMatch = matches.find((match) => !match.nextMatchId) || null;
     const championId =
       finalMatch && (finalMatch.status === 'final' || finalMatch.status === 'forfeit')
