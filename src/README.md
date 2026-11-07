@@ -39,3 +39,16 @@ composer quality   # all three
 - No Tailwind. Bootstrap is compiled from `resources/css/app.scss`.
 - No domain logic in controllers or Livewire components.
 - Every page must work without an account unless it is explicitly staff-only.
+
+
+## Seeding
+
+Default seed is light (org, roles, one organizer). For full prototype demo data:
+
+`powershell
+$env:SEED_PROTOTYPE='true'; php artisan migrate:fresh --seed
+# or
+php artisan db:seed --class=PrototypeSeeder
+`
+
+

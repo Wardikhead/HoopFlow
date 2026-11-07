@@ -37,4 +37,3 @@ class MatchModelFactory extends Factory
         ];
     }
 }
-PHP

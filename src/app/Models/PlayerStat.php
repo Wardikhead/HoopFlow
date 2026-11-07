@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PlayerStat extends Model
 {
     public $incrementing = false;
+
     protected $keyType = 'int';
 
     protected static function booted(): void
@@ -22,6 +23,7 @@ class PlayerStat extends Model
             }
         });
     }
+
     /** @use HasFactory<Factory> */
     use HasFactory;
 
