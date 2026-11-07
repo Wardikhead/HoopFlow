@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
@@ -10,7 +11,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::view('/', 'pages.home')->name('home');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', fn () => view('pages.dashboard'))->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Shell navigation destinations (full pages land in later phases).
     foreach ([
