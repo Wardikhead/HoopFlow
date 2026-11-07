@@ -19,6 +19,17 @@ class MatchModel extends Model
     /** @use HasFactory<Factory> */
     use HasFactory;
 
+    // Transient routing metadata used while generating double-elimination brackets.
+    public ?int $nextMatchId = null;
+
+    public ?int $nextSlot = null;
+
+    public ?int $loserMatchId = null;
+
+    public ?int $loserSlot = null;
+
+    public bool $isBye = false;
+
     protected $table = 'matches';
 
     protected function casts(): array
