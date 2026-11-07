@@ -650,8 +650,6 @@ export function render({ store, ui, components, root, theme }) {
     for (const entry of stats1) {
       if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
     }
-      if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
-    }
     // clamp activeQuarter if needed
     if (activeQuarter >= quarters1.length) activeQuarter = quarters1.length - 1;
     if (activeQuarter < 0) activeQuarter = 0;
@@ -904,3 +902,4 @@ export function render({ store, ui, components, root, theme }) {
 
   draw();
 
+}
