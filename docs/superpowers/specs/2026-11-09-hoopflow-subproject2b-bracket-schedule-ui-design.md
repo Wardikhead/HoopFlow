@@ -62,11 +62,11 @@ The engine (Sub-project 2A) now supports DE/RR formats and regenerate/reschedule
 - Tournament show page shows format badge.
 - All existing tests pass; `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- **Manual manage save strategy:** per-change (immediate rescheduleMatch call) or batched (collect changes, save on "Save all")? (Recommend: per-change with debounce, simpler.)
-- **RR bracket view:** matchday grid (rows = matchdays, cols = courts) or list grouped by day? (Recommend: matchday grid, consistent with schedule page.)
-- **Edit slots UI:** dropdown per slot in a modal, or inline on the bracket tree? (Recommend: modal with a list of slots and team dropdowns.)
+- **Manual manage save strategy:** per-change (immediate rescheduleMatch call). Resolved.
+- **RR bracket view:** matchday grid. Resolved.
+- **Edit slots UI:** modal with dropdowns. Resolved.
 
 ---
 
