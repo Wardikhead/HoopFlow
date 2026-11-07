@@ -19,4 +19,6 @@ export const ANNOUNCEMENT_AUDIENCES = [
   { value: 'all', label: 'Everyone' },
   { value: 'coaches', label: 'Coaches' },
   { value: 'organizers', label: 'Organizers' },
+  { value: 'fans', label: 'Fans' },
+  { value: 'specific', label: 'Specific users' },
 ];

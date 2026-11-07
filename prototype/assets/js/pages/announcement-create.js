@@ -85,6 +85,22 @@ export function render({ store, ui, components, root }) {
                 ).join('')}
               </select>
             </div>
+            <div class="hf-field hf-field--full" id="announcementTargetUsers" hidden data-testid="announcement-target-users">
+              <label class="hf-label">Target users</label>
+              <div class="hf-card hf-card--flat" style="max-height: 180px; overflow: auto;">
+                ${store
+                  .getState()
+                  .users.map(
+                    (user) => `
+                      <label class="hf-flex hf-items-center hf-gap-2 hf-small" style="padding: 4px 0;">
+                        <input type="checkbox" value="${escapeHtml(user.id)}" data-target-user>
+                        <span>${escapeHtml(user.name)} <span class="hf-muted">(${escapeHtml(user.role)})</span></span>
+                      </label>
+                    `
+                  )
+                  .join('')}
+              </div>
+            </div>
             <label class="hf-check hf-field--full">
               <input type="checkbox" id="announcementPinned" data-testid="announcement-pinned">
               <span>
@@ -174,6 +190,14 @@ export function render({ store, ui, components, root }) {
     return valid;
   }
 
+  const targetUsersSection = root.querySelector('#announcementTargetUsers');
+  function updateTargetUsersVisibility() {
+    if (!targetUsersSection) return;
+    targetUsersSection.hidden = audienceSelect.value !== 'specific';
+  }
+  audienceSelect.addEventListener('change', updateTargetUsersVisibility);
+  updateTargetUsersVisibility();
+
   form.addEventListener('input', (event) => {
     if (event.target.matches('input, textarea, select')) ui.clearFieldError(event.target);
     paintPreview();
@@ -190,6 +214,10 @@ export function render({ store, ui, components, root }) {
       body: body.value.trim(),
       category: categorySelect.value,
       audience: audienceSelect.value,
+      targetUserIds:
+        audienceSelect.value === 'specific'
+          ? [...root.querySelectorAll('[data-target-user]:checked')].map((cb) => cb.value)
+          : [],
       pinned: pinned.checked,
     };
 
