@@ -219,3 +219,116 @@ test('notifications respect the announcement audience', () => {
   store.actions.setRole('coach');
   assert.equal(store.select.notifications().length, 4);
 });
+
+test('generateBracket supports double elimination', () => {
+  const seed = structuredClone(SEED);
+  const t = seed.tournaments.find((tournament) => tournament.id === 'tournament-3');
+  t.format = 'double-elimination';
+  t.slots = 8;
+  t.seedLocked = false;
+  seed.teams = seed.teams.map((team) =>
+    team.tournamentId === 'tournament-3' ? { ...team, status: 'approved' } : team
+  );
+  seed.matches = seed.matches.filter((match) => match.tournamentId !== 'tournament-3');
+  const store = createStore({ storage: memoryStorage(), seed });
+  const result = store.actions.generateBracket('tournament-3');
+  assert.equal(result.matches, 14);
+  const matches = store.select.matches('tournament-3');
+  assert.ok(matches.some((m) => m.bracket === 'winners'));
+  assert.ok(matches.some((m) => m.bracket === 'losers'));
+  assert.ok(matches.some((m) => m.bracket === 'grand-final'));
+  const gf = matches.find((m) => m.bracket === 'grand-final');
+  assert.ok(gf);
+  assert.equal(gf.nextMatchId, null);
+});
+
+test('generateBracket supports round robin', () => {
+  const seed = structuredClone(SEED);
+  const t = seed.tournaments.find((tournament) => tournament.id === 'tournament-3');
+  t.format = 'round-robin';
+  t.slots = 8;
+  t.seedLocked = false;
+  seed.teams = seed.teams.map((team) =>
+    team.tournamentId === 'tournament-3' ? { ...team, status: 'approved' } : team
+  );
+  seed.matches = seed.matches.filter((match) => match.tournamentId !== 'tournament-3');
+  const store = createStore({ storage: memoryStorage(), seed });
+  const result = store.actions.generateBracket('tournament-3');
+  assert.equal(result.matches, 28);
+  const matches = store.select.matches('tournament-3');
+  assert.ok(matches.every((m) => m.nextMatchId === null));
+  const rounds = [...new Set(matches.map((m) => m.round))];
+  assert.equal(rounds.length, 7);
+});
+
+test('regenerateBracket wipes and rebuilds', () => {
+  const store = makeStore();
+  store.actions.generateBracket('tournament-3');
+  const first = store.select.matches('tournament-3').length;
+  const regenerated = store.actions.regenerateBracket('tournament-3');
+  assert.equal(regenerated.matches, 7);
+  assert.equal(store.select.matches('tournament-3').length, 7);
+});
+
+test('regenerateBracket refuses when results exist', () => {
+  const store = makeStore();
+  store.actions.generateBracket('tournament-3');
+  const firstMatch = store.select.matches('tournament-3')[0];
+  store.actions.saveScore(firstMatch.id, 70, 60);
+  assert.throws(
+    () => store.actions.regenerateBracket('tournament-3'),
+    (error) => error.code === 'BRACKET_LOCKED'
+  );
+});
+
+test('rescheduleMatch updates court and time', () => {
+  const store = makeStore();
+  store.actions.generateBracket('tournament-3');
+  store.actions.generateSchedule('tournament-3');
+  const match = store.select.matches('tournament-3')[0];
+  const original = { courtId: match.courtId, scheduledAt: match.scheduledAt };
+  const updated = store.actions.rescheduleMatch(match.id, {
+    courtId: 'court-2',
+    scheduledAt: '2026-05-20T10:00:00+08:00',
+  });
+  assert.equal(updated.courtId, 'court-2');
+  assert.equal(updated.scheduledAt, '2026-05-20T10:00:00+08:00');
+});
+
+test('rescheduleMatch throws on conflict', () => {
+  const store = makeStore();
+  store.actions.generateBracket('tournament-3');
+  store.actions.generateSchedule('tournament-3');
+  const matches = store.select.matches('tournament-3').filter((m) => m.courtId && m.scheduledAt);
+  if (matches.length < 2) return;
+  const a = matches[0];
+  const b = matches[1];
+  assert.throws(
+    () => store.actions.rescheduleMatch(b.id, { courtId: a.courtId, scheduledAt: a.scheduledAt }),
+    (error) => error.code === 'SCHEDULE_CONFLICT'
+  );
+});
+
+test('setBracketSlots reassigns teams', () => {
+  const store = makeStore();
+  store.actions.generateBracket('tournament-3');
+  const match = store.select.matches('tournament-3').find((m) => m.round === '8' || m.round === 'W1');
+  if (!match) return;
+  const teams = store.select.teams('tournament-3').filter((t) => t.status === 'approved');
+  if (teams.length < 2) return;
+  store.actions.setBracketSlots('tournament-3', [
+    { matchId: match.id, slot: 1, teamId: teams[0].id },
+    { matchId: match.id, slot: 2, teamId: teams[1].id },
+  ]);
+  const updated = store.select.match(match.id);
+  assert.equal(updated.team1Id, teams[0].id);
+  assert.equal(updated.team2Id, teams[1].id);
+});
+
+test('setBracketSlots refuses when results exist', () => {
+  const store = makeStore();
+  assert.throws(
+    () => store.actions.setBracketSlots('tournament-1', []),
+    (error) => error.code === 'BRACKET_LOCKED'
+  );
+});
