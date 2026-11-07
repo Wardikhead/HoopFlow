@@ -505,6 +505,16 @@ export function render({ store, ui, components, root, theme }) {
         const side = input.dataset.pqSide;
         const playerIndex = input.dataset.pqPlayer;
         const qi = input.dataset.pqQ;
+        const stat = input.dataset.pqStat;
+        const value = toInt(input.value) ?? 0;
+        // update in-memory state
+        const statsArr = side === '1' ? stats1 : stats2;
+        const entry = statsArr[Number(playerIndex)];
+        if (entry) {
+          if (!Array.isArray(entry.quarters)) entry.quarters = [];
+          while (entry.quarters.length <= Number(qi)) entry.quarters.push({ fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,to:0,pf:0,points:0 });
+          entry.quarters[Number(qi)][stat] = value;
+        }
         // recompute that quarter's PTS
         const fgm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${qi}"][data-pq-stat="fgm"]`)?.value) || 0;
         const tpm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${playerIndex}"][data-pq-q="${qi}"][data-pq-stat="tpm"]`)?.value) || 0;
@@ -640,7 +650,6 @@ export function render({ store, ui, components, root, theme }) {
     for (const entry of stats1) {
       if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
     }
-    for (const entry of stats2) {
       if (Array.isArray(entry.quarters) && entry.quarters.length) entry.quarters.pop();
     }
     // clamp activeQuarter if needed
@@ -779,34 +788,6 @@ export function render({ store, ui, components, root, theme }) {
     bindQuarterInputs();
     bindPlayerQuarterInputs();
 
-    // Bind stat inputs for PTS
-    root.querySelectorAll('[data-pq-stat]').forEach((input) => {
-      if (input.dataset.bound === '1') return;
-      input.dataset.bound = '1';
-      input.addEventListener('input', () => {
-        const side = input.dataset.pqSide;
-        const index = input.dataset.pqPlayer;
-        const qi = input.dataset.pqQ;
-        const stat = input.dataset.pqStat;
-        const value = toInt(input.value) ?? 0;
-        const statsArr = side === '1' ? stats1 : stats2;
-        const entry = statsArr[Number(index)];
-        if (entry) {
-          if (!Array.isArray(entry.quarters)) entry.quarters = [];
-          while (entry.quarters.length <= Number(qi)) entry.quarters.push({ fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,to:0,pf:0,points:0 });
-          entry.quarters[Number(qi)][stat] = value;
-        }
-        const fgm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="fgm"]`)?.value) || 0;
-        const tpm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="tpm"]`)?.value) || 0;
-        const ftm = Number(root.querySelector(`[data-pq-side="${side}"][data-pq-player="${index}"][data-pq-q="${qi}"][data-pq-stat="ftm"]`)?.value) || 0;
-        const points = root.querySelector(`[data-pq-points="${side}-${index}-${qi}"]`);
-        if (points) points.textContent = String(fgm * 2 + tpm * 3 + ftm);
-        // re-sum this player's totals + team quarter + final
-        recomputePlayerTotals(side, index);
-        setError('');
-      });
-    });
-
     // Bind search inputs
     [1, 2].forEach((side) => {
       const input = root.querySelector(`[data-player-search="${side}"]`);
@@ -923,4 +904,3 @@ export function render({ store, ui, components, root, theme }) {
 
   draw();
 
-}
