@@ -4,11 +4,11 @@
 // Bootstrap's JavaScript is intentionally not imported (ADR-0001).
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
-const THEME_KEY = 'hoopflow_theme';
+const THEME_KEY = 'hf-theme';
 
 function applyTheme(value) {
     const next = value === 'dark' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', next);
+    document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next;
 }
 
@@ -24,20 +24,28 @@ const theme = {
 
 applyTheme(theme.get());
 
-function syncThemeIcons() {
+function syncTheme() {
     document.querySelectorAll('[data-theme-toggle] i').forEach((icon) => {
         icon.className = `bi bi-${theme.get() === 'dark' ? 'sun' : 'moon-stars'}`;
+    });
+    document.querySelectorAll('[data-demo-theme]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.demoTheme === theme.get()));
     });
 }
 
 document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-theme-toggle]');
-    if (!button) {
+    const toggle = event.target.closest('[data-theme-toggle]');
+    if (toggle) {
+        theme.set(theme.get() === 'dark' ? 'light' : 'dark');
+        syncTheme();
         return;
     }
-    theme.set(theme.get() === 'dark' ? 'light' : 'dark');
-    syncThemeIcons();
+    const demo = event.target.closest('[data-demo-theme]');
+    if (demo) {
+        theme.set(demo.dataset.demoTheme);
+        syncTheme();
+    }
 });
 
-syncThemeIcons();
-document.addEventListener('hf:theme-changed', syncThemeIcons);
+syncTheme();
+document.addEventListener('hf:theme-changed', syncTheme);
