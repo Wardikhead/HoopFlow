@@ -6,6 +6,7 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TournamentController;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\BracketShow;
+use App\Livewire\Organizer\ScheduleShow;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentsIndex;
@@ -31,8 +32,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/bracket', BracketShow::class)->name('bracket');
 
+    Route::get('/schedule', ScheduleShow::class)->name('schedule');
+
     foreach ([
-        'schedule' => '/schedule',
         'standings' => '/standings',
         'announcements' => '/announcements',
         'submissions' => '/submissions',
