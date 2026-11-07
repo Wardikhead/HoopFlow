@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['bracket_id', 'tournament_id', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason'])]
 class MatchModel extends Model
 {
+    public $incrementing = false;
+    protected $keyType = 'int';
     /** @use HasFactory<Factory> */
     use HasFactory;
 

@@ -11,6 +11,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['match_id', 'player_id', 'team_id', 'points', 'assists', 'rebounds', 'steals', 'blocks', 'fouls'])]
 class PlayerStat extends Model
 {
+    public $incrementing = false;
+    protected $keyType = 'int';
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (static::max('id') ?? 0) + 1;
+            }
+        });
+    }
     /** @use HasFactory<Factory> */
     use HasFactory;
 
