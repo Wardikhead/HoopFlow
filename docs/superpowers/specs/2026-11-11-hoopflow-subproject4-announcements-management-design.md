@@ -67,10 +67,10 @@ An announcement is visible to the current user if:
 - Fans see fan-targeted and all announcements.
 - All existing tests pass; `node --test` green; static sweeps clean.
 
-## Open questions
+## Open questions (resolved)
 
-- Should delete be soft (mark deleted) or hard (remove)? (Recommend: hard remove, consistent with prototype simplicity.)
-- Should pin/unpin be available from the card (quick action) or only the modal? (Recommend: modal only, to keep cards clean.)
+- **Delete soft or hard?** Hard remove. Resolved.
+- **Pin/unpin from card or modal only?** Modal only. Resolved.
 
 ---
 
