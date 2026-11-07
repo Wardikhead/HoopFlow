@@ -25,11 +25,27 @@ class Team extends Model
     }
 
     /**
+     * @return HasMany<Registration, $this>
+     */
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(Registration::class);
+    }
+
+    /**
+     * @return HasMany<TeamMembership, $this>
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(TeamMembership::class);
+    }
+
+    /**
      * @return HasMany<TeamMembership, $this>
      */
     public function teamMemberships(): HasMany
     {
-        return $this->hasMany(TeamMembership::class);
+        return $this->memberships();
     }
 
     /**
@@ -38,14 +54,6 @@ class Team extends Model
     public function players(): HasMany
     {
         return $this->hasMany(Player::class);
-    }
-
-    /**
-     * @return HasMany<Registration, $this>
-     */
-    public function registrations(): HasMany
-    {
-        return $this->hasMany(Registration::class);
     }
 
     /**
