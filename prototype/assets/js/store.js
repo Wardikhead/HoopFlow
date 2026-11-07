@@ -314,6 +314,11 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       'double-elimination',
       'round-robin',
     ]);
+    const paymentMethod = requireChoice(input.paymentMethod || 'GCash', 'paymentMethod', 'Payment method', PAYMENT_METHODS);
+    const paymentAccount = requireText(input.paymentAccount, 'paymentAccount', 'Payment account', 6);
+    if (paymentAccount.length > 24) {
+      throw new StoreError('VALIDATION', 'Payment account must be 24 characters or fewer.', 'paymentAccount');
+    }
     const venue = requireText(input.venue, 'venue', 'Venue', 3);
     const courts = Array.isArray(input.courts)
       ? input.courts.map((court, index) => {
@@ -347,6 +352,8 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       division,
       format,
       slots,
+      paymentMethod,
+      paymentAccount,
       status: 'registration-open',
       startDate,
       endDate,

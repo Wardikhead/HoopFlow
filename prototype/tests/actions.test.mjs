@@ -71,6 +71,8 @@ test('organizer creates a tournament and writes audit', () => {
     venue: 'Navotas Sports Complex',
     slots: 8,
     format: 'single-elimination',
+    paymentMethod: 'GCash',
+    paymentAccount: '09489666136',
     courts: ['Court A', 'Court B'],
     slotMinutes: 25,
     restMinutes: 10,
