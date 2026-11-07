@@ -678,74 +678,57 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
     commit(next, 'announcements.seen');
   }
 
-  function generateBracket(tournamentId) {
-    requirePermission(state, 'bracket.generate');
-    const tournament = findTournament(state, tournamentId);
-    const approved = state.teams.filter(
-      (team) => team.tournamentId === tournamentId && team.status === 'approved'
-    );
-    if (approved.length < tournament.slots / 2) {
-      throw new StoreError(
-        'NOT_ENOUGH_TEAMS',
-        `At least ${tournament.slots / 2} approved teams are required for a ${tournament.slots}-slot bracket.`,
-        'teams'
-      );
-    }
-    if (approved.length < 2) {
-      throw new StoreError('NOT_ENOUGH_TEAMS', 'At least two approved teams are required.');
-    }
-    if (approved.length > tournament.slots) {
-      throw new StoreError('TOO_MANY_TEAMS', 'There are more approved teams than bracket slots.');
-    }
-    const hasResults = state.matches.some(
-      (match) =>
-        match.tournamentId === tournamentId &&
-        !match.isBye &&
-        (match.status === 'final' || match.status === 'forfeit')
-    );
-    if (hasResults) {
-      throw new StoreError('BRACKET_LOCKED', 'This bracket already has recorded results.');
-    }
+  function createMatch(tournament, round, roundLabel, bracketSlot, bracket, nextMatchId, nextSlot) {
+    return {
+      id: `${tournament.id}-${round}-${bracketSlot}`,
+      tournamentId: tournament.id,
+      round,
+      roundLabel,
+      bracketSlot,
+      team1Id: null,
+      team2Id: null,
+      score1: null,
+      score2: null,
+      winnerId: null,
+      status: 'scheduled',
+      courtId: null,
+      scheduledAt: null,
+      nextMatchId: nextMatchId || null,
+      nextSlot: nextSlot || null,
+      loserMatchId: null,
+      loserSlot: null,
+      isBye: false,
+      correction: null,
+      bracket: bracket || null,
+      boxScore: { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
+    };
+  }
+
+  function generateSingleElimination(tournament, approved, next, created) {
     const size = tournament.slots;
-    if (![2, 4, 8, 16, 32].includes(size)) {
-      throw new StoreError('VALIDATION', 'Bracket size must be 8 or 16.', 'slots');
-    }
     const ordered = [...approved].sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999));
     const orderedSlots = seedOrder(size).map((seedNumber) => ordered[seedNumber - 1] || null);
-    const next = clone(state);
-    next.matches = next.matches.filter((match) => match.tournamentId !== tournamentId);
     const rounds = [];
     for (let roundSize = size; roundSize >= 2; roundSize /= 2) {
       rounds.push({ round: String(roundSize), roundSize });
     }
-    const created = [];
     const byRound = new Map();
     rounds.forEach(({ round, roundSize }, roundIndex) => {
       const nextRound = rounds[roundIndex + 1];
       const count = roundSize / 2;
       const roundMatches = [];
-      for (let slot = 1; slot <= count; slot += 1) {
-        roundMatches.push({
-          id: `${tournamentId}-${round}-${slot}`,
-          tournamentId,
-          round,
-          roundLabel: ROUND_LABELS[roundSize],
-          bracketSlot: slot,
-          team1Id: null,
-          team2Id: null,
-          score1: null,
-          score2: null,
-          winnerId: null,
-          status: 'scheduled',
-          courtId: null,
-          scheduledAt: null,
-          nextMatchId: nextRound ? `${tournamentId}-${nextRound.round}-${Math.ceil(slot / 2)}` : null,
-          nextSlot: nextRound ? (slot % 2 === 1 ? 1 : 2) : null,
-          isBye: false,
-          correction: null,
-          bracket: null,
-          boxScore: { team1: [], team2: [], quarters: { team1: [0, 0, 0, 0], team2: [0, 0, 0, 0] } },
-        });
+      for (let slot = 1; slot <= count; slot++) {
+        roundMatches.push(
+          createMatch(
+            tournament,
+            round,
+            ROUND_LABELS[roundSize],
+            slot,
+            null,
+            nextRound ? `${tournament.id}-${nextRound.round}-${Math.ceil(slot / 2)}` : null,
+            nextRound ? (slot % 2 === 1 ? 1 : 2) : null
+          )
+        );
       }
       byRound.set(round, roundMatches);
       created.push(...roundMatches);
@@ -773,6 +756,308 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       if (match.nextSlot === 1) nextMatch.team1Id = match.winnerId;
       else nextMatch.team2Id = match.winnerId;
     });
+    return {
+      byes: firstRound.filter((match) => match.isBye).length,
+    };
+  }
+
+  function generateRoundRobin(tournament, approved, next, created) {
+    const teams = [...approved].sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999));
+    // circle method
+    const arr = [...teams];
+    if (arr.length % 2 !== 0) arr.push(null);
+    const n = arr.length;
+    const rounds = [];
+    for (let r = 0; r < n - 1; r++) {
+      const round = [];
+      for (let i = 0; i < n / 2; i++) {
+        const a = arr[i];
+        const b = arr[n - 1 - i];
+        round.push([a, b]);
+      }
+      rounds.push(round);
+      const last = arr.pop();
+      arr.splice(1, 0, last);
+    }
+    rounds.forEach((round, ri) => {
+      const roundNum = ri + 1;
+      const roundMatches = [];
+      round.forEach((pair, slot) => {
+        const [a, b] = pair;
+        const m = createMatch(
+          tournament,
+          String(roundNum),
+          `Matchday ${roundNum}`,
+          slot + 1,
+          null,
+          null,
+          null
+        );
+        m.team1Id = a ? a.id : null;
+        m.team2Id = b ? b.id : null;
+        if (m.team1Id && !m.team2Id) {
+          m.isBye = true;
+          m.status = 'final';
+          m.winnerId = m.team1Id;
+        }
+        if (!m.team1Id && m.team2Id) {
+          m.isBye = true;
+          m.status = 'final';
+          m.winnerId = m.team2Id;
+        }
+        roundMatches.push(m);
+        created.push(m);
+      });
+    });
+    return { byes: 0 };
+  }
+
+  function generateDoubleElimination(tournament, approved, next, created) {
+    const size = tournament.slots;
+    if (size < 4) {
+      throw new StoreError('VALIDATION', 'Double elimination requires at least 4 slots.', 'slots');
+    }
+    const ordered = [...approved].sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999));
+    const orderedSlots = seedOrder(size).map((seedNumber) => ordered[seedNumber - 1] || null);
+
+    const wbRounds = []; // array of arrays of WB matches
+    // WB Round 1
+    const wbR1 = [];
+    for (let slot = 1; slot <= size / 2; slot++) {
+      wbR1.push(createMatch(tournament, `W1`, 'Winners Round 1', slot, 'winners', null, null));
+    }
+    orderedSlots.forEach((team, index) => {
+      const match = wbR1[Math.floor(index / 2)];
+      if (index % 2 === 0) match.team1Id = team ? team.id : null;
+      else match.team2Id = team ? team.id : null;
+    });
+    wbR1.forEach((match) => {
+      if (match.team1Id && !match.team2Id) { match.isBye = true; match.status = 'final'; match.winnerId = match.team1Id; }
+      if (!match.team1Id && match.team2Id) { match.isBye = true; match.status = 'final'; match.winnerId = match.team2Id; }
+      if (!match.winnerId) return;
+      const nextMatch = created.find((item) => item.id === match.nextMatchId);
+      if (nextMatch) {
+        if (match.nextSlot === 1) nextMatch.team1Id = match.winnerId;
+        else nextMatch.team2Id = match.winnerId;
+      }
+      // bye has no loser, so no loser routing
+    });
+    wbRounds.push(wbR1);
+    created.push(...wbR1);
+
+    // Additional WB rounds
+    let wbRoundSize = size / 2;
+    let wbRoundNum = 2;
+    while (wbRoundSize >= 2) {
+      const count = wbRoundSize / 2;
+      const round = [];
+      for (let slot = 1; slot <= count; slot++) {
+        round.push(createMatch(tournament, `W${wbRoundNum}`, `Winners Round ${wbRoundNum}`, slot, 'winners', null, null));
+      }
+      const prevRound = wbRounds[wbRounds.length - 1];
+      prevRound.forEach((m, idx) => {
+        const nextSlot = Math.floor(idx / 2) + 1;
+        const nextMatch = round[nextSlot - 1];
+        if (nextMatch) { m.nextMatchId = nextMatch.id; m.nextSlot = (idx % 2 === 0) ? 1 : 2; }
+      });
+      wbRounds.push(round);
+      created.push(...round);
+      wbRoundSize /= 2;
+      wbRoundNum += 1;
+    }
+    const wbFinal = wbRounds[wbRounds.length - 1][0];
+    const wbSemi = wbRounds.length >= 2 ? wbRounds[wbRounds.length - 2] : null;
+
+    // Losers bracket
+    const lbRounds = [];
+    // LB R1: losers of WB R1, paired
+    const lbR1Count = Math.max(1, Math.floor(wbRounds[0].length / 2));
+    const lbR1 = [];
+    for (let slot = 1; slot <= lbR1Count; slot++) {
+      lbR1.push(createMatch(tournament, 'L1', 'Losers Round 1', slot, 'losers', null, null));
+    }
+    // Route WB R1 losers to LB R1
+    wbRounds[0].forEach((m, idx) => {
+      const lbMatch = lbR1[Math.floor(idx / 2)];
+      if (lbMatch) {
+        m.loserMatchId = lbMatch.id;
+        m.loserSlot = (idx % 2 === 0) ? 1 : 2;
+      }
+    });
+    lbRounds.push(lbR1);
+    created.push(...lbR1);
+
+    // LB R2: LB R1 winners + WB semi losers (if WB has >= 2 rounds)
+    if (wbRounds.length >= 2) {
+      const lbR2Count = lbR1.length;
+      const lbR2 = [];
+      for (let slot = 1; slot <= lbR2Count; slot++) {
+        lbR2.push(createMatch(tournament, 'L2', 'Losers Round 2', slot, 'losers', null, null));
+      }
+      // LB R1 winners → LB R2
+      lbR1.forEach((m, idx) => {
+        const lbMatch = lbR2[Math.floor(idx / 2)] || lbR2[idx];
+        if (lbMatch) { m.nextMatchId = lbMatch.id; m.nextSlot = (idx % 2 === 0) ? 1 : 2; }
+      });
+      // WB semi losers → LB R2 (each WB semi match loser goes to corresponding LB R2 match)
+      if (wbSemi) {
+        wbSemi.forEach((m, idx) => {
+          const lbMatch = lbR2[idx % lbR2.length];
+          if (lbMatch && !m.loserMatchId) {
+            m.loserMatchId = lbMatch.id;
+            m.loserSlot = lbMatch.team1Id ? 2 : 1;
+          }
+        });
+      }
+      lbRounds.push(lbR2);
+      created.push(...lbR2);
+
+      // LB R3: consolidate LB R2 winners (if more than 1 match)
+      if (lbR2.length > 1) {
+        const lbR3Count = Math.max(1, Math.floor(lbR2.length / 2));
+        const lbR3 = [];
+        for (let slot = 1; slot <= lbR3Count; slot++) {
+          lbR3.push(createMatch(tournament, 'L3', 'Losers Round 3', slot, 'losers', null, null));
+        }
+        lbR2.forEach((m, idx) => {
+          const lbMatch = lbR3[Math.floor(idx / 2)];
+          if (lbMatch) { m.nextMatchId = lbMatch.id; m.nextSlot = (idx % 2 === 0) ? 1 : 2; }
+        });
+        lbRounds.push(lbR3);
+        created.push(...lbR3);
+
+        // LB R4: LB R3 winners + WB final loser (if WB has >= 3 rounds)
+        if (wbRounds.length >= 3) {
+          const lbR4Count = lbR3.length;
+          const lbR4 = [];
+          for (let slot = 1; slot <= lbR4Count; slot++) {
+            lbR4.push(createMatch(tournament, 'L4', 'Losers Round 4', slot, 'losers', null, null));
+          }
+          lbR3.forEach((m, idx) => {
+            const lbMatch = lbR4[idx % lbR4.length];
+            if (lbMatch) { m.nextMatchId = lbMatch.id; m.nextSlot = (idx % 2 === 0) ? 1 : 2; }
+          });
+          // WB final loser → LB R4
+          if (wbFinal) {
+            wbFinal.loserMatchId = lbR4[0]?.id || null;
+            wbFinal.loserSlot = 1;
+          }
+          lbRounds.push(lbR4);
+          created.push(...lbR4);
+
+          // LB Final: consolidate
+          if (lbR4.length > 1) {
+            const lbFinalCount = Math.max(1, Math.floor(lbR4.length / 2));
+            const lbFinal = [];
+            for (let slot = 1; slot <= lbFinalCount; slot++) {
+              lbFinal.push(createMatch(tournament, 'LF', 'Losers Final', slot, 'losers', null, null));
+            }
+            lbR4.forEach((m, idx) => {
+              const lbMatch = lbFinal[Math.floor(idx / 2)];
+              if (lbMatch) { m.nextMatchId = lbMatch.id; m.nextSlot = (idx % 2 === 0) ? 1 : 2; }
+            });
+            lbRounds.push(lbFinal);
+            created.push(...lbFinal);
+          }
+        }
+      }
+    }
+
+    const lbChampionMatch = lbRounds.length ? lbRounds[lbRounds.length - 1][0] : null;
+
+    // Grand final
+    const gf = createMatch(tournament, 'GF', 'Grand Final', 1, 'grand-final', null, null);
+    created.push(gf);
+    if (wbFinal) { wbFinal.nextMatchId = gf.id; wbFinal.nextSlot = 1; }
+    if (lbChampionMatch) { lbChampionMatch.nextMatchId = gf.id; lbChampionMatch.nextSlot = 2; }
+    // WB final loser → LB (if not already routed)
+    if (wbFinal && !wbFinal.loserMatchId && lbRounds.length) {
+      const lastLb = lbRounds[lbRounds.length - 1];
+      if (lastLb && lastLb[0]) {
+        wbFinal.loserMatchId = lastLb[0].id;
+        wbFinal.loserSlot = 2;
+      }
+    }
+
+    // Grand final is the final match (no reset match in prototype v1).
+    gf.loserMatchId = null;
+
+    // Handle byes in WB R1
+    wbR1.forEach((match) => {
+      if (!match.winnerId) return;
+      const nextMatch = created.find((item) => item.id === match.nextMatchId);
+      if (!nextMatch) return;
+      if (match.nextSlot === 1) nextMatch.team1Id = match.winnerId;
+      else nextMatch.team2Id = match.winnerId;
+      // loser of a bye doesn't drop (no loser)
+    });
+
+    next.matches.push(...created);
+    const targetTournament = findTournament(next, tournament.id);
+    targetTournament.seedLocked = true;
+    if (targetTournament.status === 'draft') targetTournament.status = 'upcoming';
+    appendAudit(next, {
+      action: 'bracket.generate',
+      entityType: 'tournament',
+      entityId: tournament.id,
+      summary: `Generated a ${size}-slot double-elimination bracket`,
+      changes: { teams: approved.length, byes: wbR1.filter((match) => match.isBye).length, format: 'double-elimination' },
+    });
+    commit(next, 'bracket.generate');
+    return { matches: created.length, byes: wbR1.filter((match) => match.isBye).length };
+  }
+  function generateBracket(tournamentId) {
+    requirePermission(state, 'bracket.generate');
+    const tournament = findTournament(state, tournamentId);
+    const approved = state.teams.filter(
+      (team) => team.tournamentId === tournamentId && team.status === 'approved'
+    );
+    if (approved.length < 2) {
+      throw new StoreError('NOT_ENOUGH_TEAMS', 'At least two approved teams are required.');
+    }
+    if (approved.length > tournament.slots) {
+      throw new StoreError('TOO_MANY_TEAMS', 'There are more approved teams than bracket slots.');
+    }
+    const hasResults = state.matches.some(
+      (match) =>
+        match.tournamentId === tournamentId &&
+        !match.isBye &&
+        (match.status === 'final' || match.status === 'forfeit')
+    );
+    if (hasResults) {
+      throw new StoreError('BRACKET_LOCKED', 'This bracket already has recorded results.');
+    }
+    const format = tournament.format || 'single-elimination';
+    const size = tournament.slots;
+    if (format === 'single-elimination' || format === 'double-elimination') {
+      if (![2, 4, 8, 16, 32].includes(size)) {
+        throw new StoreError('VALIDATION', 'Bracket size must be 2, 4, 8, 16, or 32.', 'slots');
+      }
+      if (approved.length < size / 2) {
+        throw new StoreError('NOT_ENOUGH_TEAMS', `At least ${size / 2} approved teams are required for a ${size}-slot bracket.`, 'teams');
+      }
+    } else if (format === 'round-robin') {
+      if (size < 2 || size > 16) {
+        throw new StoreError('VALIDATION', 'Round robin requires 2 to 16 teams.', 'slots');
+      }
+      if (approved.length < 2) {
+        throw new StoreError('NOT_ENOUGH_TEAMS', 'At least two approved teams are required.');
+      }
+    }
+    const next = clone(state);
+    next.matches = next.matches.filter((match) => match.tournamentId !== tournamentId);
+    const created = [];
+    let byes = 0;
+    if (format === 'single-elimination') {
+      const r = generateSingleElimination(tournament, approved, next, created);
+      byes = r.byes;
+    } else if (format === 'double-elimination') {
+      const r = generateDoubleElimination(tournament, approved, next, created);
+      byes = r.byes;
+    } else if (format === 'round-robin') {
+      const r = generateRoundRobin(tournament, approved, next, created);
+      byes = r.byes;
+    }
     next.matches.push(...created);
     const targetTournament = findTournament(next, tournamentId);
     targetTournament.seedLocked = true;
@@ -781,16 +1066,12 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
       action: 'bracket.generate',
       entityType: 'tournament',
       entityId: tournamentId,
-      summary: `Generated a ${size}-slot single-elimination bracket`,
-      changes: { teams: approved.length, byes: firstRound.filter((match) => match.isBye).length },
+      summary: `Generated a ${size}-slot ${format} bracket`,
+      changes: { teams: approved.length, byes, format },
     });
     commit(next, 'bracket.generate');
-    return {
-      matches: created.length,
-      byes: firstRound.filter((match) => match.isBye).length,
-    };
+    return { matches: created.length, byes };
   }
-
   function planSchedule(tournamentId, options = {}) {
     const tournament = findTournament(state, tournamentId);
     const matches = state.matches.filter(
@@ -891,14 +1172,26 @@ export function createStore({ storage = globalThis.localStorage, seed = SEED } =
   }
 
   function placeWinner(next, match, winnerId) {
-    if (!match.nextMatchId) return;
-    const nextMatch = next.matches.find((item) => item.id === match.nextMatchId);
-    if (!nextMatch) return;
-    if (nextMatch.status === 'final' || nextMatch.status === 'forfeit') {
-      throw new StoreError('DOWNSTREAM_LOCKED', 'The next-round match already has a result.');
+    // winner advances
+    if (match.nextMatchId) {
+      const nextMatch = next.matches.find((item) => item.id === match.nextMatchId);
+      if (nextMatch && nextMatch.status !== 'final' && nextMatch.status !== 'forfeit') {
+        if (match.nextSlot === 1) nextMatch.team1Id = winnerId;
+        else nextMatch.team2Id = winnerId;
+      }
     }
-    if (match.nextSlot === 1) nextMatch.team1Id = winnerId;
-    else nextMatch.team2Id = winnerId;
+    // DE: loser drops to losers bracket
+    if (match.loserMatchId) {
+      const loserId = match.team1Id === winnerId ? match.team2Id : match.team1Id;
+      if (loserId) {
+        const loserMatch = next.matches.find((item) => item.id === match.loserMatchId);
+        if (loserMatch && loserMatch.status !== 'final' && loserMatch.status !== 'forfeit') {
+          if (match.loserSlot === 1) loserMatch.team1Id = loserId;
+          else loserMatch.team2Id = loserId;
+        }
+      }
+    }
+    // Grand final is the final match; no reset match in prototype v1.
   }
 
   function saveScore(matchId, score1, score2, options = {}) {
