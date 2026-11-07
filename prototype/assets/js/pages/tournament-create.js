@@ -1,7 +1,7 @@
 import { route } from '../routes.js';
 import { escapeHtml, formatDate, formatMoney } from '../ui.js';
 import { guardRole } from '../guards.js';
-import { DIVISIONS } from '../options.js';
+import { DIVISIONS, PAYMENT_METHODS } from '../options.js';
 
 const STEPS = ['Basics', 'Format & courts', 'Review'];
 
@@ -114,6 +114,21 @@ export function render({ store, ui, components, root }) {
             <label class="hf-label" for="createFee">Entry fee (PHP)</label>
             <input class="hf-input" id="createFee" name="fee" type="number" min="0" step="100" value="1500"
                    data-testid="create-fee">
+          </div>
+
+          <div class="hf-field">
+            <label class="hf-label" for="createPaymentMethod">Payment method</label>
+            <select class="hf-select" id="createPaymentMethod" name="paymentMethod" data-testid="create-payment-method">
+              <option value="GCash">GCash</option>
+              <option value="Maya">Maya</option>
+              <option value="Bank transfer">Bank transfer</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div class="hf-field">
+            <label class="hf-label" for="createPaymentAccount">Payment account</label>
+            <input class="hf-input" id="createPaymentAccount" name="paymentAccount" value="09489666136"
+                   placeholder="09489666136" data-testid="create-payment-account">
           </div>
 
           <div class="hf-field hf-field--full">
@@ -295,6 +310,20 @@ export function render({ store, ui, components, root }) {
       ui.setFieldError(input('fee'), 'Fee must be zero or more.');
       ok = false;
     }
+    const paymentMethod = input('paymentMethod')?.value;
+    if (!PAYMENT_METHODS.includes(paymentMethod)) {
+      ui.setFieldError(input('paymentMethod'), 'Choose a payment method.');
+      ok = false;
+    }
+    const paymentAccount = String(input('paymentAccount')?.value || '').trim();
+    if (paymentAccount.length < 6) {
+      ui.setFieldError(input('paymentAccount'), 'Enter a valid payment account (at least 6 characters).');
+      ok = false;
+    }
+    if (paymentAccount.length > 24) {
+      ui.setFieldError(input('paymentAccount'), 'Payment account must be 24 characters or fewer.');
+      ok = false;
+    }
     return ok;
   }
 
@@ -415,6 +444,8 @@ export function render({ store, ui, components, root }) {
       endDate: input('endDate').value,
       description: input('description').value.trim(),
       format: form.querySelector('[name="format"]:checked')?.value || 'single-elimination',
+      paymentMethod: input('paymentMethod')?.value || 'GCash',
+      paymentAccount: String(input('paymentAccount')?.value || '').trim(),
       slots: Number(input('slots').value),
       courts: courtInputs()
         .map((court) => court.value.trim())
