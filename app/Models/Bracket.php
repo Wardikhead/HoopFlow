@@ -33,9 +33,17 @@ class Bracket extends Model
     /**
      * @return HasMany<BracketSlot, $this>
      */
-    public function bracketSlots(): HasMany
+    public function slots(): HasMany
     {
         return $this->hasMany(BracketSlot::class);
+    }
+
+    /**
+     * @return HasMany<BracketSlot, $this>
+     */
+    public function bracketSlots(): HasMany
+    {
+        return $this->slots();
     }
 
     /**

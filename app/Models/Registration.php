@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['tournament_id', 'division_id', 'team_id', 'status', 'submitted_at', 'decided_by', 'decided_at', 'rejection_reason', 'seed', 'roster_locked_at'])]
 class Registration extends Model
@@ -51,9 +52,25 @@ class Registration extends Model
     /**
      * @return BelongsTo<User, $this>
      */
-    public function decidedBy(): BelongsTo
+    public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function decidedBy(): BelongsTo
+    {
+        return $this->decider();
+    }
+
+    /**
+     * @return HasOne<Payment, $this>
+     */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class);
     }
 
     /**

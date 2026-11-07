@@ -87,4 +87,12 @@ class MatchModel extends Model
     {
         return $this->hasMany(PlayerStat::class, 'match_id');
     }
+
+    /**
+     * @return HasMany<PlayerStat, $this>
+     */
+    public function stats(): HasMany
+    {
+        return $this->playerStats();
+    }
 }
