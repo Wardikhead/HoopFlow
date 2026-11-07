@@ -1,6 +1,16 @@
 import { route } from '../routes.js';
 import { escapeHtml, formatDate, formatMoney, formatTime } from '../ui.js';
 
+function formatLabel(format) {
+  return (
+    {
+      'single-elimination': 'Single elimination',
+      'double-elimination': 'Double elimination',
+      'round-robin': 'Round robin',
+    }[format] || format || 'Single elimination'
+  );
+}
+
 export function render({ store, ui, components, root }) {
   const params = new URLSearchParams(window.location.search);
   const tournamentId = params.get('id') || 'tournament-1';
@@ -56,6 +66,7 @@ export function render({ store, ui, components, root }) {
           <div><span>Venue</span><strong>${escapeHtml(tournament.venue)}</strong></div>
           <div><span>Courts</span><strong>${tournament.courts.length}</strong></div>
           <div><span>Entry</span><strong>${escapeHtml(formatMoney(tournament.fee))}</strong></div>
+          <div><span>Format</span><strong>${escapeHtml(formatLabel(tournament.format))}</strong></div>
         </div>
         <div class="hf-btn-row hf-mt-3">
           <a class="hf-btn hf-btn--primary" href="${route('bracket', { id: tournamentId })}">Bracket</a>
