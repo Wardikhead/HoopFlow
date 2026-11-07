@@ -22,6 +22,8 @@ export function render({ store, ui, components, root }) {
     })}
     <div id="paymentKpis" class="hf-grid hf-grid--4 hf-mb-3"></div>
 
+    <div id="paymentDestination" data-testid="payment-destination" class="hf-card hf-card--flat hf-mb-3"></div>
+
     <div class="hf-card hf-mb-3">
       <div class="hf-form-grid">
         <div class="hf-field hf-field--full">
@@ -140,6 +142,14 @@ export function render({ store, ui, components, root }) {
   }
 
   function renderList() {
+    const destination = root.querySelector('#paymentDestination');
+    if (destination) {
+      const tid = tournamentSelect.value;
+      const t = tid !== 'all' ? store.select.tournament(tid) : null;
+      destination.innerHTML = t
+        ? `<div class="hf-between"><span class="hf-kpi-label">Send payments to</span><strong>${escapeHtml(t.paymentMethod || 'GCash')} · ${escapeHtml(t.paymentAccount || 'TBD')}</strong></div>`
+        : `<span class="hf-small hf-muted">Select a tournament to see the payment destination.</span>`;
+    }
     const term = search.value.trim().toLowerCase();
     const filtered = scopedTeams()
       .filter((team) => {
