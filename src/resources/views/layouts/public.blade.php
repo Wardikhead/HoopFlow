@@ -10,7 +10,7 @@
     <script>
         (function () {
             try {
-                var t = localStorage.getItem('hoopflow_theme');
+                var t = localStorage.getItem('hf-theme');
                 var next = (t === 'dark' || t === 'light') ? t : 'light';
                 document.documentElement.setAttribute('data-theme', next);
                 document.documentElement.style.colorScheme = next;
