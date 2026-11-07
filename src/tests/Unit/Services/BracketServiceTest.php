@@ -29,9 +29,18 @@ it('generates an 8-team round-robin bracket', function () {
     expect($result['byes'])->toBe(0);
 });
 
+it('generates an 8-team double-elimination bracket', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+
+    $result = (new BracketService)->generate($tournament, 'double-elimination');
+
+    expect($result['matches'])->toBe(14);
+    expect($result['byes'])->toBe(0);
+});
+
 it('throws on invalid format', function () {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
 
-    expect(fn () => (new BracketService)->generate($tournament, 'double-elimination'))
+    expect(fn () => (new BracketService)->generate($tournament, 'knockout'))
         ->toThrow(InvalidArgumentException::class);
 });
