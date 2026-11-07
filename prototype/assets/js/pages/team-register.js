@@ -169,6 +169,10 @@ export function render({ store, ui, components, root }) {
             <span class="hf-eyebrow">Entry fee</span>
             <strong class="hf-kpi-value" style="font-size: 34px">${escapeHtml(formatMoney(tournament.fee))}</strong>
             <p class="hf-small hf-muted hf-mb-0">Submit a reference now; the organizer verifies the payment before seeding.</p>
+            <div class="hf-mt-2 hf-card hf-card--flat">
+              <span class="hf-kpi-label">Send payment to</span>
+              <strong style="display:block">${escapeHtml(tournament.paymentMethod || 'GCash')} · ${escapeHtml(tournament.paymentAccount || 'TBD')}</strong>
+            </div>
           </div>
         </div>
         <div class="hf-form-grid hf-mt-3">
