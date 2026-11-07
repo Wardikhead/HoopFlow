@@ -67,6 +67,7 @@ export function render({ store, ui, components, root }) {
           <div><span>Courts</span><strong>${tournament.courts.length}</strong></div>
           <div><span>Entry</span><strong>${escapeHtml(formatMoney(tournament.fee))}</strong></div>
           <div><span>Format</span><strong>${escapeHtml(formatLabel(tournament.format))}</strong></div>
+          <div><span>Payment</span><strong>${escapeHtml(tournament.paymentMethod || 'GCash')} · ${escapeHtml(tournament.paymentAccount || 'TBD')}</strong></div>
         </div>
         <div class="hf-btn-row hf-mt-3">
           <a class="hf-btn hf-btn--primary" href="${route('bracket', { id: tournamentId })}">Bracket</a>
