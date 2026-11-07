@@ -39,6 +39,7 @@ export function render({ store, ui, components, root }) {
         <a class="hf-btn" href="${route('schedule', { id: tournamentId })}" data-testid="bracket-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
         <a class="hf-btn" href="${route('standings', { id: tournamentId })}" data-testid="bracket-standings"><i class="bi bi-bar-chart"></i> Standings</a>
         ${role === 'organizer' && bracket.hasBracket && !kpis.matchesPlayed ? `<button type="button" class="hf-btn" data-regenerate-bracket data-testid="bracket-regenerate">Regenerate bracket</button>` : ''}
+        ${role === 'organizer' && bracket.hasBracket && !kpis.matchesPlayed ? `<button type="button" class="hf-btn" data-edit-slots data-testid="bracket-edit-slots">Edit slots</button>` : ''}
       `,
     });
 
@@ -233,6 +234,7 @@ export function render({ store, ui, components, root }) {
 
     attachBracket(rounds);
     attachRegenerate();
+    attachEditSlots();
     if (requestedMatch && !openedFromQuery) {
       openedFromQuery = true;
       openMatch(requestedMatch);
@@ -306,6 +308,83 @@ export function render({ store, ui, components, root }) {
         ui.setBusy(button, false);
         ui.toast(error.message, { tone: 'danger', title: 'Could not regenerate' });
       }
+    });
+  }
+
+  function attachEditSlots() {
+    const button = root.querySelector('[data-edit-slots]');
+    if (!button) return;
+    button.addEventListener('click', () => {
+      const bracket = store.select.bracket(tournamentId);
+      const firstRound = bracket.rounds.find((r) => r.matches.some((m) => m.round === roundLabelForFirst(bracket)));
+      const approved = store.select.teams(tournamentId, { status: 'approved' });
+      const slotMatches = bracket.rounds
+        .filter((r) => r.matches.length === Math.pow(2, bracket.rounds.length - 1) / 2 || r === bracket.rounds[0])
+        .flatMap((r) => r.matches)
+        .filter((m) => !m.isBye || true)
+        .slice(0, tournament.slots / 2);
+      // Simpler: use first round matches
+      const firstRoundMatches = bracket.rounds[0]?.matches || [];
+      const body = `
+        <p class="hf-small hf-muted">Reassign approved teams to first-round slots. Save to apply.</p>
+        <div class="hf-table-wrap">
+          <table class="hf-table">
+            <thead><tr><th scope="col">Slot</th><th scope="col">Team 1</th><th scope="col">Team 2</th></tr></thead>
+            <tbody>
+              ${firstRoundMatches
+                .map(
+                  (match, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td>
+                        <select class="hf-select" data-edit-slot-team data-match="${escapeHtml(match.id)}" data-slot="1">
+                          <option value="">— bye —</option>
+                          ${approved.map((t) => `<option value="${escapeHtml(t.id)}" ${match.team1Id === t.id ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+                        </select>
+                      </td>
+                      <td>
+                        <select class="hf-select" data-edit-slot-team data-match="${escapeHtml(match.id)}" data-slot="2">
+                          <option value="">— bye —</option>
+                          ${approved.map((t) => `<option value="${escapeHtml(t.id)}" ${match.team2Id === t.id ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+                        </select>
+                      </td>
+                    </tr>
+                  `
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      const { element, close } = ui.dialog({
+        title: 'Edit bracket slots',
+        size: 'wide',
+        body,
+        footer: `
+          <button type="button" class="hf-btn" data-edit-cancel data-testid="edit-slots-cancel">Cancel</button>
+          <button type="button" class="hf-btn hf-btn--primary" data-edit-save data-testid="edit-slots-save">Save slots</button>
+        `,
+      });
+      element.querySelector('[data-edit-cancel]')?.addEventListener('click', close);
+      element.querySelector('[data-edit-save]')?.addEventListener('click', async () => {
+        const assignments = [];
+        element.querySelectorAll('[data-edit-slot-team]').forEach((select) => {
+          assignments.push({
+            matchId: select.dataset.match,
+            slot: Number(select.dataset.slot),
+            teamId: select.value || null,
+          });
+        });
+        // dedupe: one assignment per match/slot already
+        try {
+          store.actions.setBracketSlots(tournamentId, assignments);
+          ui.toast('Slots updated.', { tone: 'success', title: 'Bracket updated' });
+          close();
+          draw();
+        } catch (error) {
+          ui.toast(error.message, { tone: 'danger', title: 'Could not update slots' });
+        }
+      });
     });
   }
 
