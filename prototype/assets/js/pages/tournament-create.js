@@ -86,14 +86,18 @@ export function render({ store, ui, components, root }) {
         <div class="hf-form-grid">
           <div class="hf-field hf-field--full">
             <span class="hf-label">Format</span>
-            <div class="hf-grid hf-grid--2">
+            <div class="hf-grid hf-grid--3">
               <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
                 <input type="radio" name="format" value="single-elimination" checked data-testid="create-format-elimination">
-                <span><strong>Single elimination</strong><span class="hf-small hf-muted" style="display:block">One loss ends the run. Winner advances automatically.</span></span>
+                <span><strong>Single elimination</strong><span class="hf-small hf-muted" style="display:block">One loss ends the run.</span></span>
               </label>
-              <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2" aria-disabled="true">
-                <input type="radio" name="format" value="round-robin" disabled data-testid="create-format-round-robin">
-                <span><strong>Round robin <span class="hf-chip hf-chip--slate">v2</span></strong><span class="hf-small hf-muted" style="display:block">Scheduled for a later release. Not available in this demo.</span></span>
+              <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
+                <input type="radio" name="format" value="double-elimination" data-testid="create-format-double-elimination">
+                <span><strong>Double elimination</strong><span class="hf-small hf-muted" style="display:block">Two losses to be eliminated.</span></span>
+              </label>
+              <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
+                <input type="radio" name="format" value="round-robin" data-testid="create-format-round-robin">
+                <span><strong>Round robin</strong><span class="hf-small hf-muted" style="display:block">Everyone plays everyone.</span></span>
               </label>
             </div>
           </div>
@@ -101,9 +105,10 @@ export function render({ store, ui, components, root }) {
           <div class="hf-field">
             <label class="hf-label" for="createSlots">Bracket slots</label>
             <select class="hf-select" id="createSlots" name="slots" data-testid="create-slots">
-              <option value="8">8 teams</option>
-              <option value="16" selected>16 teams</option>
+              <option value="8" selected>8 teams</option>
+              <option value="16">16 teams</option>
             </select>
+            <p class="hf-small hf-muted hf-mb-0" data-testid="create-slots-hint">Single/double elimination: 2, 4, 8, 16, or 32. Round robin: 2 to 16.</p>
           </div>
           <div class="hf-field">
             <label class="hf-label" for="createFee">Entry fee (PHP)</label>
@@ -265,9 +270,14 @@ export function render({ store, ui, components, root }) {
       }
     });
 
+    const format = form.querySelector('[name="format"]:checked')?.value || 'single-elimination';
     const slots = Number(input('slots').value);
-    if (![8, 16].includes(slots)) {
-      ui.setFieldError(input('slots'), 'Choose 8 or 16 slots.');
+    const isRR = format === 'round-robin';
+    const validSlots = isRR
+      ? (slots >= 2 && slots <= 16)
+      : [2, 4, 8, 16, 32].includes(slots);
+    if (!validSlots) {
+      ui.setFieldError(input('slots'), isRR ? 'Choose 2 to 16 teams.' : 'Choose 2, 4, 8, 16, or 32 slots.');
       ok = false;
     }
     const slotMinutes = Number(input('slotMinutes').value);
@@ -294,6 +304,8 @@ export function render({ store, ui, components, root }) {
       .filter(Boolean);
     const slots = Number(input('slots').value) || 16;
     const firstRound = slots / 2;
+    const format = form.querySelector('[name="format"]:checked')?.value || 'single-elimination';
+    const formatLabel = (f) => (f === 'double-elimination' ? 'Double elimination' : f === 'round-robin' ? 'Round robin' : 'Single elimination');
     summary.innerHTML = `
       <div class="hf-grid hf-grid--3 hf-mb-3">
         <div class="hf-card hf-card--flat">
@@ -314,7 +326,7 @@ export function render({ store, ui, components, root }) {
       </div>
       <div class="hf-card hf-card--flat">
         <div class="hf-between">
-          <span><strong>${slots}-team single elimination</strong><span class="hf-small hf-muted" style="display:block">${firstRound} first-round games, then quarterfinals, semifinals, and the final.</span></span>
+          <span><strong>${slots}-team ${escapeHtml(formatLabel(format))}</strong><span class="hf-small hf-muted" style="display:block">${format === 'round-robin' ? 'Full round robin: every team plays every team.' : `${firstRound} first-round games, then quarterfinals, semifinals, and the final.`}</span></span>
           <span class="hf-chip hf-chip--gold">${courts.length} courts</span>
         </div>
         <div class="hf-flex hf-wrap hf-gap-2 hf-mt-2 hf-small hf-muted">
@@ -339,6 +351,22 @@ export function render({ store, ui, components, root }) {
   }
 
   back.addEventListener('click', () => showStep(step - 1));
+
+  function updateSlotsOptions() {
+    const format = form.querySelector('[name="format"]:checked')?.value || 'single-elimination';
+    const select = input('slots');
+    if (!select) return;
+    const isRR = format === 'round-robin';
+    const values = isRR ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] : [2, 4, 8, 16, 32];
+    const current = Number(select.value);
+    select.innerHTML = values
+      .map((v) => `<option value="${v}" ${v === (values.includes(current) ? current : values[0]) ? 'selected' : ''}>${v} ${isRR ? 'teams' : 'teams'}</option>`)
+      .join('');
+  }
+  form.querySelectorAll('[name="format"]').forEach((radio) => {
+    radio.addEventListener('change', updateSlotsOptions);
+  });
+  updateSlotsOptions();
 
   next.addEventListener('click', () => {
     if (step === 0 && !validateBasics()) return;
