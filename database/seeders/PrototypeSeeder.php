@@ -29,15 +29,38 @@ use Illuminate\Support\Facades\Hash;
 
 class PrototypeSeeder extends Seeder
 {
+    /** @var array<string, Team> */
     protected array $teamMap = [];
+
+    /** @var array<string, MatchModel> */
     protected array $matchMap = [];
+
+    /** @var array<string, Court> */
     protected array $courtMap = [];
+
+    /** @var array<string, Tournament> */
     protected array $tournMap = [];
+
+    /** @var array<string, Division> */
     protected array $divisionMap = [];
+
+    /** @var array<string, User> */
     protected array $userMap = [];
+
+    protected ?Organization $org = null;
+
+    protected ?User $organizer = null;
+
+    protected ?User $coach = null;
+
+    protected ?User $fan = null;
+
     protected int $matchIdSeq = 0;
+
     protected int $auditIdSeq = 0;
+
     protected int $matchSlotIdSeq = 0;
+
     protected int $playerStatIdSeq = 0;
 
     protected function nextMatchId(): int
@@ -45,6 +68,7 @@ class PrototypeSeeder extends Seeder
         if ($this->matchIdSeq === 0) {
             $this->matchIdSeq = (int) (MatchModel::max('id') ?? 0);
         }
+
         return ++$this->matchIdSeq;
     }
 
@@ -53,6 +77,7 @@ class PrototypeSeeder extends Seeder
         if ($this->auditIdSeq === 0) {
             $this->auditIdSeq = (int) (AuditLog::max('id') ?? 0);
         }
+
         return ++$this->auditIdSeq;
     }
 
@@ -61,6 +86,7 @@ class PrototypeSeeder extends Seeder
         if ($this->matchSlotIdSeq === 0) {
             $this->matchSlotIdSeq = (int) (MatchSlot::max('id') ?? 0);
         }
+
         return ++$this->matchSlotIdSeq;
     }
 
@@ -69,6 +95,7 @@ class PrototypeSeeder extends Seeder
         if ($this->playerStatIdSeq === 0) {
             $this->playerStatIdSeq = (int) (PlayerStat::max('id') ?? 0);
         }
+
         return ++$this->playerStatIdSeq;
     }
 
@@ -193,11 +220,12 @@ class PrototypeSeeder extends Seeder
 
             foreach ($d['courts'] as [$cid, $cname]) {
                 $court = Court::firstOrCreate(['venue_id' => $venue->id, 'name' => $cname], ['notes' => null]);
-                $this->courtMap[$d['slug'] . ':' . $cid] = $court;
+                $this->courtMap[$d['slug'].':'.$cid] = $court;
             }
         }
     }
 
+    /** @return array<int, array<string, mixed>> */
     protected function makePlayers(int $teamIndex, int $divisionMax, int $count, bool $pending): array
     {
         $positions = ['Point Guard (PG)', 'Shooting Guard (SG)', 'Small Forward (SF)', 'Power Forward (PF)', 'Center (C)'];
@@ -215,6 +243,7 @@ class PrototypeSeeder extends Seeder
                 'missing' => $pending && $i === $count - 1,
             ];
         }
+
         return $out;
     }
 
@@ -249,7 +278,7 @@ class PrototypeSeeder extends Seeder
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
-            $this->teamMap['team-' . ($i + 1)] = $team;
+            $this->teamMap['team-'.($i + 1)] = $team;
 
             $players = $this->makePlayers($i, 15, 10, $payStatus === 'pending');
             foreach ($players as $p) {
@@ -267,7 +296,7 @@ class PrototypeSeeder extends Seeder
                 );
                 EligibilityDocument::firstOrCreate(
                     ['player_id' => $player->id, 'type' => 'birth_certificate'],
-                    ['file_url' => 'https://example.com/doc/' . $player->id, 'status' => $p['missing'] ? 'pending' : 'approved', 'reviewed_by' => $p['missing'] ? null : $this->organizer->id, 'reviewed_at' => $p['missing'] ? null : now(), 'notes' => null]
+                    ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => $p['missing'] ? 'pending' : 'approved', 'reviewed_by' => $p['missing'] ? null : $this->organizer->id, 'reviewed_at' => $p['missing'] ? null : now(), 'notes' => null]
                 );
             }
 
@@ -320,7 +349,7 @@ class PrototypeSeeder extends Seeder
             );
             EligibilityDocument::firstOrCreate(
                 ['player_id' => $player->id, 'type' => 'birth_certificate'],
-                ['file_url' => 'https://example.com/doc/' . $player->id, 'status' => 'pending', 'reviewed_by' => null, 'reviewed_at' => null, 'notes' => null]
+                ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => 'pending', 'reviewed_by' => null, 'reviewed_at' => null, 'notes' => null]
             );
         }
         $reg = Registration::firstOrCreate(
@@ -359,13 +388,13 @@ class PrototypeSeeder extends Seeder
 
         foreach ($openTeams as $i => $row) {
             [$name, $short, $coach, $city, $color, $status, $payStatus, $payRef] = $row;
-            $team = Team::firstOrCreate(['slug' => strtolower($short) . '-open'], [
+            $team = Team::firstOrCreate(['slug' => strtolower($short).'-open'], [
                 'organization_id' => $this->org->id,
                 'name' => $name,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
-            $this->teamMap['team-open-' . ($i + 1)] = $team;
+            $this->teamMap['team-open-'.($i + 1)] = $team;
 
             $pending = $status === 'pending';
             $players = $this->makePlayers(100 + $i, 17, 10, $pending);
@@ -384,7 +413,7 @@ class PrototypeSeeder extends Seeder
                 );
                 EligibilityDocument::firstOrCreate(
                     ['player_id' => $player->id, 'type' => 'birth_certificate'],
-                    ['file_url' => 'https://example.com/doc/' . $player->id, 'status' => $p['missing'] ? 'pending' : 'approved', 'reviewed_by' => $p['missing'] || $pending ? null : $this->organizer->id, 'reviewed_at' => $p['missing'] || $pending ? null : now(), 'notes' => null]
+                    ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => $p['missing'] ? 'pending' : 'approved', 'reviewed_by' => $p['missing'] || $pending ? null : $this->organizer->id, 'reviewed_at' => $p['missing'] || $pending ? null : now(), 'notes' => null]
                 );
             }
 
@@ -429,13 +458,13 @@ class PrototypeSeeder extends Seeder
 
         foreach ($cdoTeams as $i => $row) {
             [$name, $short, $coach, $city] = $row;
-            $team = Team::firstOrCreate(['slug' => strtolower($short) . '-cdo'], [
+            $team = Team::firstOrCreate(['slug' => strtolower($short).'-cdo'], [
                 'organization_id' => $this->org->id,
                 'name' => $name,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
-            $this->teamMap['team-cdo-' . ($i + 1)] = $team;
+            $this->teamMap['team-cdo-'.($i + 1)] = $team;
 
             $players = $this->makePlayers(200 + $i, 14, 10, false);
             foreach ($players as $p) {
@@ -453,7 +482,7 @@ class PrototypeSeeder extends Seeder
                 );
                 EligibilityDocument::firstOrCreate(
                     ['player_id' => $player->id, 'type' => 'birth_certificate'],
-                    ['file_url' => 'https://example.com/doc/' . $player->id, 'status' => 'approved', 'reviewed_by' => $this->organizer->id, 'reviewed_at' => now(), 'notes' => null]
+                    ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => 'approved', 'reviewed_by' => $this->organizer->id, 'reviewed_at' => now(), 'notes' => null]
                 );
             }
 
@@ -472,7 +501,7 @@ class PrototypeSeeder extends Seeder
             );
             Payment::firstOrCreate(['registration_id' => $reg->id], [
                 'amount' => 1000, 'currency' => 'PHP', 'method' => 'GCash',
-                'reference_no' => 'GCASH-CDO-' . ($i + 1), 'receipt_no' => null,
+                'reference_no' => 'GCASH-CDO-'.($i + 1), 'receipt_no' => null,
                 'status' => 'verified', 'paid_at' => '2026-06-01 09:00:00',
                 'recorded_by' => $this->organizer->id, 'remarks' => null,
                 'refunded_amount' => 0, 'refunded_at' => null,
@@ -495,6 +524,7 @@ class PrototypeSeeder extends Seeder
                 return $t;
             }
         }
+
         return Team::where('name', $name)->firstOrFail();
     }
 
@@ -520,7 +550,7 @@ class PrototypeSeeder extends Seeder
 
         $courtIds = [];
         foreach (['court-1', 'court-2', 'court-3', 'court-4'] as $cid) {
-            $c = $this->courtMap['hoopflow-summer-cup:' . $cid] ?? null;
+            $c = $this->courtMap['hoopflow-summer-cup:'.$cid] ?? null;
             if ($c) {
                 $courtIds[] = $c->id;
             }
@@ -546,10 +576,10 @@ class PrototypeSeeder extends Seeder
             $winner = null;
             if ($bye) {
                 $winner = $home->id;
-            } elseif ($status === 'final' || $status === 'forfeit') {
+            } else {
                 $winner = ($s1 > $s2) ? $home->id : $away->id;
             }
-            $completedAt = ($status === 'final' || $status === 'forfeit') ? '2026-05-16 09:00:00' : null;
+            $completedAt = '2026-05-16 09:00:00';
             $m = MatchModel::firstOrCreate(
                 ['bracket_id' => $bracket->id, 'round_number' => 16, 'match_number' => $mslot],
                 [
@@ -562,7 +592,7 @@ class PrototypeSeeder extends Seeder
                     'winner_team_id' => $winner,
                     'status' => $status,
                     'completed_at' => $completedAt,
-                    'forfeit_reason' => $status === 'forfeit' ? 'No-show' : null,
+                    'forfeit_reason' => null,
                 ]
             );
             $this->matchMap[$pid] = $m;
@@ -617,7 +647,7 @@ class PrototypeSeeder extends Seeder
                     'away_score' => $s2,
                     'winner_team_id' => $winner,
                     'status' => $status,
-                    'completed_at' => $status === 'final' ? $sched : null,
+                    'completed_at' => $sched,
                     'forfeit_reason' => null,
                 ]
             );
@@ -637,11 +667,11 @@ class PrototypeSeeder extends Seeder
 
             BracketSlot::firstOrCreate(
                 ['bracket_id' => $bracket->id, 'round_number' => 8, 'match_number' => $mslot, 'slot' => 'home'],
-                ['source_type' => 'winner', 'source_match_id' => $this->matchMap['r16-' . (($mslot - 1) * 2 + 1)]->id, 'source_outcome' => 'winner', 'team_id' => $home->id]
+                ['source_type' => 'winner', 'source_match_id' => $this->matchMap['r16-'.(($mslot - 1) * 2 + 1)]->id, 'source_outcome' => 'winner', 'team_id' => $home->id]
             );
             BracketSlot::firstOrCreate(
                 ['bracket_id' => $bracket->id, 'round_number' => 8, 'match_number' => $mslot, 'slot' => 'away'],
-                ['source_type' => 'winner', 'source_match_id' => $this->matchMap['r16-' . (($mslot - 1) * 2 + 2)]->id, 'source_outcome' => 'winner', 'team_id' => $away->id]
+                ['source_type' => 'winner', 'source_match_id' => $this->matchMap['r16-'.(($mslot - 1) * 2 + 2)]->id, 'source_outcome' => 'winner', 'team_id' => $away->id]
             );
         }
 
@@ -739,19 +769,22 @@ class PrototypeSeeder extends Seeder
         $i = 0;
         foreach ($players as $player) {
             $pts = $base + ($i < $rem ? 1 : 0);
+            $statAttrs = [
+                'id' => $this->nextPlayerStatId(),
+                'team_id' => $team->id,
+                'points' => $pts,
+                'assists' => ($i * 3 + 1) % 7,
+                'rebounds' => ($i * 2 + 2) % 9,
+                'steals' => 0,
+                'blocks' => 0,
+                'fouls' => 0,
+            ];
+            if (DB::getDriverName() === 'pgsql') {
+                $statAttrs['tournament_id'] = $tournamentId;
+            }
             PlayerStat::firstOrCreate(
                 ['match_id' => $match->id, 'player_id' => $player->id],
-                [
-                    'id' => $this->nextPlayerStatId(),
-                    'team_id' => $team->id,
-                    'tournament_id' => $tournamentId,
-                    'points' => $pts,
-                    'assists' => ($i * 3 + 1) % 7,
-                    'rebounds' => ($i * 2 + 2) % 9,
-                    'steals' => 0,
-                    'blocks' => 0,
-                    'fouls' => 0,
-                ]
+                $statAttrs
             );
             $i++;
         }

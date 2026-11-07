@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MatchModel extends Model
 {
     public $incrementing = false;
+
     protected $keyType = 'int';
+
     /** @use HasFactory<Factory> */
     use HasFactory;
 

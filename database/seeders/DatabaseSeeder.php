@@ -12,10 +12,5 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([OrganizationSeeder::class, RoleSeeder::class, DefaultOrganizerSeeder::class]);
-
-        if (env('SEED_PROTOTYPE', false)) {
-            $this->call(PrototypeSeeder::class);
-        }
     }
 }
-

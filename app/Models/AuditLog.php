@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AuditLog extends Model
 {
     public $incrementing = false;
+
     protected $keyType = 'int';
+
     /** @use HasFactory<Factory> */
     use BelongsToOrganization, HasFactory;
 
