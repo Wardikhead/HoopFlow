@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Bracket;
 use App\Models\BracketSlot;
 use App\Models\Division;
@@ -719,5 +720,191 @@ class BracketService
         }
 
         return $order;
+    }
+
+    public function correctScore(MatchModel $match, int $score1, int $score2, string $reason): void
+    {
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new \InvalidArgumentException('Correction reason is required.');
+        }
+        if ($score1 < 0 || $score2 < 0) {
+            throw new \InvalidArgumentException('Scores must be zero or positive whole numbers.');
+        }
+        if ($score1 === $score2) {
+            throw new \InvalidArgumentException('Elimination games cannot end in a tie.');
+        }
+
+        DB::transaction(function () use ($match, $score1, $score2, $reason): void {
+            $match->refresh();
+
+            $previousScore1 = $match->home_score;
+            $previousScore2 = $match->away_score;
+            $previousWinnerId = $match->winner_team_id;
+
+            $team1Id = $match->home_team_id;
+            $team2Id = $match->away_team_id;
+
+            if ($team1Id === null && $team2Id === null) {
+                throw new \InvalidArgumentException('Match has no teams.');
+            }
+
+            if ($team1Id === null) {
+                $winnerId = $team2Id;
+            } elseif ($team2Id === null) {
+                $winnerId = $team1Id;
+            } else {
+                $winnerId = $score1 > $score2 ? $team1Id : $team2Id;
+            }
+
+            $match->home_score = $score1;
+            $match->away_score = $score2;
+            $match->winner_team_id = $winnerId;
+            $match->status = 'final';
+            if ($match->completed_at === null) {
+                $match->completed_at = now();
+            }
+            $match->save();
+
+            if ($previousWinnerId !== $winnerId) {
+                $this->propagateMatchResult($match, $winnerId);
+            }
+
+            $orgId = $match->tournament?->organization_id;
+
+            $auditId = (int) (AuditLog::max('id') ?? 0) + 1;
+
+            AuditLog::create([
+                'id' => $auditId,
+                'organization_id' => $orgId,
+                'actor_user_id' => null,
+                'action' => 'score.correct',
+                'entity_type' => 'match',
+                'entity_id' => $match->id,
+                'before_json' => [
+                    'home_score' => $previousScore1,
+                    'away_score' => $previousScore2,
+                    'winner_team_id' => $previousWinnerId,
+                ],
+                'after_json' => [
+                    'home_score' => $score1,
+                    'away_score' => $score2,
+                    'winner_team_id' => $winnerId,
+                    'reason' => $reason,
+                ],
+                'ip' => null,
+                'user_agent' => null,
+                'created_at' => now(),
+            ]);
+        });
+    }
+
+    public function finalizeMatch(MatchModel $match): void
+    {
+        DB::transaction(function () use ($match): void {
+            $match->refresh();
+
+            if ($match->home_score === null || $match->away_score === null) {
+                return;
+            }
+
+            $team1Id = $match->home_team_id;
+            $team2Id = $match->away_team_id;
+
+            $winnerId = $match->winner_team_id;
+
+            if ($winnerId === null) {
+                if ($team1Id === null && $team2Id === null) {
+                    return;
+                }
+                if ($team1Id === null) {
+                    $winnerId = $team2Id;
+                } elseif ($team2Id === null) {
+                    $winnerId = $team1Id;
+                } else {
+                    $winnerId = $match->home_score > $match->away_score ? $team1Id : $team2Id;
+                }
+            }
+
+            $match->winner_team_id = $winnerId;
+            $match->status = 'final';
+            if ($match->completed_at === null) {
+                $match->completed_at = now();
+            }
+            $match->save();
+
+            $this->propagateMatchResult($match, $winnerId);
+        });
+    }
+
+    protected function propagateMatchResult(MatchModel $match, ?int $winnerId): void
+    {
+        if ($winnerId === null) {
+            return;
+        }
+
+        $loserId = null;
+        if ($match->home_team_id !== null && $match->away_team_id !== null) {
+            $loserId = $match->home_team_id === $winnerId ? $match->away_team_id : $match->home_team_id;
+        }
+
+        $slots = BracketSlot::where('source_match_id', $match->id)->get();
+
+        if ($slots->isEmpty()) {
+            $format = $match->bracket?->format;
+
+            if ($format === 'single_elim' || $format === null) {
+                $nextRound = (int) ($match->round_number / 2);
+
+                if ($nextRound >= 2) {
+                    $nextMatchNumber = (int) ceil($match->match_number / 2);
+                    $target = MatchModel::where('bracket_id', $match->bracket_id)
+                        ->where('round_number', $nextRound)
+                        ->where('match_number', $nextMatchNumber)
+                        ->first();
+
+                    if ($target !== null && ! in_array($target->status, ['final', 'forfeit'], true)) {
+                        if ($match->match_number % 2 !== 0) {
+                            $target->home_team_id = $winnerId;
+                        } else {
+                            $target->away_team_id = $winnerId;
+                        }
+                        $target->save();
+                    }
+                }
+            }
+
+            return;
+        }
+
+        foreach ($slots as $slot) {
+            $isLoserOutcome = $slot->source_outcome === 'loser';
+            $value = $isLoserOutcome ? $loserId : $winnerId;
+
+            if ($value === null) {
+                continue;
+            }
+
+            $target = MatchModel::where('bracket_id', $slot->bracket_id)
+                ->where('round_number', $slot->round_number)
+                ->where('match_number', $slot->match_number)
+                ->first();
+
+            if ($target !== null && in_array($target->status, ['final', 'forfeit'], true)) {
+                continue;
+            }
+
+            $slot->team_id = $value;
+            $slot->save();
+
+            if ($target !== null) {
+                if ($slot->slot === 'home') {
+                    $target->home_team_id = $value;
+                } else {
+                    $target->away_team_id = $value;
+                }
+                $target->save();
+            }
+        }
     }
 }
