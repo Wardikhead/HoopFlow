@@ -2,15 +2,58 @@ import { route } from '../routes.js';
 import { escapeHtml } from '../ui.js';
 
 export function render({ store, ui, components, root }) {
+  function renderTournamentPicker({ store, ui, components, root, role }) {
+    const tournaments = store.select.tournaments();
+    root.innerHTML = `
+      ${components.pageHeader({
+        eyebrow: 'Team directory',
+        title: 'Select a tournament',
+        description: 'Choose a tournament to view its teams.',
+      })}
+      <div class="hf-grid hf-grid--2" data-testid="team-tournament-picker">
+        ${tournaments
+          .map(
+            (t) => `
+              <a class="hf-card hf-card--flat" href="${route('teams', { tournament: t.id })}" data-testid="team-tournament-${escapeHtml(t.id)}">
+                <strong>${escapeHtml(t.name)}</strong>
+                <span class="hf-small hf-muted" style="display:block">${escapeHtml(t.division)} · ${escapeHtml(t.status)}</span>
+              </a>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+  }
+
   const role = store.getRole();
   const params = new URLSearchParams(window.location.search);
+  const selectedTournamentId = params.get('tournament') || '';
+
+  // Coach auto-select: if they own a team in exactly one tournament, scope to it.
+  const coachTeams = role === 'coach' ? store.select.coachTeams() : [];
+  const coachTournamentIds = [...new Set(coachTeams.map((t) => t.tournamentId))];
+  if (!selectedTournamentId && role === 'coach' && coachTournamentIds.length === 1) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tournament', coachTournamentIds[0]);
+    window.history.replaceState({}, '', url);
+    return render({ store, ui, components, root });
+  }
+
+  // Tournament picker when no tournament is selected.
+  if (!selectedTournamentId) {
+    renderTournamentPicker({ store, ui, components, root, role });
+    return;
+  }
+
   let statusFilter = role === 'fan' ? 'approved' : params.get('status') || 'all';
   let divisionFilter = params.get('division') || 'all';
   let searchTerm = params.get('q') || '';
 
   const tournaments = store.select.tournaments();
-  const divisions = [...new Set(tournaments.map((tournament) => tournament.division))].sort();
-  const openTournament = tournaments.find((tournament) => tournament.registrationOpen);
+  const tournament = store.select.tournament(selectedTournamentId);
+  const scopedTeams = store.getState().teams.filter((t) => t.tournamentId === selectedTournamentId);
+  const divisions = [...new Set(scopedTeams.map((t) => store.select.tournament(t.tournamentId)?.division).filter(Boolean))].sort();
+  const openTournament = tournaments.find((t) => t.registrationOpen);
 
   root.innerHTML = `
     ${components.pageHeader({
@@ -19,10 +62,11 @@ export function render({ store, ui, components, root }) {
       description:
         role === 'fan'
           ? 'Public team cards show records, coaches, and cities. Payment and eligibility details stay private.'
-          : 'Every registered team, scoped to its tournament, with record, roster size, and review state.',
+          : `Teams in ${escapeHtml(tournament?.name || 'selected tournament')}.`,
       actions:
         role === 'organizer'
-          ? `<a class="hf-btn hf-btn--primary" href="${route('submissions')}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check"></i> Review queue</a>`
+          ? `<a class="hf-btn" href="${route('teams')}" data-testid="teams-change-tournament"><i class="bi bi-arrow-left"></i> Change tournament</a>
+             <a class="hf-btn hf-btn--primary" href="${route('submissions')}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check"></i> Review queue</a>`
           : role === 'coach'
             ? openTournament
               ? `<a class="hf-btn hf-btn--primary" href="${route('teamRegister', { tournament: openTournament.id })}" data-testid="teams-register"><i class="bi bi-plus-lg"></i> Register team</a>`
@@ -73,13 +117,12 @@ export function render({ store, ui, components, root }) {
   if (status) status.value = statusFilter;
   division.value = divisionFilter;
 
-  const coachTeams = role === 'coach' ? store.select.coachTeams() : [];
   const ownsTeam = (team) => coachTeams.some((item) => item.id === team.id);
   const canSeePrivate = (team) =>
     role === 'organizer' || (role === 'coach' && ownsTeam(team));
 
   function visibleTeams() {
-    const teams = store.getState().teams;
+    const teams = store.getState().teams.filter((team) => team.tournamentId === selectedTournamentId);
     return role === 'fan'
       ? teams.filter((team) => team.status === 'approved')
       : teams;
