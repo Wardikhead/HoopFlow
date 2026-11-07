@@ -13,4 +13,9 @@ class AnnouncementPolicy extends BasePolicy
         return $user->hasRole('organizer')
             || ($model instanceof Announcement && $model->created_by === $user->id);
     }
+
+    public function publish(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }

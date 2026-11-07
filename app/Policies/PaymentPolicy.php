@@ -13,4 +13,14 @@ class PaymentPolicy extends BasePolicy
         return $user->hasRole('organizer')
             || ($model instanceof Payment && $model->recorded_by === $user->id);
     }
+
+    public function verify(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function refund(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
 }
