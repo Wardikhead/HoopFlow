@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TournamentController;
 use App\Livewire\Coach\TeamRegister;
+use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentsIndex;
@@ -28,9 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-team', [TeamController::class, 'myTeam'])->name('myTeam')->middleware('role:coach');
     Route::get('/team-register', TeamRegister::class)->name('teamRegister')->middleware('role:coach');
 
-    // Shell navigation destinations (full pages land in later phases).
+    Route::get('/bracket', BracketShow::class)->name('bracket');
+
     foreach ([
-        'bracket' => '/bracket',
         'schedule' => '/schedule',
         'standings' => '/standings',
         'announcements' => '/announcements',

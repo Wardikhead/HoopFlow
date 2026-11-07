@@ -75,6 +75,28 @@ class BracketShow extends Component
 
     public function editSlots(): void
     {
+        $tournament = $this->tournament();
+        $matches = $tournament !== null ? $tournament->matches : collect();
+        $firstRound = $matches->sortByDesc('round_number')->first()?->round_number;
+        $firstRoundMatches = $firstRound !== null
+            ? $matches->where('round_number', $firstRound)->sortBy('match_number')->values()
+            : collect();
+
+        $this->slots = $firstRoundMatches->map(fn ($match) => [
+            'matchId' => $match->id,
+            'slot' => 1,
+            'teamId' => $match->home_team_id,
+        ])->values()->all();
+
+        // add away slot assignments
+        $away = $firstRoundMatches->map(fn ($match) => [
+            'matchId' => $match->id,
+            'slot' => 2,
+            'teamId' => $match->away_team_id,
+        ])->values()->all();
+
+        $this->slots = array_merge($this->slots, $away);
+
         $this->showEditSlots = true;
     }
 
@@ -168,6 +190,66 @@ class BracketShow extends Component
         );
 
         $this->showCorrection = false;
+    }
+
+    /**
+     * @return array{hasBracket: bool, rounds: array<int, mixed>, champion: mixed}
+     */
+    #[Computed]
+    public function bracket(): array
+    {
+        $tournament = $this->tournament();
+
+        if (! $tournament instanceof Tournament) {
+            return ['hasBracket' => false, 'rounds' => [], 'champion' => null];
+        }
+
+        $matches = $tournament->matches()->with(['homeTeam', 'awayTeam', 'winnerTeam'])->get();
+
+        if ($matches->isEmpty()) {
+            return ['hasBracket' => false, 'rounds' => [], 'champion' => null];
+        }
+
+        $roundNumbers = $matches->pluck('round_number')->unique()->values();
+
+        // Single-elimination brackets use descending round sizes; default to descending.
+        $roundNumbers = $roundNumbers->sortDesc()->values();
+
+        $rounds = $roundNumbers->map(function ($roundNumber) use ($matches): array {
+            $roundMatches = $matches
+                ->where('round_number', $roundNumber)
+                ->sortBy('match_number')
+                ->values();
+
+            $label = match ((int) $roundNumber) {
+                2 => 'Championship Final',
+                4 => 'Semifinals',
+                8 => 'Quarterfinals',
+                16 => 'Round of 16',
+                32 => 'Round of 32',
+                default => 'Round '.$roundNumber,
+            };
+
+            return [
+                'round' => $roundNumber,
+                'label' => $label,
+                'matches' => $roundMatches,
+            ];
+        })->values()->all();
+
+        $finalMatch = $matches->firstWhere('round_number', 2)
+            ?? $matches->sortByDesc('round_number')->first();
+
+        $champion = null;
+        if ($finalMatch && in_array($finalMatch->status, ['final', 'forfeit'], true)) {
+            $champion = $finalMatch->winnerTeam;
+        }
+
+        return [
+            'hasBracket' => true,
+            'rounds' => $rounds,
+            'champion' => $champion,
+        ];
     }
 
     public function render(): View
