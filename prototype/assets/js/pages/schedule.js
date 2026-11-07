@@ -102,6 +102,8 @@ export function render({ store, ui, components, root }) {
           <a class="hf-btn" href="${route('bracket', { id: tournamentId })}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
           <a class="hf-btn" href="${route('matches', { id: tournamentId })}" data-testid="schedule-matches"><i class="bi bi-list-ul"></i> Matchups</a>
           ${role === 'organizer' && allMatches.some((m) => m.courtId) && !kpis.matchesPlayed ? `<button type="button" class="hf-btn" data-regenerate-schedule data-testid="schedule-regenerate">Regenerate schedule</button>` : ''}
+          ${role === 'organizer' && allMatches.some((m) => m.courtId) ? `<button type="button" class="hf-btn" data-reschedule-match data-testid="schedule-reschedule">Reschedule match</button>` : ''}
+          ${role === 'organizer' && allMatches.some((m) => m.courtId) ? `<button type="button" class="hf-btn" data-manual-manage data-testid="schedule-manual-manage">Manual manage</button>` : ''}
         `,
       })}
 
@@ -420,6 +422,80 @@ export function render({ store, ui, components, root }) {
           ui.toast(error.message, { tone: 'danger', title: 'Could not regenerate' });
         }
       });
+      return;
+    }
+    const reschedule = event.target.closest('[data-reschedule-match]');
+    if (reschedule) {
+      const scheduledMatches = allMatches.filter((m) => m.courtId && m.scheduledAt);
+      if (!scheduledMatches.length) return;
+      const options = scheduledMatches
+        .map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.roundLabel)} · ${escapeHtml(m.team1Id || '?')} vs ${escapeHtml(m.team2Id || '?')}</option>`)
+        .join('');
+      const courtOptions = tournament.courts
+        .map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`)
+        .join('');
+      const { element, close } = ui.dialog({
+        title: 'Reschedule match',
+        size: 'wide',
+        body: `
+          <div class="hf-form-grid">
+            <div class="hf-field hf-field--full">
+              <label class="hf-label" for="rescheduleMatch">Match</label>
+              <select id="rescheduleMatch" class="hf-select" data-reschedule-match-select>${options}</select>
+            </div>
+            <div class="hf-field">
+              <label class="hf-label" for="rescheduleCourt">Court</label>
+              <select id="rescheduleCourt" class="hf-select" data-reschedule-court>${courtOptions}</select>
+            </div>
+            <div class="hf-field">
+              <label class="hf-label" for="rescheduleTime">Date & time</label>
+              <input id="rescheduleTime" class="hf-input" type="datetime-local" data-reschedule-time>
+            </div>
+          </div>
+          <p class="hf-field-error hf-mt-1" data-reschedule-error hidden></p>
+        `,
+        footer: `
+          <button type="button" class="hf-btn" data-reschedule-cancel>Cancel</button>
+          <button type="button" class="hf-btn hf-btn--primary" data-reschedule-save>Save</button>
+        `,
+      });
+      const matchSelect = element.querySelector('[data-reschedule-match-select]');
+      const courtSelect = element.querySelector('[data-reschedule-court]');
+      const timeInput = element.querySelector('[data-reschedule-time]');
+      const errorEl = element.querySelector('[data-reschedule-error]');
+      const syncFromMatch = () => {
+        const m = scheduledMatches.find((x) => x.id === matchSelect.value);
+        if (m) {
+          courtSelect.value = m.courtId || tournament.courts[0]?.id || '';
+          if (m.scheduledAt) {
+            const d = new Date(m.scheduledAt);
+            const pad = (n) => String(n).padStart(2, '0');
+            timeInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          }
+        }
+      };
+      matchSelect.addEventListener('change', syncFromMatch);
+      syncFromMatch();
+      element.querySelector('[data-reschedule-cancel]')?.addEventListener('click', close);
+      element.querySelector('[data-reschedule-save]')?.addEventListener('click', () => {
+        const matchId = matchSelect.value;
+        const courtId = courtSelect.value;
+        const local = timeInput.value;
+        const scheduledAt = local ? `${local}:00+08:00` : null;
+        try {
+          store.actions.rescheduleMatch(matchId, { courtId, scheduledAt });
+          ui.toast('Match rescheduled.', { tone: 'success', title: 'Schedule updated' });
+          close();
+          draw();
+        } catch (error) {
+          if (errorEl) { errorEl.hidden = false; errorEl.textContent = error.message; }
+          ui.toast(error.message, { tone: 'danger', title: 'Could not reschedule' });
+        }
+      });
+    }
+    const manual = event.target.closest('[data-manual-manage]');
+    if (manual) {
+      ui.toast('Manual manage mode: edit courts/times per match (coming soon).', { tone: 'info', title: 'Manual manage' });
     }
   });
 
