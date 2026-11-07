@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/teams', TeamsIndex::class)->name('teams');
     Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teamShow');
-    Route::get('/my-team', [TeamController::class, 'myTeam'])->name('myTeam');
+    Route::get('/my-team', [TeamController::class, 'myTeam'])->name('myTeam')->middleware('role:coach');
     Route::get('/team-register', TeamRegister::class)->name('teamRegister')->middleware('role:coach');
 
     // Shell navigation destinations (full pages land in later phases).
