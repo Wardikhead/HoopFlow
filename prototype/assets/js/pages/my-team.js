@@ -198,6 +198,7 @@ export function render({ store, ui, components, root }) {
             </div>
             <h3 class="hf-section-title hf-mt-1">${escapeHtml(team.payment.method || 'No method')}</h3>
             <p class="hf-small hf-muted hf-mb-1">${escapeHtml(team.payment.ref || 'No reference')} · ${escapeHtml(formatMoney(team.payment.amount || tournament?.fee || 0))}</p>
+            <p class="hf-small hf-muted hf-mb-0"><span class="hf-kpi-label">Send to:</span> ${escapeHtml(tournament?.paymentMethod || 'GCash')} · ${escapeHtml(tournament?.paymentAccount || 'TBD')}</p>
             ${team.payment.verifiedAt ? `<p class="hf-small hf-muted hf-mb-0">Verified ${escapeHtml(formatDate(team.payment.verifiedAt))}</p>` : ''}
             ${team.payment.status !== 'paid' ? `<button type="button" class="hf-btn hf-btn--sm hf-btn--primary hf-mt-2" data-update-payment data-testid="my-team-update-payment">Update payment reference</button>` : ''}
           </div>
