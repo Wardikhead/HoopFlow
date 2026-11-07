@@ -1,5 +1,5 @@
 import { route } from '../routes.js';
-import { escapeHtml } from '../ui.js';
+import { escapeHtml, formatDate } from '../ui.js';
 import { ANNOUNCEMENT_CATEGORIES } from '../options.js';
 import { AUDIENCE_BY_ROLE } from '../store.js';
 
@@ -73,9 +73,15 @@ export function render({ store, ui, components, root }) {
 
   function visibleItems() {
     const term = search.value.trim().toLowerCase();
+    const userId = store.getCurrentUser()?.id;
     return store
       .select.announcements(tournamentFilter === 'all' ? undefined : tournamentFilter)
-      .filter((item) => allowedAudiences.includes(item.audience))
+      .filter((item) => {
+        if (item.audience === 'specific') {
+          return Array.isArray(item.targetUserIds) && item.targetUserIds.includes(userId);
+        }
+        return allowedAudiences.includes(item.audience);
+      })
       .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
       .filter((item) => {
         if (!term) return true;
@@ -136,6 +142,65 @@ export function render({ store, ui, components, root }) {
       paintCategories();
       renderFeed();
     });
+
+    feed.querySelectorAll('[data-testid^="announcement-"]').forEach((card) => {
+      const id = card.dataset.testid.replace('announcement-', '');
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('button, a')) return;
+        const item = visibleItems().find((a) => a.id === id);
+        if (!item) return;
+        openAnnouncementModal(item);
+      });
+    });
+  }
+
+  function openAnnouncementModal(item) {
+    const tournament = store.select.tournament(item.tournamentId);
+    const audienceLabel = item.audience === 'specific' ? 'Specific users' : item.audience;
+    const isOrganizer = role === 'organizer';
+    const { element, close } = ui.dialog({
+      title: item.title,
+      size: 'wide',
+      body: `
+        <div class="hf-flex hf-wrap hf-gap-2 hf-mb-2">
+          <span class="hf-chip hf-chip--slate">${escapeHtml(item.category)}</span>
+          ${item.pinned ? '<span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill"></i> Pinned</span>' : ''}
+          <span class="hf-chip hf-chip--slate">Audience: ${escapeHtml(audienceLabel)}</span>
+        </div>
+        <p class="hf-small hf-muted hf-mb-2">${escapeHtml(item.author)} · ${escapeHtml(formatDate(item.createdAt))} · ${escapeHtml(tournament?.name || item.tournamentId)}</p>
+        <p class="hf-mb-0">${escapeHtml(item.body)}</p>
+      `,
+      footer: isOrganizer
+        ? `
+          <button type="button" class="hf-btn" data-ann-delete data-testid="announcement-delete">Delete</button>
+          <button type="button" class="hf-btn" data-ann-pin data-testid="announcement-pin">${item.pinned ? 'Unpin' : 'Pin'}</button>
+          <button type="button" class="hf-btn hf-btn--primary" data-ann-close>Close</button>
+        `
+        : `<button type="button" class="hf-btn hf-btn--primary" data-ann-close>Close</button>`,
+    });
+    element.querySelector('[data-ann-close]')?.addEventListener('click', close);
+    if (isOrganizer) {
+      element.querySelector('[data-ann-pin]')?.addEventListener('click', () => {
+        store.actions.pinAnnouncement(item.id, !item.pinned);
+        ui.toast(item.pinned ? 'Unpinned.' : 'Pinned.', { tone: 'success' });
+        close();
+        renderFeed();
+      });
+      element.querySelector('[data-ann-delete]')?.addEventListener('click', async () => {
+        const ok = await ui.confirm({
+          title: 'Delete announcement?',
+          message: 'This removes the announcement permanently.',
+          confirmLabel: 'Delete',
+          tone: 'danger',
+        });
+        if (!ok) return;
+        store.actions.deleteAnnouncement(item.id);
+        ui.toast('Announcement deleted.', { tone: 'success' });
+        close();
+        renderFeed();
+      });
+    }
   }
 
   function paintCategories() {
