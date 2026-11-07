@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\AuditLog;
+use App\Models\MatchModel;
 use App\Models\Tournament;
 use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
@@ -43,4 +45,34 @@ it('throws on invalid format', function () {
 
     expect(fn () => (new BracketService)->generate($tournament, 'knockout'))
         ->toThrow(InvalidArgumentException::class);
+});
+
+it('corrects a score and propagates the changed winner', function () {
+    $match = MatchModel::where('round_number', 8)->where('match_number', 2)->firstOrFail();
+
+    (new BracketService)->correctScore($match, 70, 64, 'Clock review');
+
+    $match->refresh();
+    expect($match->home_score)->toBe(70);
+    expect($match->away_score)->toBe(64);
+    expect($match->winner_team_id)->toBe($match->home_team_id);
+    expect($match->status)->toBe('final');
+
+    $next = MatchModel::where('round_number', 4)->where('match_number', 1)->firstOrFail();
+    expect($next->away_team_id)->toBe($match->home_team_id);
+
+    expect(AuditLog::where('action', 'score.correct')->count())->toBeGreaterThanOrEqual(1);
+});
+
+it('finalizes a match with scores and propagates winner', function () {
+    $match = MatchModel::where('round_number', 8)->where('match_number', 3)->firstOrFail();
+    $match->home_score = 80;
+    $match->away_score = 70;
+    $match->save();
+
+    (new BracketService)->finalizeMatch($match);
+
+    $match->refresh();
+    expect($match->status)->toBe('final');
+    expect($match->winner_team_id)->toBe($match->home_team_id);
 });
