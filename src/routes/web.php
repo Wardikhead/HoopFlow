@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     // Shell navigation destinations (full pages land in later phases).
     foreach ([
         'teams' => '/teams',
+        'teamShow' => '/teams/{team}',
         'bracket' => '/bracket',
         'schedule' => '/schedule',
         'standings' => '/standings',
