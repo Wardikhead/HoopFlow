@@ -11,6 +11,7 @@ use App\Livewire\Organizer\AuditLogIndex;
 use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\GameStatsShow;
 use App\Livewire\Organizer\MatchesIndex;
+use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\ScheduleShow;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
@@ -50,10 +51,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/audit', AuditLogIndex::class)->name('audit')->middleware('role:organizer');
 
+    Route::get('/payments', PaymentsIndex::class)->name('payments')->middleware('role:organizer');
+
     foreach ([
         'standings' => '/standings',
         'submissions' => '/submissions',
-        'payments' => '/payments',
     ] as $name => $uri) {
         Route::get($uri, fn () => view('pages.dashboard'))->name($name);
     }
