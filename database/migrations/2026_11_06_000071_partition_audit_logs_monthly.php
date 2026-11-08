@@ -19,7 +19,7 @@ CREATE TABLE audit_logs (
 SQL);
         DB::statement('ALTER TABLE audit_logs ALTER COLUMN created_at SET NOT NULL');
         DB::statement('ALTER TABLE audit_logs ALTER COLUMN created_at SET DEFAULT now()');
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 12; $i++) {
             $start = now()->startOfMonth()->addMonths($i)->format('Y-m-d');
             $end = now()->startOfMonth()->addMonths($i + 1)->format('Y-m-d');
             $name = 'audit_logs_'.now()->startOfMonth()->addMonths($i)->format('Y_m');

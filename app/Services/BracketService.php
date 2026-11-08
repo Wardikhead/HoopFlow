@@ -166,6 +166,7 @@ class BracketService
         }
 
         $byes = 0;
+
         foreach ($firstRound as $slotIndex => $match) {
             $isBye = false;
             if ($match->home_team_id && ! $match->away_team_id) {
@@ -200,6 +201,66 @@ class BracketService
                 $nextMatch->away_team_id = $match->winner_team_id;
             }
             $nextMatch->save();
+        }
+
+        // Resolve structural byes in later rounds where the missing-side feeder
+        // has no real team (so no future opponent can appear).
+        $changed = true;
+        while ($changed) {
+            $changed = false;
+            foreach ($roundSizes as $roundSize) {
+                if ($roundSize === $firstRoundSize) {
+                    continue;
+                }
+                $prevRoundSize = $roundSize * 2;
+                if (! isset($byRound[$prevRoundSize])) {
+                    continue;
+                }
+                foreach ($byRound[$roundSize] as $match) {
+                    if (in_array($match->status, ['final', 'forfeit'], true)) {
+                        continue;
+                    }
+
+                    $missingHome = $match->home_team_id === null && $match->away_team_id !== null;
+                    $missingAway = $match->away_team_id === null && $match->home_team_id !== null;
+                    if (! $missingHome && ! $missingAway) {
+                        continue;
+                    }
+
+                    $feederIndex = $missingHome
+                        ? ($match->match_number * 2 - 2)
+                        : ($match->match_number * 2 - 1);
+                    $feeder = $byRound[$prevRoundSize][$feederIndex] ?? null;
+                    if (! $feeder instanceof MatchModel) {
+                        continue;
+                    }
+                    if ($feeder->home_team_id !== null || $feeder->away_team_id !== null) {
+                        continue;
+                    }
+
+                    $winnerId = $missingHome ? $match->away_team_id : $match->home_team_id;
+
+                    $match->status = 'final';
+                    $match->winner_team_id = $winnerId;
+                    $match->save();
+                    $byes++;
+                    $changed = true;
+
+                    $nextRoundSize = (int) ($roundSize / 2);
+                    if ($nextRoundSize >= 2 && isset($byRound[$nextRoundSize])) {
+                        $nextMatchNumber = (int) ceil($match->match_number / 2);
+                        $nextMatch = $byRound[$nextRoundSize][$nextMatchNumber - 1] ?? null;
+                        if ($nextMatch instanceof MatchModel) {
+                            if ($match->match_number % 2 !== 0) {
+                                $nextMatch->home_team_id = $winnerId;
+                            } else {
+                                $nextMatch->away_team_id = $winnerId;
+                            }
+                            $nextMatch->save();
+                        }
+                    }
+                }
+            }
         }
 
         // Create bracket slots.

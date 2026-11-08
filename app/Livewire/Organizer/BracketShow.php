@@ -6,6 +6,7 @@ use App\Models\MatchModel;
 use App\Models\Tournament;
 use App\Services\BracketService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -63,12 +64,16 @@ class BracketShow extends Component
     {
         $tournament = Tournament::findOrFail($this->tournamentId);
 
+        Gate::authorize('generateBracket', $tournament);
+
         $bracketService->generate($tournament, 'single-elimination');
     }
 
     public function regenerateBracket(BracketService $bracketService): void
     {
         $tournament = Tournament::findOrFail($this->tournamentId);
+
+        Gate::authorize('generateBracket', $tournament);
 
         $bracketService->generate($tournament, 'single-elimination');
     }
@@ -102,19 +107,32 @@ class BracketShow extends Component
 
     public function saveSlots(): void
     {
+        $tournament = $this->tournament();
+        $allowedTeamIds = $tournament !== null
+            ? $tournament->registrations()->where('status', 'approved')->pluck('team_id')->all()
+            : [];
+
         foreach ($this->slots as $assignment) {
             if (! is_array($assignment)) {
                 continue;
             }
 
             $match = MatchModel::find($assignment['matchId'] ?? null);
-            if (! $match instanceof MatchModel) {
+            if (! $match instanceof MatchModel || $match->tournament_id !== $this->tournamentId) {
+                continue;
+            }
+
+            if (Gate::denies('update', $match)) {
                 continue;
             }
 
             $slot = (int) ($assignment['slot'] ?? 0);
             $teamId = $assignment['teamId'] ?? null;
             $teamId = $teamId === '' ? null : $teamId;
+
+            if ($teamId !== null && ! in_array((int) $teamId, $allowedTeamIds, true)) {
+                $teamId = null;
+            }
 
             if ($slot === 1) {
                 $match->home_team_id = $teamId !== null ? (int) $teamId : null;
@@ -148,14 +166,27 @@ class BracketShow extends Component
             return;
         }
 
+        $this->validate([
+            'score1' => ['required', 'integer', 'min:0'],
+            'score2' => ['required', 'integer', 'min:0'],
+        ]);
+
         $match = MatchModel::findOrFail($this->selectedMatchId);
 
-        $bracketService->correctScore(
-            $match,
-            (int) ($this->score1 ?? 0),
-            (int) ($this->score2 ?? 0),
-            $this->reason,
-        );
+        Gate::authorize('correctScore', $match);
+
+        try {
+            $bracketService->correctScore(
+                $match,
+                (int) ($this->score1 ?? 0),
+                (int) ($this->score2 ?? 0),
+                $this->reason !== '' ? $this->reason : 'Score entry',
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('reason', $e->getMessage());
+
+            return;
+        }
 
         $this->showScoreConsole = false;
     }
@@ -180,14 +211,28 @@ class BracketShow extends Component
             return;
         }
 
+        $this->validate([
+            'score1' => ['required', 'integer', 'min:0'],
+            'score2' => ['required', 'integer', 'min:0'],
+            'reason' => ['required', 'string', 'min:1'],
+        ]);
+
         $match = MatchModel::findOrFail($this->selectedMatchId);
 
-        $bracketService->correctScore(
-            $match,
-            (int) ($this->score1 ?? 0),
-            (int) ($this->score2 ?? 0),
-            $this->reason,
-        );
+        Gate::authorize('correctScore', $match);
+
+        try {
+            $bracketService->correctScore(
+                $match,
+                (int) ($this->score1 ?? 0),
+                (int) ($this->score2 ?? 0),
+                $this->reason,
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('reason', $e->getMessage());
+
+            return;
+        }
 
         $this->showCorrection = false;
     }

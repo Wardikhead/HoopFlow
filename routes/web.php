@@ -17,6 +17,8 @@ use App\Livewire\Organizer\SubmissionsIndex;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentsIndex;
+use App\Models\Tournament;
+use App\Services\StandingsService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
@@ -56,5 +58,16 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/submissions', SubmissionsIndex::class)->name('submissions')->middleware('role:organizer');
 
-    Route::get('/standings', fn () => view('pages.dashboard'))->name('standings');
+    Route::get('/standings', function () {
+        $id = request()->query('id') ?? request()->query('tournament');
+        $tournament = is_numeric($id)
+            ? Tournament::find((int) $id)
+            : Tournament::where('status', 'active')->first() ?? Tournament::first();
+
+        $standings = $tournament
+            ? app(StandingsService::class)->compute($tournament)
+            : collect();
+
+        return view('pages.standings', compact('tournament', 'standings'));
+    })->name('standings');
 });

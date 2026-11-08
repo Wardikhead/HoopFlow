@@ -13,7 +13,7 @@ class DashboardController extends Controller
 
     public function index(Request $request): View
     {
-        $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->first()
+        $tournament = Tournament::where('status', 'active')->first()
             ?? Tournament::first();
 
         $user = $request->user();
