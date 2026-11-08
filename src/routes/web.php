@@ -13,6 +13,7 @@ use App\Livewire\Organizer\GameStatsShow;
 use App\Livewire\Organizer\MatchesIndex;
 use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\ScheduleShow;
+use App\Livewire\Organizer\SubmissionsIndex;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentsIndex;
@@ -53,10 +54,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/payments', PaymentsIndex::class)->name('payments')->middleware('role:organizer');
 
-    foreach ([
-        'standings' => '/standings',
-        'submissions' => '/submissions',
-    ] as $name => $uri) {
-        Route::get($uri, fn () => view('pages.dashboard'))->name($name);
-    }
+    Route::get('/submissions', SubmissionsIndex::class)->name('submissions')->middleware('role:organizer');
+
+    Route::get('/standings', fn () => view('pages.dashboard'))->name('standings');
 });
