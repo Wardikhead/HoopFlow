@@ -7,6 +7,7 @@ use App\Http\Controllers\TournamentController;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Livewire\Organizer\AnnouncementsIndex;
+use App\Livewire\Organizer\AuditLogIndex;
 use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\GameStatsShow;
 use App\Livewire\Organizer\MatchesIndex;
@@ -45,12 +46,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/announcements', AnnouncementsIndex::class)->name('announcements');
     Route::get('/announcements/create', AnnouncementCreate::class)->name('announcementCreate')->middleware('role:organizer');
 
+    Route::view('/profile', 'pages.profile')->name('profile');
+
+    Route::get('/audit', AuditLogIndex::class)->name('audit')->middleware('role:organizer');
+
     foreach ([
         'standings' => '/standings',
         'submissions' => '/submissions',
         'payments' => '/payments',
-        'audit' => '/audit',
-        'profile' => '/profile',
     ] as $name => $uri) {
         Route::get($uri, fn () => view('pages.dashboard'))->name($name);
     }
