@@ -20,11 +20,13 @@
 
 @section('title', 'Matches')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Matchups</span>
-    <h1 class="hf-page-title">Matches</h1>
-    <p class="hf-muted">Every bracket game, filterable by tournament and round, with a link to the official box score.</p>
-</div>
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Matchups</span>
+        <h1 class="hf-page-title">Matches</h1>
+        <p class="hf-page-desc">Every bracket game, filterable by tournament and round, with a link to the official box score.</p>
+    </div>
+</header>
 
 <div class="hf-card hf-mb-3">
     <div class="hf-form-grid">

@@ -1,14 +1,22 @@
 @extends('layouts.public')
 
-@section('title', 'Standings — HoopFlow')
+@section('title', 'Standings')
 
 @section('content')
 <div class="hf-page">
-    <section class="hf-hero hf-mb-3">
-        <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament?->division?->name ?? 'Division' }} · {{ $tournament?->name ?? 'Standings' }}</span>
-        <h1>Standings</h1>
-        <p>Wins, losses, point differential — computed from every recorded result.</p>
-    </section>
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">{{ $tournament?->divisions?->first()?->name ?? 'Division' }} · {{ $tournament?->name ?? 'Standings' }}</span>
+            <h1 class="hf-page-title">Standings</h1>
+            <p class="hf-page-desc">Wins, losses, point differential, and the playoff cut — computed from every recorded result.</p>
+        </div>
+        @if ($tournament)
+            <div class="hf-page-actions">
+                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}"><i class="bi bi-diagram-3"></i> Bracket</a>
+                <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}"><i class="bi bi-list-ul"></i> Matchups</a>
+            </div>
+        @endif
+    </header>
 
     @if ($tournament)
         <div class="hf-card">

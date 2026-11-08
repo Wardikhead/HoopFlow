@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'My team — HoopFlow')
+@section('title', 'My team')
 
 @section('content')
 <div class="hf-page">
@@ -18,21 +18,22 @@
             $docsCount = $team->players->filter(fn ($p) => $p->eligibility_status === 'verified')->count();
         @endphp
 
-        <section class="hf-hero hf-mb-3">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $registration?->tournament?->name ?? 'Tournament' }} · {{ $registration?->status ?? '' }}</span>
-            <h1>{{ $team->name }}</h1>
-            <p>{{ $team->coachUser?->name ?? ($user?->name ?? 'Coach') }} · {{ $registration?->division?->name ?? '' }}</p>
-            <div class="hf-stat-strip">
-                <div><span>Record</span><strong>{{ $record['wins'] }}-{{ $record['losses'] }}</strong></div>
-                <div><span>Seed</span><strong>{{ $registration?->seed ?? 'TBD' }}</strong></div>
-                <div><span>Roster</span><strong>{{ $team->players->count() }}</strong></div>
-                <div><span>Payment</span><strong>{{ $registration?->payment?->status ?? 'n/a' }}</strong></div>
+        <header class="hf-page-head hf-mb-3">
+            <div>
+                <span class="hf-eyebrow">{{ $registration?->tournament?->name ?? 'Tournament' }} · {{ $registration?->status ?? '' }}</span>
+                <h1 class="hf-page-title">{{ $team->name }}</h1>
+                <p class="hf-page-desc">{{ $team->coachUser?->name ?? ($user?->name ?? 'Coach') }}@if ($registration?->division?->name) · {{ $registration->division->name }}@endif</p>
+                <div class="hf-page-meta">
+                    <span><i class="bi bi-shield-check"></i> {{ $registration?->status ?? 'Pending' }}</span>
+                    <span><i class="bi bi-cash-coin"></i> {{ $registration?->payment?->status ?? 'No payment' }}</span>
+                    <span><i class="bi bi-people"></i> {{ $team->players->count() }} players</span>
+                </div>
             </div>
-            <div class="hf-btn-row hf-mt-3">
+            <div class="hf-page-actions">
                 <a class="hf-btn" href="{{ route('teamShow', ['team' => $team->id]) }}">Public profile</a>
                 <a class="hf-btn" href="{{ route('tournaments') }}">Register another team</a>
             </div>
-        </section>
+        </header>
 
         <div class="hf-grid hf-grid--4 hf-mb-3">
             <div class="hf-card">
@@ -133,7 +134,7 @@
                 <div class="hf-card">
                     <span class="hf-kpi-label">Tournament</span>
                     <h3 class="hf-section-title hf-mt-1">{{ $registration?->tournament?->name ?? '—' }}</h3>
-                    <p class="hf-small hf-muted hf-mb-1">{{ $registration?->division?->name ?? '' }} · {{ $registration?->tournament?->venue ?? '' }}</p>
+                    <p class="hf-small hf-muted hf-mb-1">@if ($registration?->division?->name){{ $registration->division->name }}@endif</p>
                     @if ($registration?->tournament)
                     <a class="hf-btn hf-btn--sm" href="{{ route('tournamentShow', ['tournament' => $registration->tournament->id]) }}">Tournament desk</a>
                     @endif

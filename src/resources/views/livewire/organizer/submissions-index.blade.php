@@ -1,14 +1,16 @@
 <div>
 @section('title', 'Submissions')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Organizer desk · Eligibility</span>
-    <h1 class="hf-page-title">Submissions</h1>
-    <p class="hf-muted">Review rosters, consent, documents, and payment references before a team enters the bracket.</p>
-    <div class="hf-btn-row hf-mt-2">
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Organizer desk · Eligibility</span>
+        <h1 class="hf-page-title">Submissions</h1>
+        <p class="hf-page-desc">Review rosters, consent, documents, and payment references before a team enters the bracket.</p>
+    </div>
+    <div class="hf-page-actions">
         <a class="hf-btn" href="{{ url('/payments') }}" data-testid="submissions-open-payments"><i class="bi bi-credit-card"></i> Payments</a>
     </div>
-</div>
+</header>
 
 <div class="hf-card hf-mb-3">
     <div class="hf-form-grid">
@@ -53,7 +55,7 @@
                             <span>
                                 <strong>{{ $team?->name ?? 'Unknown team' }}</strong>
                                 <span class="hf-small hf-muted" style="display:block">
-                                    {{ $team?->coachUser?->first_name ?? 'Coach' }} {{ $team?->coachUser?->last_name ?? '' }} · {{ $team?->city ?? '' }} · {{ $tournament?->name ?? 'Tournament' }}
+                                    {{ $team?->coachUser?->first_name ?? 'Coach' }} {{ $team?->coachUser?->last_name ?? '' }} · {{ $tournament?->name ?? 'Tournament' }}
                                 </span>
                             </span>
                         </span>

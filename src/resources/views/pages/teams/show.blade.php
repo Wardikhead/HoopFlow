@@ -1,9 +1,23 @@
 @extends('layouts.public')
 
-@section('title', $team->name . ' — HoopFlow')
+@section('title', $team->name)
 
 @section('content')
 <div class="hf-page">
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">{{ $registration?->division?->name ?? 'Division' }} · {{ $registration?->tournament?->name ?? 'Tournament' }}</span>
+            <h1 class="hf-page-title">{{ $team->name }}</h1>
+            <p class="hf-page-desc">{{ $team->coachUser?->name ?? 'Coach' }} · {{ $registration?->tournament?->name ?? 'Tournament' }}</p>
+        </div>
+        <div class="hf-page-actions">
+            <a class="hf-btn" href="{{ route('teams') }}" data-testid="team-back"><i class="bi bi-arrow-left"></i> Teams</a>
+            @if (auth()->user()?->hasRole('coach'))
+                <a class="hf-btn hf-btn--primary" href="{{ route('myTeam', ['team' => $team->id]) }}" data-testid="team-manage-roster"><i class="bi bi-person-lines-fill"></i> Manage roster</a>
+            @endif
+        </div>
+    </header>
+
     <section class="hf-hero hf-mb-3">
         <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $registration?->division?->name ?? 'Division' }} · {{ $registration?->status ?? 'Team' }}</span>
         <h1>{{ $team->name }}</h1>

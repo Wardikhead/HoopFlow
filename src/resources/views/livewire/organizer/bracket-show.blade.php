@@ -12,37 +12,45 @@
             <p class="hf-muted hf-mb-0">Tournament not found.</p>
         </div>
     @else
-        <section class="hf-hero hf-mb-3">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament->division?->name ?? 'Division' }} · {{ $tournament->status }}</span>
-            <h1>{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
-            <p>{{ $bracket['hasBracket'] ? $tournament->name . ' · ' . $tournament->division?->name : $tournament->name . ' · ' . $approved->count() . ' approved teams ready to seed.' }}</p>
-            <div class="hf-btn-row hf-mt-3">
+        <header class="hf-page-head hf-mb-3">
+            <div>
+                <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? $tournament->name }} · {{ $tournament->status }}</span>
+                <h1 class="hf-page-title">{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
+                <p class="hf-page-desc">
+                    @if ($bracket['hasBracket'])
+                        {{ $tournament->name }} · {{ count($bracket['rounds']) }} rounds
+                    @else
+                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournament->divisions?->first()?->max_teams ?? 0 }}-slot single-elimination bracket.
+                    @endif
+                </p>
+            </div>
+            <div class="hf-page-actions">
                 <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}"><i class="bi bi-arrow-left"></i> Tournament</a>
                 <a class="hf-btn" href="{{ route('schedule') }}"><i class="bi bi-calendar3"></i> Schedule</a>
                 <a class="hf-btn" href="{{ route('standings') }}"><i class="bi bi-bar-chart"></i> Standings</a>
-                @if ($role === 'organizer' && $bracket['hasBracket'])
+                @if ($role === 'organizer' && $bracket['hasBracket'] && $tournament->matches->where('status', 'final')->isEmpty())
                     <button type="button" class="hf-btn" wire:click="regenerateBracket" data-testid="bracket-regenerate">Regenerate bracket</button>
                     <button type="button" class="hf-btn" wire:click="editSlots" data-testid="bracket-edit-slots">Edit slots</button>
                 @endif
             </div>
-        </section>
+        </header>
 
         @if (! $bracket['hasBracket'])
             <div class="hf-grid hf-grid--3 hf-mb-3">
                 <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">Approved teams</span>
                     <strong class="hf-kpi-value">{{ $approved->count() }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->division?->max_teams ?? 0 }} bracket slots</p>
+                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->divisions?->first()?->max_teams ?? 0 }} bracket slots</p>
                 </div>
                 <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">First-round games</span>
-                    <strong class="hf-kpi-value">{{ (int) (($tournament->division?->max_teams ?? 0) / 2) }}</strong>
+                    <strong class="hf-kpi-value">{{ (int) (($tournament->divisions?->first()?->max_teams ?? 0) / 2) }}</strong>
                     <p class="hf-small hf-muted hf-mb-0">Byes fill empty slots</p>
                 </div>
                 <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">Courts</span>
-                    <strong class="hf-kpi-value">{{ $tournament->courts?->count() ?? 0 }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->venue?->name ?? '' }}</p>
+                    <strong class="hf-kpi-value">{{ $tournament->matchSlots->pluck('court_id')->filter()->unique()->count() }}</strong>
+                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->name }}</p>
                 </div>
             </div>
 
@@ -52,7 +60,7 @@
                 <div class="hf-grid hf-grid--2 hf-mt-2">
                     @forelse ($approved->sortBy('seed') as $reg)
                         <div class="hf-flex hf-items-center hf-gap-2 hf-card hf-card--flat">
-                            <span><strong>{{ $reg->team?->name ?? 'Team' }}</strong><span class="hf-small hf-muted" style="display:block">{{ $reg->team?->city ?? '' }} · seed {{ $reg->seed ?? 'TBD' }}</span></span>
+                            <span><strong>{{ $reg->team?->name ?? 'Team' }}</strong><span class="hf-small hf-muted" style="display:block">seed {{ $reg->seed ?? 'TBD' }}</span></span>
                         </div>
                     @empty
                         <div class="hf-card hf-card--flat">
@@ -85,7 +93,7 @@
                 <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">Rounds</span>
                     <strong class="hf-kpi-value">{{ count($bracket['rounds']) }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->division?->max_teams ?? 0 }}-team bracket</p>
+                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->divisions?->first()?->max_teams ?? 0 }}-team bracket</p>
                 </div>
                 <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">Played</span>

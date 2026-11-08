@@ -5,24 +5,26 @@
 
 @section('title', 'Announcements')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Matchday desk · Bulletin</span>
-    <h1 class="hf-page-title">Announcements</h1>
-    <p class="hf-muted">
-        @if(auth()->user()?->hasRole('fan'))
-            Official venue, schedule, and eligibility notices from the tournament desk.
-        @else
-            Venue, schedule, and eligibility bulletins, filtered to what this role can see.
-        @endif
-    </p>
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Matchday desk · Bulletin</span>
+        <h1 class="hf-page-title">Announcements</h1>
+        <p class="hf-page-desc">
+            @if(auth()->user()?->hasRole('fan'))
+                Official venue, schedule, and eligibility notices from the tournament desk.
+            @else
+                Venue, schedule, and eligibility bulletins, filtered to what this role can see.
+            @endif
+        </p>
+    </div>
     @if(auth()->user()?->hasRole('organizer'))
-        <div class="hf-btn-row hf-mt-2">
+        <div class="hf-page-actions">
             <a class="hf-btn hf-btn--primary" href="{{ url('/announcements/create') }}" data-testid="announcement-new">
                 <i class="bi bi-megaphone"></i> New announcement
             </a>
         </div>
     @endif
-</div>
+</header>
 
 <div class="hf-card hf-mb-3">
     <div class="hf-form-grid">
