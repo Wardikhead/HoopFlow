@@ -25,17 +25,19 @@
     $unscheduledCount = $tournament ? $tournament->matches()->whereDoesntHave('matchSlots')->count() : 0;
 @endphp
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">{{ $tournament?->division ?? '' }} · {{ $tournament?->venue ?? '' }}</span>
-    <h1 class="hf-page-title">Court schedule</h1>
-    <p class="hf-muted">
-        @if ($tournament)
-            {{ optional($tournament->start_date)->format('M d, Y') }} to {{ optional($tournament->end_date)->format('M d, Y') }} · {{ $courtCount }} courts · {{ $tournament->slotMinutes ?? 30 }}-minute slots
-        @else
-            No tournament selected.
-        @endif
-    </p>
-    <div class="hf-flex hf-gap-2 hf-mt-2">
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">{{ $tournament?->divisions?->first()?->name ?? 'Tournament' }} · {{ $tournament?->name ?? 'Schedule' }}</span>
+        <h1 class="hf-page-title">Court schedule</h1>
+        <p class="hf-page-desc">
+            @if ($tournament)
+                {{ optional($tournament->start_date)->format('M d, Y') }} to {{ optional($tournament->end_date)->format('M d, Y') }} · {{ $courtCount }} courts · {{ $tournament->slotMinutes ?? 30 }}-minute slots
+            @else
+                No tournament selected.
+            @endif
+        </p>
+    </div>
+    <div class="hf-page-actions">
         @if ($tournament)
             <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
             <a class="hf-btn" href="{{ route('bracket') }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
@@ -44,7 +46,7 @@
             <button type="button" class="hf-btn" wire:click="generateSchedule" data-testid="schedule-regenerate">Regenerate schedule</button>
         @endif
     </div>
-</div>
+</header>
 
 <div class="hf-grid hf-grid--4 hf-mb-3">
     <div class="hf-card hf-card--flat" data-testid="schedule-kpi-scheduled">
@@ -60,7 +62,7 @@
     <div class="hf-card hf-card--flat" data-testid="schedule-kpi-courts">
         <span class="hf-kpi-label">Courts</span>
         <strong class="hf-kpi-value">{{ $courtCount }}</strong>
-        <span class="hf-small hf-muted">{{ $tournament?->venue ?? '' }}</span>
+        <span class="hf-small hf-muted">{{ $tournament?->name ?? '' }}</span>
     </div>
     <div class="hf-card hf-card--flat" data-testid="schedule-kpi-results">
         <span class="hf-kpi-label">Results</span>

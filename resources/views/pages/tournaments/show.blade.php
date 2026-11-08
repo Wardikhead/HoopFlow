@@ -1,18 +1,18 @@
 @extends('layouts.public')
 
-@section('title', $tournament->name . ' — HoopFlow')
+@section('title', $tournament->name)
 
 @section('content')
 <div class="hf-page">
     <section class="hf-hero hf-mb-3">
-        <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament->division?->name ?? 'Division' }} · {{ $tournament->status }}</span>
+        <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament->divisions?->first()?->name ?? 'Division' }} · {{ $tournament->status }}</span>
         <h1>{{ $tournament->name }}</h1>
         <p>{{ $tournament->description }}</p>
         <div class="hf-stat-strip">
             <div><span>Dates</span><strong>{{ $tournament->start_date }} – {{ $tournament->end_date }}</strong></div>
-            <div><span>Entry</span><strong>{{ number_format($tournament->division?->entry_fee ?? 0, 2) }}</strong></div>
+            <div><span>Entry</span><strong>{{ number_format($tournament->divisions?->first()?->entry_fee ?? 0, 2) }}</strong></div>
             <div><span>Format</span><strong>Single elimination</strong></div>
-            <div><span>Slots</span><strong>{{ $tournament->division?->max_teams ?? ($tournament->rules_json['slots'] ?? 0) }}</strong></div>
+            <div><span>Slots</span><strong>{{ $tournament->divisions?->first()?->max_teams ?? ($tournament->rules_json['slots'] ?? 0) }}</strong></div>
         </div>
         <div class="hf-btn-row hf-mt-3">
             <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}">Bracket</a>

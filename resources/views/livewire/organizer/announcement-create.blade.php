@@ -1,14 +1,16 @@
 <div>
     @section('title', 'New announcement')
 
-    <div class="hf-page-header hf-mb-3">
-        <span class="hf-eyebrow">Matchday desk · Bulletin</span>
-        <h1 class="hf-page-title">New announcement</h1>
-        <p class="hf-muted">Publish a venue, schedule, or eligibility notice to the right audience.</p>
-        <div class="hf-flex hf-gap-2 hf-mt-2">
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Matchday desk · Bulletin</span>
+            <h1 class="hf-page-title">New announcement</h1>
+            <p class="hf-page-desc">Publish a venue, schedule, or eligibility notice to the right audience.</p>
+        </div>
+        <div class="hf-page-actions">
             <a class="hf-btn" href="{{ route('announcements') }}" data-testid="announcement-composer-back"><i class="bi bi-arrow-left"></i> Announcements</a>
         </div>
-    </div>
+    </header>
 
     <form wire:submit="save" class="hf-card" data-testid="announcement-create-form">
         <div class="hf-form-grid">

@@ -42,11 +42,13 @@
         ->implode('');
 @endphp
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Account</span>
-    <h1 class="hf-page-title">Profile</h1>
-    <p class="hf-muted">Your identity, role scope, and appearance preferences.</p>
-</div>
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Account</span>
+        <h1 class="hf-page-title">Profile</h1>
+        <p class="hf-page-desc">Your identity, role scope, and appearance preferences.</p>
+    </div>
+</header>
 
 <section class="hf-card hf-profile-head hf-mb-3" data-testid="profile-identity">
     <span class="hf-avatar hf-avatar--xl">{{ $initials }}</span>

@@ -18,16 +18,18 @@
         <a class="hf-btn hf-btn--primary" href="{{ url('/matches') }}">Browse matchups</a>
     </div>
 @else
-    <div class="hf-page-header hf-mb-3">
-        <span class="hf-eyebrow">{{ $match->tournament?->name ?? 'Tournament' }}</span>
-        <h1 class="hf-page-title">Game stats</h1>
-        <p class="hf-muted">
-            {{ $home?->name ?? 'TBD' }} vs {{ $away?->name ?? 'TBD' }}
-            @if ($match->home_score !== null && $match->away_score !== null)
-                · {{ $match->home_score }}–{{ $match->away_score }}
-            @endif
-        </p>
-    </div>
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">{{ $match->tournament?->name ?? 'Tournament' }}</span>
+            <h1 class="hf-page-title">Game stats</h1>
+            <p class="hf-page-desc">
+                {{ $home?->name ?? 'TBD' }} vs {{ $away?->name ?? 'TBD' }}
+                @if ($match->home_score !== null && $match->away_score !== null)
+                    · {{ $match->home_score }}–{{ $match->away_score }}
+                @endif
+            </p>
+        </div>
+    </header>
 
     <div class="hf-card hf-card--flat hf-mb-3">
         <div class="hf-between hf-wrap">

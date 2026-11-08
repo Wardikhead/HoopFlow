@@ -1,14 +1,16 @@
 <div>
 @section('title', 'Payments')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Organizer desk · Finance</span>
-    <h1 class="hf-page-title">Payments</h1>
-    <p class="hf-muted">Verify entry fees, track collection, and keep every reference in the audit trail.</p>
-    <div class="hf-btn-row hf-mt-2">
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Organizer desk · Finance</span>
+        <h1 class="hf-page-title">Payments</h1>
+        <p class="hf-page-desc">Verify entry fees, track collection, and keep every reference in the audit trail.</p>
+    </div>
+    <div class="hf-page-actions">
         <a class="hf-btn" href="{{ url('/submissions') }}" data-testid="payments-open-submissions"><i class="bi bi-clipboard-check"></i> Submissions</a>
     </div>
-</div>
+</header>
 
 <div class="hf-card hf-mb-3">
     <div class="hf-form-grid">

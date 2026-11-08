@@ -30,18 +30,20 @@
 
 @section('title', 'Tournaments')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Tournament directory</span>
-    <h1 class="hf-page-title">Tournaments</h1>
-    <p class="hf-muted">Three seeded competitions cover registration, a live bracket, and a draft that can generate a bracket and schedule during the demo.</p>
-    <div class="hf-flex hf-gap-2 hf-mt-2">
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Tournament directory</span>
+        <h1 class="hf-page-title">Tournaments</h1>
+        <p class="hf-page-desc">Three seeded competitions cover registration, a live bracket, and a draft that can generate a bracket and schedule during the demo.</p>
+    </div>
+    <div class="hf-page-actions">
         @if ($role === 'organizer')
             <a class="hf-btn hf-btn--primary" href="{{ route('tournamentCreate') }}" data-testid="tournaments-create"><i class="bi bi-plus-lg"></i> New tournament</a>
         @else
             <a class="hf-btn" href="{{ route('dashboard') }}">Back to dashboard</a>
         @endif
     </div>
-</div>
+</header>
 
 <div class="hf-card hf-mb-3">
     <div class="hf-form-grid">

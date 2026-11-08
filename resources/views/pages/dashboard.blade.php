@@ -41,20 +41,22 @@
         $standings = $tournament ? app(\App\Services\StandingsService::class)->compute($tournament)->take(4) : collect();
     @endphp
 
-    <div class="hf-page-header hf-mb-3">
-        <span class="hf-eyebrow">Matchday desk · organizer</span>
-        <h1 class="hf-page-title">Run the tournament</h1>
-        <p class="hf-muted">Approvals, payments, bracket progress, and the next action that keeps the matchday moving.</p>
-        @if ($tournament)
-            <div class="hf-flex hf-wrap hf-gap-2 hf-mt-2">
-                <span><i class="bi bi-calendar3"></i> {{ optional($tournament->start_date)->format('M d, Y') }} – {{ optional($tournament->end_date)->format('M d, Y') }}</span>
-            </div>
-        @endif
-        <div class="hf-flex hf-gap-2 hf-mt-2">
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Matchday desk · organizer</span>
+            <h1 class="hf-page-title">Run the tournament</h1>
+            <p class="hf-page-desc">Approvals, payments, bracket progress, and the next action that keeps the matchday moving.</p>
+            @if ($tournament)
+                <div class="hf-page-meta">
+                    <span><i class="bi bi-calendar3"></i> {{ optional($tournament->start_date)->format('M d, Y') }} – {{ optional($tournament->end_date)->format('M d, Y') }}</span>
+                </div>
+            @endif
+        </div>
+        <div class="hf-page-actions">
             <a class="hf-btn hf-btn--primary" href="{{ route('tournamentCreate') }}" data-testid="dashboard-create-tournament"><i class="bi bi-plus-lg"></i> New tournament</a>
             <a class="hf-btn" href="{{ route('submissions') }}" data-testid="dashboard-open-submissions">Review queue</a>
         </div>
-    </div>
+    </header>
 
     <div class="hf-grid hf-grid--4 hf-mb-3">
         <a class="hf-card hf-card--flat" href="{{ route('tournaments') }}" data-testid="kpi-tournaments">
@@ -208,6 +210,17 @@
         $rosterReady = $team ? $team->players->filter(fn ($p) => $p->consent_at)->count() : 0;
     @endphp
 
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Matchday desk · coach</span>
+            <h1 class="hf-page-title">Coach corner</h1>
+            <p class="hf-page-desc">Your registration status, roster readiness, payment, and next game.</p>
+        </div>
+        <div class="hf-page-actions">
+            <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}" data-testid="dashboard-register-cta"><i class="bi bi-trophy"></i> Find open tournament</a>
+        </div>
+    </header>
+
     @if (! $team)
         <div class="hf-card">
             <h2 class="hf-section-title">No team attached</h2>
@@ -216,9 +229,9 @@
         </div>
     @else
         <section class="hf-hero hf-mb-3" data-testid="coach-hero">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament?->name ?? 'Tournament' }} · {{ $team->status ?? '' }}</span>
+            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament?->name ?? 'Tournament' }} · {{ $team->registrations?->first()?->status ?? $team->status ?? 'Team' }}</span>
             <h1>{{ $team->name }}</h1>
-            <p>{{ $team->coachUser?->name ?? '' }} · {{ $team->city ?? '' }} · {{ $tournament?->divisions?->first()?->name ?? '' }}</p>
+            <p>{{ $team->coachUser?->name ?? 'Coach' }}@if ($tournament?->divisions?->first()?->name) · {{ $tournament->divisions->first()->name }}@endif</p>
             <div class="hf-stat-strip">
                 <div><span>Record</span><strong>{{ $record['wins'] }}-{{ $record['losses'] }}</strong></div>
                 <div><span>Seed</span><strong>{{ $team->registrations?->first()?->seed ?? 'TBD' }}</strong></div>
@@ -276,6 +289,17 @@
         $fanAnnouncements = $announcements->filter(fn ($a) => ($a->audience ?? 'all') === 'all')->values();
         $standings = $tournament ? app(\App\Services\StandingsService::class)->compute($tournament)->take(5) : collect();
     @endphp
+
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Courtside pass · fan</span>
+            <h1 class="hf-page-title">Courtside pass</h1>
+            <p class="hf-page-desc">Follow the active tournament: bracket, schedule, results, standings, and announcements.</p>
+        </div>
+        <div class="hf-page-actions">
+            <a class="hf-btn hf-btn--primary" href="{{ route('bracket') }}" data-testid="dashboard-open-bracket"><i class="bi bi-diagram-3"></i> Open bracket</a>
+        </div>
+    </header>
 
     <section class="hf-hero hf-mb-3" data-testid="fan-hero">
         <span class="hf-eyebrow" style="color: var(--hf-gold)">Courtside pass · {{ $tournament?->status ?? '' }}</span>

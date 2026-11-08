@@ -1,14 +1,16 @@
 <div>
     @section('title', 'Create tournament')
 
-    <div class="hf-page-header hf-mb-3">
-        <span class="hf-eyebrow">Organizer desk · Setup</span>
-        <h1 class="hf-page-title">Create a tournament</h1>
-        <p class="hf-muted">Name the competition, choose the court plan, then publish a registration page.</p>
-        <div class="hf-flex hf-gap-2 hf-mt-2">
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Organizer desk · Setup</span>
+            <h1 class="hf-page-title">Create a tournament</h1>
+            <p class="hf-page-desc">Name the competition, choose the court plan, then publish a registration page.</p>
+        </div>
+        <div class="hf-page-actions">
             <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="create-cancel"><i class="bi bi-arrow-left"></i> Tournaments</a>
         </div>
-    </div>
+    </header>
 
     <form wire:submit="save" class="hf-card" data-testid="create-form">
         <div class="hf-form-grid">

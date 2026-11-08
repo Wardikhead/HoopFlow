@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', config('app.name'))</title>
+    <title>@yield('title', $title ?? config('app.name'))</title>
 
     <script>
         (function () {
@@ -20,6 +20,7 @@
         })();
     </script>
 
+    <link rel="stylesheet" href="{{ asset('fonts/fonts.css') }}">
     @vite(['resources/css/app.scss', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -38,6 +39,7 @@
         </header>
 
         <main id="main">
+            {{ $slot ?? '' }}
             @yield('content')
         </main>
     @endguest
@@ -152,7 +154,7 @@
 
             <header class="hf-topbar">
                 <div class="hf-topbar-context">
-                    <h1 class="hf-topbar-title">@yield('title', 'HoopFlow')</h1>
+                    <h1 class="hf-topbar-title">@yield('title', $title ?? 'HoopFlow')</h1>
                     <div class="hf-topbar-sub">{{ $activeTournament?->name ?? 'No active tournament' }} · {{ $role }}</div>
                 </div>
                 <div class="hf-topbar-actions">
@@ -182,6 +184,7 @@
             </nav>
 
             <main id="main" class="hf-main">
+                {{ $slot ?? '' }}
                 @yield('content')
             </main>
         </div>

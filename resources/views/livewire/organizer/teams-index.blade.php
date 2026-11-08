@@ -36,17 +36,19 @@
 
 @section('title', 'Teams')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Team directory</span>
-    <h1 class="hf-page-title">Teams</h1>
-    <p class="hf-muted">
-        @if ($role === 'fan')
-            Public team cards show records, coaches, and rosters. Payment and eligibility details stay private.
-        @else
-            Teams across tournaments. Filter by tournament, status, division, or search.
-        @endif
-    </p>
-    <div class="hf-flex hf-gap-2 hf-mt-2">
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Team directory</span>
+        <h1 class="hf-page-title">Teams</h1>
+        <p class="hf-page-desc">
+            @if ($role === 'fan')
+                Public team cards show records, coaches, and rosters. Payment and eligibility details stay private.
+            @else
+                Teams across tournaments. Filter by tournament, status, division, or search.
+            @endif
+        </p>
+    </div>
+    <div class="hf-page-actions">
         @if ($role === 'organizer')
             <a class="hf-btn" href="{{ route('teams') }}" data-testid="teams-change-tournament"><i class="bi bi-arrow-left"></i> All teams</a>
             <a class="hf-btn hf-btn--primary" href="{{ route('submissions') }}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check"></i> Review queue</a>
@@ -64,7 +66,7 @@
             <a class="hf-btn" href="{{ route('dashboard') }}">Back to dashboard</a>
         @endif
     </div>
-</div>
+</header>
 
 <div id="teamKpis" class="hf-grid hf-grid--4 hf-mb-3">
     @if ($role === 'fan')

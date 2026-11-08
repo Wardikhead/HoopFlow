@@ -5,13 +5,15 @@
 
 @section('title', 'Audit log')
 
-<div class="hf-page-header hf-mb-3">
-    <span class="hf-eyebrow">Operations</span>
-    <h1 class="hf-page-title">Audit log</h1>
-    <p class="hf-muted">
-        A reverse-chronological record of approvals, payments, brackets, schedules, scores, and announcements.
-    </p>
-</div>
+<header class="hf-page-head hf-mb-3">
+    <div>
+        <span class="hf-eyebrow">Operations</span>
+        <h1 class="hf-page-title">Audit log</h1>
+        <p class="hf-page-desc">
+            A reverse-chronological record of approvals, payments, brackets, schedules, scores, and announcements.
+        </p>
+    </div>
+</header>
 
 <div class="hf-card hf-mb-3" data-testid="audit-filters">
     <div class="hf-form-grid">

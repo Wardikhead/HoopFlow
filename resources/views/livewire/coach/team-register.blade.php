@@ -1,11 +1,13 @@
 <div>
     @section('title', 'Register team')
 
-    <div class="hf-page-header hf-mb-3">
-        <span class="hf-eyebrow">Coach desk · Registration</span>
-        <h1 class="hf-page-title">Register a team</h1>
-        <p class="hf-muted">Create your team, roster, and payment reference.</p>
-    </div>
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Coach desk · Registration</span>
+            <h1 class="hf-page-title">Register a team</h1>
+            <p class="hf-page-desc">Create your team, roster, and payment reference.</p>
+        </div>
+    </header>
 
     <form wire:submit="save" class="hf-card" data-testid="register-form">
         <div class="hf-form-grid">
