@@ -5,6 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TournamentController;
 use App\Livewire\Coach\TeamRegister;
+use App\Livewire\Organizer\AnnouncementCreate;
+use App\Livewire\Organizer\AnnouncementsIndex;
 use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\GameStatsShow;
 use App\Livewire\Organizer\MatchesIndex;
@@ -40,9 +42,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/game-stats', GameStatsShow::class)->name('gameStats');
 
+    Route::get('/announcements', AnnouncementsIndex::class)->name('announcements');
+    Route::get('/announcements/create', AnnouncementCreate::class)->name('announcementCreate')->middleware('role:organizer');
+
     foreach ([
         'standings' => '/standings',
-        'announcements' => '/announcements',
         'submissions' => '/submissions',
         'payments' => '/payments',
         'audit' => '/audit',
