@@ -209,7 +209,7 @@ class TeamRegister extends Component
             return $team->id;
         });
 
-        $this->redirectRoute('myTeam', ['team' => $teamId]);
+        $this->redirectRoute('myTeam');
     }
 
     public function render(): View

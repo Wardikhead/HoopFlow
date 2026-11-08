@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['match_id', 'player_id', 'team_id', 'points', 'assists', 'rebounds', 'steals', 'blocks', 'fouls'])]
+#[Fillable(['match_id', 'player_id', 'team_id', 'tournament_id', 'points', 'assists', 'rebounds', 'steals', 'blocks', 'fouls'])]
 class PlayerStat extends Model
 {
     public $incrementing = false;
@@ -49,5 +49,13 @@ class PlayerStat extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * @return BelongsTo<Tournament, $this>
+     */
+    public function tournament(): BelongsTo
+    {
+        return $this->belongsTo(Tournament::class);
     }
 }

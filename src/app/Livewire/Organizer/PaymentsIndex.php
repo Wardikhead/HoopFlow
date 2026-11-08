@@ -35,7 +35,7 @@ class PaymentsIndex extends Component
     {
         $payment = Payment::query()->find($paymentId);
 
-        if ($payment === null) {
+        if ($payment === null || $payment->status !== 'pending') {
             return;
         }
 
@@ -50,7 +50,7 @@ class PaymentsIndex extends Component
     {
         $payment = Payment::query()->find($paymentId);
 
-        if ($payment === null) {
+        if ($payment === null || $payment->status !== 'verified') {
             return;
         }
 

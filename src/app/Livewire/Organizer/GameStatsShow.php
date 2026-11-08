@@ -5,6 +5,7 @@ namespace App\Livewire\Organizer;
 use App\Models\MatchModel;
 use App\Services\BracketService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -74,14 +75,27 @@ class GameStatsShow extends Component
             return;
         }
 
+        $this->validate([
+            'score1' => ['required', 'integer', 'min:0'],
+            'score2' => ['required', 'integer', 'min:0'],
+        ]);
+
         $match = MatchModel::findOrFail($this->matchId);
 
-        $bracketService->correctScore(
-            $match,
-            (int) ($this->score1 ?? 0),
-            (int) ($this->score2 ?? 0),
-            $this->reason !== '' ? $this->reason : 'Score entry',
-        );
+        Gate::authorize('correctScore', $match);
+
+        try {
+            $bracketService->correctScore(
+                $match,
+                (int) ($this->score1 ?? 0),
+                (int) ($this->score2 ?? 0),
+                $this->reason !== '' ? $this->reason : 'Score entry',
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('reason', $e->getMessage());
+
+            return;
+        }
 
         $this->showScoreConsole = false;
     }
@@ -108,14 +122,28 @@ class GameStatsShow extends Component
             return;
         }
 
+        $this->validate([
+            'score1' => ['required', 'integer', 'min:0'],
+            'score2' => ['required', 'integer', 'min:0'],
+            'reason' => ['required', 'string', 'min:1'],
+        ]);
+
         $match = MatchModel::findOrFail($this->matchId);
 
-        $bracketService->correctScore(
-            $match,
-            (int) ($this->score1 ?? 0),
-            (int) ($this->score2 ?? 0),
-            $this->reason,
-        );
+        Gate::authorize('correctScore', $match);
+
+        try {
+            $bracketService->correctScore(
+                $match,
+                (int) ($this->score1 ?? 0),
+                (int) ($this->score2 ?? 0),
+                $this->reason,
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('reason', $e->getMessage());
+
+            return;
+        }
 
         $this->showCorrection = false;
     }
