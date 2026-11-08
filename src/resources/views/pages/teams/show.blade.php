@@ -87,7 +87,9 @@
                 <span class="hf-kpi-label">Tournament</span>
                 <h3 class="hf-section-title hf-mt-1">{{ $registration?->tournament?->name ?? '—' }}</h3>
                 <p class="hf-small hf-muted hf-mb-1">{{ $registration?->division?->name ?? '' }}</p>
-                <a class="hf-btn hf-btn--sm" href="{{ $registration?->tournament ? route('tournamentShow', ['tournament' => $registration->tournament->id]) : '#' }}">Tournament desk</a>
+                @if ($registration?->tournament)
+                <a class="hf-btn hf-btn--sm" href="{{ route('tournamentShow', ['tournament' => $registration->tournament->id]) }}">Tournament desk</a>
+                @endif
             </div>
         </aside>
     </div>
