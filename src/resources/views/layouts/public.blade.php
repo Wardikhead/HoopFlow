@@ -46,6 +46,7 @@
         @php
             $authUser = auth()->user();
             $role = $authUser->hasRole('organizer') ? 'organizer' : ($authUser->hasRole('coach') ? 'coach' : 'fan');
+            $activeTournament = \App\Models\Tournament::where('status', 'active')->first() ?? \App\Models\Tournament::first();
 
             $navItems = [
                 'dashboard' => ['label' => 'Dashboard', 'icon' => 'speedometer2', 'route' => 'dashboard'],
@@ -152,7 +153,7 @@
             <header class="hf-topbar">
                 <div class="hf-topbar-context">
                     <h1 class="hf-topbar-title">@yield('title', 'HoopFlow')</h1>
-                    <div class="hf-topbar-sub">No active tournament · {{ $role }}</div>
+                    <div class="hf-topbar-sub">{{ $activeTournament?->name ?? 'No active tournament' }} · {{ $role }}</div>
                 </div>
                 <div class="hf-topbar-actions">
                     <button type="button" class="hf-icon-btn" data-theme-toggle aria-label="Toggle color theme" data-testid="theme-toggle">
