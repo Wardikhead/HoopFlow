@@ -140,7 +140,7 @@
                 {{ $daySlots->count() }} games · {{ $daySlots->pluck('court_id')->filter()->unique()->count() }} courts · first tip-off {{ $daySlots->first()?->start_at?->format('g:i A') ?? 'TBD' }}
             </p>
             @if ($tournament)
-                <a class="hf-btn hf-btn--sm" href="#" data-testid="schedule-open-day">Open day list</a>
+                <a class="hf-btn hf-btn--sm" href="{{ route('matches') }}" data-testid="schedule-open-day">Open day list</a>
             @endif
         </div>
 
