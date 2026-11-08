@@ -115,7 +115,7 @@
             </div>
         </div>
 
-        @foreach ([$home => $homeStats, $away => $awayStats] as $team => $rows)
+        @foreach ([[$home, $homeStats], [$away, $awayStats]] as [$team, $rows])
             @if ($team)
                 <section class="hf-mb-3" data-testid="stats-team-{{ $team->id }}">
                     <div class="hf-between hf-mb-1">
