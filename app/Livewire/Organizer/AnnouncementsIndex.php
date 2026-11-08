@@ -18,11 +18,14 @@ class AnnouncementsIndex extends Component
 {
     public ?int $tournament = null;
 
+    public string $category = 'all';
+
     public string $search = '';
 
     public function clearFilters(): void
     {
         $this->tournament = null;
+        $this->category = 'all';
         $this->search = '';
     }
 
@@ -79,6 +82,7 @@ class AnnouncementsIndex extends Component
 
         return $announcements
             ->filter(fn (Announcement $announcement) => in_array($announcement->audience, $allowedAudiences, true))
+            ->filter(fn (Announcement $announcement) => $this->category === 'all' || ($announcement->category ?? 'general') === $this->category)
             ->filter(function (Announcement $announcement) use ($term) {
                 if ($term === '') {
                     return true;
