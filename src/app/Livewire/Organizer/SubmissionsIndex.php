@@ -35,6 +35,21 @@ class SubmissionsIndex extends Component
 
     public string $rejectReason = '';
 
+    public function mount(): void
+    {
+        $status = request()->query('status', 'submitted');
+        $status = is_string($status) ? $status : 'submitted';
+        $status = $status === 'pending' ? 'submitted' : $status;
+
+        $this->status = in_array($status, ['submitted', 'approved', 'rejected', 'all'], true) ? $status : 'submitted';
+
+        $search = request()->query('q');
+        $this->search = is_string($search) ? $search : '';
+
+        $tournament = request()->query('tournament');
+        $this->tournament = is_string($tournament) && $tournament !== '' ? $tournament : 'all';
+    }
+
     public function openReview(int $registrationId): void
     {
         $this->reviewingId = $registrationId;

@@ -57,6 +57,7 @@ it('submissions render prototype filters, kpis, and buttons', function () {
         ->assertOk()
         ->assertSee('Submissions')
         ->assertSee('Pending review')
+        ->assertSee('Across all tournaments')
         ->assertSee('Approved')
         ->assertSee('Rejected')
         ->assertSee('Open registration')
@@ -148,4 +149,71 @@ it('verify requires a reference and an amount greater than zero', function () {
         ->assertHasErrors(['verifyRef', 'verifyAmount']);
 
     expect($payment->fresh()->status)->toBe('pending');
+});
+
+it('payments hydrates filters from the query string', function () {
+    Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['status' => 'paid', 'q' => 'Vipers', 'tournament' => '7'])
+        ->test(PaymentsIndex::class)
+        ->assertSet('status', 'paid')
+        ->assertSet('search', 'Vipers')
+        ->assertSet('tournament', '7');
+});
+
+it('payments maps the paid filter to verified records', function () {
+    $component = Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['status' => 'paid'])
+        ->test(PaymentsIndex::class)
+        ->assertSee('₱1,500');
+
+    $statuses = $component->instance()->payments->pluck('status')->unique()->values()->all();
+
+    expect($statuses)->toBe(['verified']);
+});
+
+it('payments exclude rejected registrations', function () {
+    $rejected = Registration::where('status', 'rejected')->firstOrFail();
+
+    $component = Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['status' => 'all'])
+        ->test(PaymentsIndex::class);
+
+    $registrationIds = $component->instance()->payments->pluck('registration_id')->all();
+
+    expect($registrationIds)->not->toContain($rejected->id);
+});
+
+it('payment kpis ignore status and search filters', function () {
+    $user = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    $filtered = Livewire::actingAs($user)
+        ->withQueryParams(['status' => 'pending', 'q' => 'no-team-matches-this'])
+        ->test(PaymentsIndex::class)
+        ->instance()
+        ->kpis;
+
+    $unfiltered = Livewire::actingAs($user)
+        ->withQueryParams(['status' => 'all'])
+        ->test(PaymentsIndex::class)
+        ->instance()
+        ->kpis;
+
+    expect($filtered)->toBe($unfiltered)
+        ->and($filtered['collected'])->toBeGreaterThan(0);
+});
+
+it('submissions hydrates filters from the query string and maps pending', function () {
+    Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['status' => 'pending', 'q' => 'Vipers', 'tournament' => '7'])
+        ->test(SubmissionsIndex::class)
+        ->assertSet('status', 'submitted')
+        ->assertSet('search', 'Vipers')
+        ->assertSet('tournament', '7');
+});
+
+it('submissions accepts an approved query filter', function () {
+    Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['status' => 'approved'])
+        ->test(SubmissionsIndex::class)
+        ->assertSet('status', 'approved');
 });

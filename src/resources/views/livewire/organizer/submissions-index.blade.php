@@ -36,9 +36,9 @@
     <div id="submissionKpis" class="hf-grid hf-grid--4 hf-mb-3">
         @php
             $submissionKpis = [
-                ['label' => 'Pending review', 'value' => $this->kpis['pending'], 'hint' => 'Awaiting organizer decision', 'tone' => 'gold', 'testid' => 'submission-kpi-pending'],
+                ['label' => 'Pending review', 'value' => $this->kpis['pending'], 'hint' => 'Across all tournaments', 'tone' => 'gold', 'testid' => 'submission-kpi-pending'],
                 ['label' => 'Approved', 'value' => $this->kpis['approved'], 'hint' => 'Eligible for seeding', 'tone' => 'success', 'testid' => 'submission-kpi-approved'],
-                ['label' => 'Rejected', 'value' => $this->kpis['rejected'], 'hint' => 'Archived from the bracket', 'tone' => 'danger', 'testid' => 'submission-kpi-rejected'],
+                ['label' => 'Rejected', 'value' => $this->kpis['rejected'], 'hint' => 'Archived from the bracket', 'tone' => 'alert', 'testid' => 'submission-kpi-rejected'],
                 ['label' => 'Open registration', 'value' => $this->kpis['open'], 'hint' => 'Tournaments accepting teams', 'tone' => 'primary', 'testid' => 'submission-kpi-open'],
             ];
         @endphp
@@ -56,7 +56,7 @@
             </div>
             <div class="hf-field">
                 <label class="hf-label" for="submissionStatus">Status</label>
-                <select class="hf-select" id="submissionStatus" wire:model="status" data-testid="submission-status-filter">
+                <select class="hf-select" id="submissionStatus" wire:model.live="status" data-testid="submission-status-filter">
                     <option value="submitted">Pending</option>
                     <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
@@ -65,7 +65,7 @@
             </div>
             <div class="hf-field">
                 <label class="hf-label" for="submissionTournament">Tournament</label>
-                <select class="hf-select" id="submissionTournament" wire:model="tournament" data-testid="submission-tournament-filter">
+                <select class="hf-select" id="submissionTournament" wire:model.live="tournament" data-testid="submission-tournament-filter">
                     <option value="all">All tournaments</option>
                     @foreach ($this->tournaments as $tournament)
                         <option value="{{ $tournament->id }}">{{ $tournament->name }}</option>
@@ -98,11 +98,12 @@
                         $eligibility = app(\App\Services\EligibilityService::class)->status($team ?? new \App\Models\Team());
                         $documentsComplete = $eligibility['documentsComplete'] ?? false;
                         $consentComplete = $eligibility['consentComplete'] ?? false;
+                        $paymentChipStatus = $payment?->status === 'verified' ? 'paid' : ($payment?->status ?? 'pending');
                     @endphp
                     <article class="hf-card hf-card--flat" data-testid="submission-row-{{ $registration->id }}" wire:key="submission-{{ $registration->id }}">
                         <div class="hf-between">
                             <span class="hf-flex hf-items-center hf-gap-2">
-                                <span class="hf-shield hf-shield--lg" style="background: {{ $team?->displayColor() ?? '#64748b' }}; color: #ffffff">{{ strtoupper(substr($team?->name ?? '?', 0, 1)) }}</span>
+                                <x-team-shield :team="$team" size="lg" />
                                 <span>
                                     <strong>{{ $team?->name ?? 'Unknown team' }}</strong>
                                     <span class="hf-small hf-muted" style="display:block">
@@ -112,13 +113,13 @@
                             </span>
                             <span class="hf-flex hf-wrap hf-gap-1">
                                 @include('components.status-chip', ['status' => $status])
-                                @include('components.status-chip', ['status' => $payment?->status ?? 'pending'])
+                                @include('components.status-chip', ['status' => $paymentChipStatus])
                             </span>
                         </div>
                         <div class="hf-flex hf-wrap hf-gap-2 hf-mt-2 hf-small">
                             <span class="hf-chip hf-chip--slate">{{ $players->count() }} players</span>
-                            <span class="hf-chip hf-chip--{{ $documentsComplete ? 'success' : 'danger' }}">{{ $documentsComplete ? 'Documents' : 'Missing documents' }}</span>
-                            <span class="hf-chip hf-chip--{{ $consentComplete ? 'success' : 'danger' }}">{{ $consentComplete ? 'Consent' : 'Missing consent' }}</span>
+                            @include('components.status-chip', ['status' => $documentsComplete ? 'verified' : 'missing', 'label' => 'Documents'])
+                            @include('components.status-chip', ['status' => $consentComplete ? 'verified' : 'missing', 'label' => 'Consent'])
                             <span class="hf-chip hf-chip--slate">{{ $division?->name ?? ($tournament?->divisions?->first()?->name ?? '') }}</span>
                             @if ($registration->submitted_at)
                                 <span class="hf-chip hf-chip--slate">Submitted {{ $registration->submitted_at->format('M d, Y') }}</span>
@@ -148,6 +149,7 @@
                 $reviewPlayers = $reviewTeam?->players ?? collect();
                 $reviewEligibility = app(\App\Services\EligibilityService::class)->status($reviewTeam ?? new \App\Models\Team());
                 $reviewPayment = $review->payment;
+                $reviewPaymentChipStatus = $reviewPayment?->status === 'verified' ? 'paid' : ($reviewPayment?->status ?? 'pending');
             @endphp
             <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeReview()" x-on:click="if ($event.target === $el) $wire.closeReview()" wire:key="submission-review-dialog" data-testid="submission-review-dialog">
                 <div class="hf-dialog__head">
@@ -156,29 +158,33 @@
                 </div>
                 <div class="hf-dialog__body">
                     <div class="hf-flex hf-items-center hf-gap-2 hf-mb-2">
-                        <span class="hf-shield hf-shield--lg" style="background: {{ $reviewTeam?->displayColor() ?? '#64748b' }}; color: #ffffff">{{ strtoupper(substr($reviewTeam?->name ?? '?', 0, 1)) }}</span>
+                        <x-team-shield :team="$reviewTeam" size="lg" />
                         <div>
                             <strong>{{ $reviewTeam?->coach_name ?? 'Coach' }} · {{ $reviewTeam?->city ?? '' }}</strong>
                             <span class="hf-small hf-muted" style="display:block">{{ $review->tournament?->name ?? '' }} · {{ $review->division?->name ?? '' }}</span>
                         </div>
                         <span class="hf-ml-auto hf-flex hf-gap-1">
                             @include('components.status-chip', ['status' => $review->status ?? 'submitted'])
-                            @include('components.status-chip', ['status' => $reviewPayment?->status ?? 'pending'])
+                            @include('components.status-chip', ['status' => $reviewPaymentChipStatus])
                         </span>
                     </div>
                     <div class="hf-grid hf-grid--2 hf-mb-3">
                         <div class="hf-card hf-card--flat">
                             <span class="hf-kpi-label">Eligibility</span>
                             <div class="hf-flex hf-wrap hf-gap-1 hf-mt-1">
-                                @include('components.status-chip', ['status' => $reviewEligibility['documentsComplete'] ? 'verified' : 'missing', 'label' => $reviewEligibility['documentsComplete'] ? 'Documents' : 'Missing documents'])
-                                @include('components.status-chip', ['status' => $reviewEligibility['consentComplete'] ? 'verified' : 'missing', 'label' => $reviewEligibility['consentComplete'] ? 'Consent' : 'Missing consent'])
+                                @include('components.status-chip', ['status' => $reviewEligibility['documentsComplete'] ? 'verified' : 'missing', 'label' => 'Documents'])
+                                @include('components.status-chip', ['status' => $reviewEligibility['consentComplete'] ? 'verified' : 'missing', 'label' => 'Consent'])
                             </div>
-                            <p class="hf-small hf-muted hf-mt-1 hf-mb-0">{{ $reviewPlayers->where('eligibility_status', 'verified')->count() }} of {{ $reviewPlayers->count() }} players verified.</p>
+                            @if ($reviewEligibility['verifiedAt'])
+                                <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Verified {{ \Illuminate\Support\Carbon::parse($reviewEligibility['verifiedAt'])->format('M d, Y') }}</p>
+                            @else
+                                <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Verification is recorded when you approve the team.</p>
+                            @endif
                         </div>
                         <div class="hf-card hf-card--flat">
                             <span class="hf-kpi-label">Payment reference</span>
                             <p class="hf-mb-0"><strong>{{ $reviewPayment?->method ?: 'No method' }}</strong> · {{ $reviewPayment?->reference_no ?: 'No reference' }}</p>
-                            <p class="hf-small hf-muted hf-mb-0">Amount {{ number_format((float) ($reviewPayment?->amount ?? 0), 2) }} · {{ ucfirst($reviewPayment?->status ?? 'pending') }}</p>
+                            <p class="hf-small hf-muted hf-mb-0">Amount {{ '₱'.number_format((float) ($reviewPayment?->amount ?? 0)) }} · {{ ucfirst($reviewPaymentChipStatus) }}</p>
                         </div>
                     </div>
                     <h3 class="hf-section-title">Roster ({{ $reviewPlayers->count() }})</h3>
@@ -191,9 +197,11 @@
                                 @foreach ($reviewPlayers as $player)
                                     @php
                                         $pdoc = $player->eligibilityDocuments->where('type', 'birth_certificate')->first();
-                                        $pdocStatus = $pdoc?->status ?? 'missing';
-                                        $pdocLabel = $pdocStatus === 'approved' ? 'On file' : 'Missing';
-                                        $pdocTone = $pdocStatus === 'approved' ? 'success' : 'danger';
+                                        $pdocChipStatus = match ($pdoc?->status) {
+                                            'approved' => 'verified',
+                                            'pending' => 'pending',
+                                            default => 'missing',
+                                        };
                                     @endphp
                                     <tr>
                                         <td>{{ $player->jersey_number }}</td>
@@ -201,7 +209,7 @@
                                         <td>{{ $player->position }}</td>
                                         <td>{{ $player->birthdate?->age ?? '—' }}</td>
                                         <td><span class="hf-chip hf-chip--{{ $player->consent_at ? 'success' : 'danger' }}">{{ $player->consent_at ? 'On file' : 'Missing' }}</span></td>
-                                        <td><span class="hf-chip hf-chip--{{ $pdocTone }}">{{ $pdocLabel }}</span></td>
+                                        <td>@include('components.status-chip', ['status' => $pdocChipStatus])</td>
                                     </tr>
                                 @endforeach
                             </tbody>

@@ -3,6 +3,7 @@
 namespace App\Livewire\Organizer;
 
 use App\Models\Payment;
+use App\Models\Registration;
 use App\Models\Tournament;
 use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
@@ -39,6 +40,20 @@ class PaymentsIndex extends Component
     public string $verifyRef = '';
 
     public ?int $verifyAmount = null;
+
+    public function mount(): void
+    {
+        $status = request()->query('status', 'pending');
+        $this->status = is_string($status) && in_array($status, ['pending', 'partial', 'paid', 'unpaid', 'all'], true)
+            ? $status
+            : 'pending';
+
+        $search = request()->query('q');
+        $this->search = is_string($search) ? $search : '';
+
+        $tournament = request()->query('tournament');
+        $this->tournament = is_string($tournament) && $tournament !== '' ? $tournament : 'all';
+    }
 
     public function openVerify(int $paymentId): void
     {
@@ -135,14 +150,17 @@ class PaymentsIndex extends Component
     public function payments(): Collection
     {
         $query = Payment::query()
-            ->with(['registration.team', 'registration.tournament', 'registration.division', 'registration.payment', 'recordedBy']);
+            ->with(['registration.team', 'registration.tournament', 'registration.division', 'registration.payment', 'recordedBy'])
+            ->whereHas('registration', function ($q): void {
+                $q->where('status', '!=', 'rejected');
+            });
 
         if ($this->status !== '' && $this->status !== 'all') {
-            if ($this->status === 'unpaid') {
-                $query->where('status', '!=', 'verified');
-            } else {
-                $query->where('status', $this->status);
-            }
+            match ($this->status) {
+                'unpaid' => $query->where('status', '!=', 'verified'),
+                'paid' => $query->where('status', 'verified'),
+                default => $query->where('status', $this->status),
+            };
         }
 
         if ($this->tournament !== '' && $this->tournament !== 'all') {
@@ -163,7 +181,14 @@ class PaymentsIndex extends Component
             });
         }
 
-        return $query->orderByDesc('created_at')->get();
+        $rank = ['pending' => 0, 'partial' => 1, 'verified' => 2];
+
+        return $query->get()
+            ->sortBy(fn (Payment $payment): array => [
+                $rank[$payment->status] ?? 3,
+                mb_strtolower($payment->registration->team->name ?? ''),
+            ])
+            ->values();
     }
 
     /**
@@ -191,17 +216,23 @@ class PaymentsIndex extends Component
     #[Computed]
     public function kpis(): array
     {
-        $registrations = $this->payments->pluck('registration')->filter()->unique('id')->values();
+        $query = Registration::query()
+            ->with(['division', 'payment'])
+            ->where('status', '!=', 'rejected');
 
-        $billable = $registrations->filter(fn ($registration): bool => $registration->status !== 'rejected');
+        if ($this->tournament !== '' && $this->tournament !== 'all') {
+            $query->where('tournament_id', $this->tournament);
+        }
 
-        $expected = (float) $billable->sum(fn ($registration): float => (float) ($registration->division->entry_fee ?? 0));
+        $billable = $query->get();
 
-        $paidTeams = $billable->filter(fn ($registration): bool => $registration->payment->status === 'verified');
-        $collected = (float) $paidTeams->sum(fn ($registration): float => (float) $registration->payment->amount);
+        $expected = (float) $billable->sum(fn (Registration $registration): float => (float) ($registration->division->entry_fee ?? 0));
 
-        $pendingCount = $billable->filter(fn ($registration): bool => $registration->payment->status === 'pending')->count();
-        $partialCount = $billable->filter(fn ($registration): bool => $registration->payment->status === 'partial')->count();
+        $paidTeams = $billable->filter(fn (Registration $registration): bool => $registration->payment?->status === 'verified');
+        $collected = (float) $paidTeams->sum(fn (Registration $registration): float => (float) ($registration->payment->amount ?? 0));
+
+        $pendingCount = $billable->filter(fn (Registration $registration): bool => $registration->payment?->status === 'pending')->count();
+        $partialCount = $billable->filter(fn (Registration $registration): bool => $registration->payment?->status === 'partial')->count();
 
         $outstanding = max(0.0, $expected - $collected);
         $rate = $expected > 0 ? (int) round(($collected / $expected) * 100) : 0;
