@@ -855,14 +855,14 @@ class PrototypeSeeder extends Seeder
         $ann1 = Announcement::where('title', 'Championship week moves to Court 1')->first();
 
         $entries = [
+            ['2026-05-10 10:00:00', 'user-organizer', 'tournament.create', 'tournament', $t1->id, null, ['slots' => 16, 'division' => 'Under 15 (U15)']],
+            ['2026-05-12 09:00:00', 'user-coach', 'team.register', 'team', $vipers->id, null, ['players' => 10]],
+            ['2026-05-13 14:00:00', 'user-organizer', 'announcement.publish', 'announcement', $ann1?->id, null, ['pinned' => true]],
+            ['2026-05-14 09:30:00', 'user-organizer', 'team.approve', 'team', $this->teamMap['team-5']->id, ['status' => 'submitted'], ['status' => 'approved']],
+            ['2026-05-15 17:00:00', 'user-organizer', 'schedule.generate', 'tournament', $t1->id, null, ['courts' => 4, 'slotMinutes' => 30, 'restMinutes' => 15]],
+            ['2026-05-16 08:00:00', 'user-organizer', 'bracket.generate', 'tournament', $t1->id, null, ['teams' => 15, 'byes' => 1]],
+            ['2026-05-18 15:40:00', 'user-organizer', 'payment.verify', 'team', $vipers->id, ['status' => 'pending'], ['status' => 'paid', 'ref' => 'GCASH-9823412']],
             ['2026-05-18 16:20:00', 'user-organizer', 'score.correct', 'match', $qf1->id, ['previousScore1' => 74, 'previousScore2' => 70], ['score1' => 78, 'score2' => 70, 'reason' => 'Shot-clock correction after referee review.']],
-            ['2026-11-18 15:40:00', 'user-organizer', 'payment.verify', 'team', $vipers->id, ['status' => 'pending'], ['status' => 'paid', 'ref' => 'GCASH-9823412']],
-            ['2026-11-16 08:00:00', 'user-organizer', 'bracket.generate', 'tournament', $t1->id, null, ['teams' => 15, 'byes' => 1]],
-            ['2026-11-15 17:00:00', 'user-organizer', 'schedule.generate', 'tournament', $t1->id, null, ['courts' => 4, 'slotMinutes' => 30, 'restMinutes' => 15]],
-            ['2026-11-14 09:30:00', 'user-organizer', 'team.approve', 'team', $this->teamMap['team-5']->id, ['status' => 'submitted'], ['status' => 'approved']],
-            ['2026-11-13 14:00:00', 'user-organizer', 'announcement.publish', 'announcement', $ann1?->id, null, ['pinned' => true]],
-            ['2026-11-01 10:00:00', 'user-organizer', 'tournament.create', 'tournament', $t1->id, null, ['slots' => 16, 'division' => 'Under 15 (U15)']],
-            ['2026-11-02 09:00:00', 'user-coach', 'team.register', 'team', $vipers->id, null, ['players' => 10]],
         ];
         foreach ($entries as [$at, $actorProto, $action, $etype, $eid, $before, $after]) {
             $actor = $this->userMap[$actorProto] ?? $this->organizer;

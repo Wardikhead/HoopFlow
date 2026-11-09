@@ -77,6 +77,22 @@ it('shows a newly created tournament on the audit page', function () {
         ->assertSee('Tournament created');
 });
 
+it('shows the newest audit entry above the seeded timeline', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentCreate::class)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $this->actingAs($organizer)
+        ->get('/audit')
+        ->assertOk()
+        ->assertSeeInOrder(['Created HoopFlow Metro Invitational', 'Payment verified']);
+});
+
 it('records an audit entry when a coach registers a team', function () {
     $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
 
