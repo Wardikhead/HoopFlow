@@ -3,6 +3,7 @@
 @php
     $meta = match ($status) {
         'approved' => ['tone' => 'success', 'label' => 'Approved', 'icon' => 'check-circle-fill'],
+        'submitted' => ['tone' => 'warning', 'label' => 'Pending', 'icon' => 'hourglass-split'],
         'pending' => ['tone' => 'warning', 'label' => 'Pending', 'icon' => 'hourglass-split'],
         'rejected' => ['tone' => 'danger', 'label' => 'Rejected', 'icon' => 'x-circle-fill'],
         'paid' => ['tone' => 'success', 'label' => 'Paid', 'icon' => 'cash-coin'],

@@ -8,6 +8,7 @@ use App\Models\MatchModel;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
+use App\Services\AuditLogger;
 use App\Services\BracketService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -73,7 +74,7 @@ class BracketShow extends Component
     public array $scoreHistory = [];
 
     /** @var array<int, array{matchId: int, home: int|null, away: int|null}> */
-    public array $slots = [];
+    public array $slotAssignments = [];
 
     public function mount(int|string|null $id = null): void
     {
@@ -380,7 +381,7 @@ class BracketShow extends Component
             return;
         }
 
-        $this->slots = $this->firstRoundMatches()
+        $this->slotAssignments = $this->firstRoundMatches()
             ->map(fn (MatchModel $match): array => [
                 'matchId' => (int) $match->id,
                 'home' => $match->home_team_id !== null ? (int) $match->home_team_id : null,
@@ -421,7 +422,7 @@ class BracketShow extends Component
         $assignments = [];
         $usedTeamIds = [];
 
-        foreach ($this->slots as $assignment) {
+        foreach ($this->slotAssignments as $assignment) {
             $match = $this->findTournamentMatch($assignment['matchId']);
 
             if (! $match instanceof MatchModel || (int) $match->round_number !== $firstRound) {
@@ -469,8 +470,23 @@ class BracketShow extends Component
                 ->update(['team_id' => $assignment['away']]);
         }
 
+        app(AuditLogger::class)->log(
+            'bracket.slots',
+            'tournament',
+            $tournament->id,
+            null,
+            [
+                'assignments' => array_map(fn (array $assignment): array => [
+                    'matchId' => (int) $assignment['match']->id,
+                    'home' => $assignment['home'],
+                    'away' => $assignment['away'],
+                ], $assignments),
+            ],
+            $tournament->organization_id,
+        );
+
         $this->showEditSlots = false;
-        $this->slots = [];
+        $this->slotAssignments = [];
         $this->resetValidation();
         $this->toast('Slots updated.', 'Bracket updated');
     }
@@ -747,7 +763,7 @@ class BracketShow extends Component
     public function closeEditSlots(): void
     {
         $this->showEditSlots = false;
-        $this->slots = [];
+        $this->slotAssignments = [];
         $this->resetValidation();
     }
 
@@ -777,7 +793,7 @@ class BracketShow extends Component
         $this->showMatchDetail = false;
         $this->showScoreConsole = false;
         $this->showCorrection = false;
-        $this->slots = [];
+        $this->slotAssignments = [];
     }
 
     protected function performFinalize(BracketService $bracketService): void

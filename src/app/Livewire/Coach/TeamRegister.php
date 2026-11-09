@@ -9,6 +9,7 @@ use App\Models\Player;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -375,6 +376,19 @@ class TeamRegister extends Component
                 'status' => 'pending',
                 'recorded_by' => $user?->id,
             ]);
+
+            app(AuditLogger::class)->log(
+                'team.register',
+                'team',
+                $team->id,
+                null,
+                [
+                    'players' => count($this->players),
+                    'ref' => trim($this->paymentRef),
+                ],
+                $organization->id,
+                $user?->id,
+            );
         });
 
         $this->dispatch(

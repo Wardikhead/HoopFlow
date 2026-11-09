@@ -58,14 +58,27 @@ class BracketService
             ]);
 
             if ($format === 'single-elimination') {
-                return $this->generateSingleElimination($tournament, $bracket, $approved);
+                $result = $this->generateSingleElimination($tournament, $bracket, $approved);
+            } elseif ($format === 'double-elimination') {
+                $result = $this->generateDoubleElimination($tournament, $bracket, $approved);
+            } else {
+                $result = $this->generateRoundRobin($tournament, $bracket, $approved);
             }
 
-            if ($format === 'double-elimination') {
-                return $this->generateDoubleElimination($tournament, $bracket, $approved);
-            }
+            app(AuditLogger::class)->log(
+                'bracket.generate',
+                'tournament',
+                $tournament->id,
+                null,
+                [
+                    'teams' => $registrations->count(),
+                    'byes' => $result['byes'],
+                    'matches' => $result['matches'],
+                ],
+                $tournament->organization_id,
+            );
 
-            return $this->generateRoundRobin($tournament, $bracket, $approved);
+            return $result;
         });
     }
 
@@ -996,7 +1009,7 @@ class BracketService
         AuditLog::create([
             'id' => $auditId,
             'organization_id' => $match->tournament?->organization_id,
-            'actor_user_id' => null,
+            'actor_user_id' => auth()->id(),
             'action' => $action,
             'entity_type' => 'match',
             'entity_id' => $match->id,

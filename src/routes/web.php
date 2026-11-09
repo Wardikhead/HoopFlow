@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
+use App\Livewire\Coach\MyTeam;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Livewire\Organizer\AnnouncementsIndex;
@@ -36,7 +37,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/teams', TeamsIndex::class)->name('teams');
     Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teamShow');
-    Route::get('/my-team', [TeamController::class, 'myTeam'])->name('myTeam')->middleware('role:coach');
+    Route::get('/my-team', MyTeam::class)->name('myTeam')->middleware('role:coach');
     Route::get('/team-register', TeamRegister::class)->name('teamRegister')->middleware('role:coach');
 
     Route::get('/bracket', BracketShow::class)->name('bracket');

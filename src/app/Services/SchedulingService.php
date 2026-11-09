@@ -178,6 +178,20 @@ class SchedulingService
             ]);
         }
 
+        app(AuditLogger::class)->log(
+            'schedule.generate',
+            'tournament',
+            $tournament->id,
+            null,
+            [
+                'courts' => $plan['courts']->count(),
+                'slotMinutes' => $plan['slotMinutes'],
+                'restMinutes' => $plan['restMinutes'],
+                'matches' => count($plan['assignments']),
+            ],
+            $tournament->organization_id,
+        );
+
         return count($plan['assignments']);
     }
 
@@ -231,6 +245,8 @@ class SchedulingService
         }
 
         $slot = $match->matchSlots()->first();
+        $previousCourtId = $slot?->court_id !== null ? (int) $slot->court_id : null;
+        $previousStart = $slot?->start_at?->toIso8601String();
 
         if (! $slot instanceof MatchSlot) {
             $slot = new MatchSlot;
@@ -245,6 +261,21 @@ class SchedulingService
         $slot->start_at = $start;
         $slot->end_at = $start->copy()->addMinutes($slotMinutes);
         $slot->save();
+
+        app(AuditLogger::class)->log(
+            'schedule.reschedule',
+            'match',
+            $match->id,
+            [
+                'courtId' => $previousCourtId,
+                'scheduledAt' => $previousStart,
+            ],
+            [
+                'courtId' => $courtId,
+                'scheduledAt' => $start->toIso8601String(),
+            ],
+            $tournament->organization_id,
+        );
 
         return $slot;
     }

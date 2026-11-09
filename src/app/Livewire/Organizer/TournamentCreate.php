@@ -8,6 +8,7 @@ use App\Models\GameRule;
 use App\Models\Organization;
 use App\Models\Tournament;
 use App\Models\Venue;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -275,6 +276,20 @@ class TournamentCreate extends Component
                 'foul_limit' => 5,
                 'rest_minutes' => $this->restMinutes,
             ]);
+
+            app(AuditLogger::class)->log(
+                'tournament.create',
+                'tournament',
+                $tournament->id,
+                null,
+                [
+                    'slots' => $this->bracketSlots,
+                    'division' => $this->division_name,
+                    'fee' => $this->fee,
+                ],
+                $organization->id,
+                $user?->id,
+            );
 
             return $tournament;
         });

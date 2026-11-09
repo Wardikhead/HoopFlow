@@ -4,6 +4,7 @@ namespace App\Livewire\Organizer;
 
 use App\Models\Payment;
 use App\Models\Tournament;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -87,11 +88,17 @@ class PaymentsIndex extends Component
             'verifyAmount.min' => 'Amount must be greater than zero.',
         ]);
 
-        $payment = Payment::query()->find($this->verifyingId);
+        $payment = Payment::query()->with(['registration.team'])->find($this->verifyingId);
 
         if (! $payment instanceof Payment) {
             return;
         }
+
+        $before = [
+            'status' => $payment->status,
+            'ref' => $payment->reference_no,
+            'amount' => (float) $payment->amount,
+        ];
 
         $payment->update([
             'method' => $this->verifyMethod,
@@ -101,6 +108,21 @@ class PaymentsIndex extends Component
             'paid_at' => $this->verifyStatus === 'paid' ? now() : $payment->paid_at,
             'recorded_by' => auth()->id(),
         ]);
+
+        $registration = $payment->registration;
+
+        app(AuditLogger::class)->log(
+            'payment.verify',
+            'team',
+            $registration?->team_id,
+            $before,
+            [
+                'status' => $payment->status,
+                'ref' => $this->verifyRef,
+                'amount' => (int) $this->verifyAmount,
+            ],
+            $registration?->team?->organization_id,
+        );
 
         $this->closeVerify();
         $this->dispatch('hf-toast', title: 'Payment verified', message: 'Payment recorded and written to the audit trail.', tone: 'success');
