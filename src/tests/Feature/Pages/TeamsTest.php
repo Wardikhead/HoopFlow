@@ -1,7 +1,9 @@
 <?php
 
 use App\Livewire\Coach\MyTeam;
+use App\Models\Registration;
 use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +67,71 @@ it('my-team renders the prototype roster, timeline, and payment cards', function
         ->assertSee('my-team-roster', false)
         ->assertSee('my-team-timeline', false)
         ->assertSee('my-team-payment', false);
+});
+
+it('my-team scopes the team and registration to the requested tournament', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $hoopfest = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $coachTeam = Team::where('coach_user_id', $coach->id)->firstOrFail();
+
+    $otherTeam = Team::create([
+        'organization_id' => $coachTeam->organization_id,
+        'name' => 'Apex Test',
+        'short_name' => 'APX',
+        'slug' => 'apex-test',
+        'avatar_color' => '#111827',
+        'city' => 'Pasig City',
+        'coach_name' => 'Marcus Rivera',
+        'coach_user_id' => $coach->id,
+    ]);
+
+    Registration::create([
+        'tournament_id' => $hoopfest->id,
+        'division_id' => $hoopfest->divisions()->firstOrFail()->id,
+        'team_id' => $otherTeam->id,
+        'status' => 'submitted',
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($coach);
+
+    Livewire::withQueryParams(['tournament' => $summerCup->id])
+        ->test(MyTeam::class)
+        ->assertSet('teamId', $coachTeam->id)
+        ->assertSet('tournamentId', $summerCup->id)
+        ->assertSee($summerCup->name)
+        ->assertDontSee($hoopfest->name);
+
+    Livewire::withQueryParams(['team' => $otherTeam->id, 'tournament' => $hoopfest->id])
+        ->test(MyTeam::class)
+        ->assertSet('teamId', $otherTeam->id)
+        ->assertSet('tournamentId', $hoopfest->id)
+        ->assertSee($hoopfest->name)
+        ->assertDontSee($summerCup->name);
+
+    Livewire::withQueryParams(['team' => $otherTeam->id])
+        ->test(MyTeam::class)
+        ->assertSet('teamId', $otherTeam->id)
+        ->assertSet('tournamentId', null)
+        ->assertSee($hoopfest->name);
+});
+
+it('tournament pages link my team with the tournament registration context', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $coachTeam = Team::where('coach_user_id', $coach->id)->firstOrFail();
+    $myTeamUrl = route('myTeam', ['team' => $coachTeam->id, 'tournament' => $summerCup->id]);
+
+    $this->actingAs($coach)
+        ->get('/tournaments')
+        ->assertOk()
+        ->assertSee($myTeamUrl);
+
+    $this->actingAs($coach)
+        ->get('/tournaments/'.$summerCup->id)
+        ->assertOk()
+        ->assertSee($myTeamUrl);
 });
 
 it('coach can add a player and the change is audited', function () {

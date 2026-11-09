@@ -112,10 +112,14 @@
                     class="hf-select"
                     id="myTeamSelect"
                     data-testid="my-team-select"
-                    x-on:change="window.location.href = @js(route('myTeam')) + '?team=' + encodeURIComponent($event.target.value)"
+                    x-on:change="
+                        const target = new URL(@js(route('myTeam', array_filter(['tournament' => $this->tournamentId]))));
+                        target.searchParams.set('team', $event.target.value);
+                        window.location.href = target.toString();
+                    "
                 >
                     @foreach ($this->teams as $option)
-                        @php $optionStatus = $option->registrations->sortByDesc('id')->first()?->status ?? 'submitted'; @endphp
+                        @php $optionStatus = $this->registrationStatuses[$option->id] ?? 'submitted'; @endphp
                         <option value="{{ $option->id }}" @selected($option->id === $team->id)>{{ $option->name }} · {{ $optionStatus }}</option>
                     @endforeach
                 </select>
