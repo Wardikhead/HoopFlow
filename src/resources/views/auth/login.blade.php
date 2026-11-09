@@ -1,76 +1,107 @@
 @extends('layouts.public')
 
-@section('title', 'Login')
+@section('title', 'Sign in')
+@section('body-class', 'hf-auth')
+@section('main-class', 'hf-auth-main')
 
 @section('content')
-    <div class="hf-auth-main" style="min-height: calc(100vh - 80px);">
-        <div class="hf-auth-card">
-            <span class="hf-eyebrow">Welcome back</span>
-            <h1 class="hf-auth-title">Sign in</h1>
-            <p class="hf-auth-sub">Demo accounts only. Password hint: <code>password</code>.</p>
+    <div
+        class="hf-auth-card"
+        data-testid="login-card"
+        x-data="{
+            showPassword: false,
+            email: @js(old('email', '')),
+            password: '',
+        }"
+    >
+        <span class="hf-eyebrow">Welcome back</span>
+        <h1 class="hf-auth-title">Sign in</h1>
+        <p class="hf-auth-sub">Sign in to manage your tournaments, teams, and matchday.</p>
 
-            @if ($errors->any())
-                <div class="hf-card hf-card--flat hf-mb-3" role="alert">
-                    @foreach ($errors->all() as $error)
-                        <div class="hf-small" style="color: var(--hf-danger);">{{ $error }}</div>
-                    @endforeach
-                </div>
-            @endif
+        <form method="POST" action="{{ route('login.store') }}" novalidate>
+            @csrf
 
-            <form method="POST" action="{{ route('login') }}">
-                @csrf
-
-                <div class="hf-field">
-                    <label class="hf-label" for="email">Email</label>
-                    <input id="email" type="email" name="email" value="{{ old('email') }}" class="hf-input" required autofocus autocomplete="username" data-testid="login-email">
-                    @error('email')
-                        <div class="hf-small hf-mt-1" style="color: var(--hf-danger);" data-testid="login-email-error">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="hf-field hf-mt-2">
-                    <label class="hf-label" for="password">Password</label>
-                    <input id="password" type="password" name="password" class="hf-input" required autocomplete="current-password" data-testid="login-password">
-                    @error('password')
-                        <div class="hf-small hf-mt-1" style="color: var(--hf-danger);">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="hf-flex hf-items-center hf-gap-2 hf-mt-2">
-                    <input id="remember" type="checkbox" name="remember" value="1" @checked(old('remember'))>
-                    <label for="remember" class="hf-small">Remember me</label>
-                </div>
-
-                <div class="hf-btn-row hf-mt-3">
-                    <button type="submit" class="hf-btn hf-btn--primary" data-testid="login-submit">Sign in</button>
-                </div>
-            </form>
-
-            <p class="hf-small hf-muted hf-mt-3 hf-mb-0">
-                New here? <a href="{{ route('register') }}">Create an account</a>.
-            </p>
-
-            <p class="hf-small hf-muted fw-bold mt-4 mb-2">Quick sign-in (demo accounts)</p>
-            <div class="hf-quick-accounts">
-                <form method="POST" action="{{ route('login') }}" class="d-inline">
-                    @csrf
-                    <input type="hidden" name="email" value="organizer@hoopflow.ph">
-                    <input type="hidden" name="password" value="password">
-                    <button type="submit" class="hf-btn hf-btn--sm" data-testid="quick-login-organizer">Organizer</button>
-                </form>
-                <form method="POST" action="{{ route('login') }}" class="d-inline">
-                    @csrf
-                    <input type="hidden" name="email" value="coach.marcus@hoopflow.ph">
-                    <input type="hidden" name="password" value="password">
-                    <button type="submit" class="hf-btn hf-btn--sm" data-testid="quick-login-coach">Coach</button>
-                </form>
-                <form method="POST" action="{{ route('login') }}" class="d-inline">
-                    @csrf
-                    <input type="hidden" name="email" value="fan.juan@hoopflow.ph">
-                    <input type="hidden" name="password" value="password">
-                    <button type="submit" class="hf-btn hf-btn--sm" data-testid="quick-login-fan">Fan</button>
-                </form>
+            <div class="hf-field">
+                <label class="hf-label" for="loginEmail">Email</label>
+                <input
+                    class="hf-input"
+                    id="loginEmail"
+                    name="email"
+                    type="email"
+                    autocomplete="username"
+                    x-model="email"
+                    value="{{ old('email') }}"
+                    data-testid="login-email"
+                    @error('email') aria-invalid="true" aria-describedby="loginEmail-error" @enderror
+                >
+                @error('email')
+                    <div class="hf-field-error" id="loginEmail-error">{{ $message }}</div>
+                @enderror
             </div>
+
+            <div class="hf-field hf-mt-2">
+                <label class="hf-label" for="loginPassword">Password</label>
+                <div class="hf-inline-form">
+                    <input
+                        class="hf-input"
+                        id="loginPassword"
+                        name="password"
+                        x-bind:type="showPassword ? 'text' : 'password'"
+                        type="password"
+                        autocomplete="current-password"
+                        x-model="password"
+                        data-testid="login-password"
+                        @error('password') aria-invalid="true" aria-describedby="loginPassword-error" @enderror
+                    >
+                    <button
+                        type="button"
+                        class="hf-btn hf-btn--sm"
+                        x-on:click="showPassword = ! showPassword"
+                        x-bind:aria-pressed="showPassword ? 'true' : 'false'"
+                        x-text="showPassword ? 'Hide' : 'Show'"
+                        data-testid="login-password-toggle"
+                    >Show</button>
+                </div>
+                @error('password')
+                    <div class="hf-field-error" id="loginPassword-error">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <button type="submit" class="hf-btn hf-btn--primary hf-full hf-mt-3" data-testid="login-submit">
+                Sign in
+            </button>
+        </form>
+
+        <p class="hf-demo-title hf-mt-3">Quick-fill accounts</p>
+        <div class="hf-quick-accounts">
+            <button
+                type="button"
+                x-on:click="email = 'organizer@hoopflow.ph'; password = 'password'"
+                data-testid="quick-login-organizer"
+            >
+                <strong>Organizer</strong>
+                <span>Tournament operations</span>
+            </button>
+            <button
+                type="button"
+                x-on:click="email = 'coach.marcus@hoopflow.ph'; password = 'password'"
+                data-testid="quick-login-coach"
+            >
+                <strong>Coach</strong>
+                <span>San Antonio Vipers</span>
+            </button>
+            <button
+                type="button"
+                x-on:click="email = 'fan.juan@hoopflow.ph'; password = 'password'"
+                data-testid="quick-login-fan"
+            >
+                <strong>Fan</strong>
+                <span>Public view</span>
+            </button>
         </div>
+
+        <p class="hf-small hf-muted hf-mt-3 hf-mb-0">
+            No account? <a href="{{ route('register') }}">Create one</a>.
+        </p>
     </div>
 @endsection
