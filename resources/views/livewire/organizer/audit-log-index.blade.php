@@ -1,100 +1,118 @@
 <div>
-@php
-    $logs = $this->auditLogs;
-@endphp
+    @section('title', 'Audit log')
 
-@section('title', 'Audit log')
+    @php
+        $allEntries = $this->allEntries;
+        $entries = $this->entries;
+        $kpis = $this->kpis;
+    @endphp
 
-<header class="hf-page-head hf-mb-3">
-    <div>
-        <span class="hf-eyebrow">Operations</span>
-        <h1 class="hf-page-title">Audit log</h1>
-        <p class="hf-page-desc">
-            A reverse-chronological record of approvals, payments, brackets, schedules, scores, and announcements.
-        </p>
+    <header class="hf-page-head hf-mb-3">
+        <div>
+            <span class="hf-eyebrow">Operations</span>
+            <h1 class="hf-page-title">Audit log</h1>
+            <p class="hf-page-desc">
+                A reverse-chronological record of every approval, payment, bracket, schedule, score, and announcement.
+                Corrections keep their previous values.
+            </p>
+        </div>
+        <div class="hf-page-actions">
+            <a class="hf-btn" href="{{ route('profile') }}" data-testid="audit-back-profile">
+                <i class="bi bi-person" aria-hidden="true"></i> Profile
+            </a>
+        </div>
+    </header>
+
+    <div class="hf-grid hf-grid--4 hf-mb-3">
+        <x-kpi-tile label="Entries" :value="$kpis['total']" hint="Seed plus this session" tone="primary" testid="audit-kpi-total" />
+        <x-kpi-tile label="Corrections" :value="$kpis['corrections']" hint="Old values retained" tone="alert" testid="audit-kpi-corrections" />
+        <x-kpi-tile label="Approvals" :value="$kpis['approvals']" hint="Team decisions" tone="gold" testid="audit-kpi-approvals" />
+        <x-kpi-tile label="Payments" :value="$kpis['payments']" hint="Verified references" tone="success" testid="audit-kpi-payments" />
     </div>
-</header>
 
-<div class="hf-card hf-mb-3" data-testid="audit-filters">
-    <div class="hf-form-grid">
-        <div class="hf-field">
-            <label class="hf-label" for="auditAction">Action</label>
-            <select class="hf-select" id="auditAction" wire:model.live="action" data-testid="audit-action-filter">
-                <option value="all">All actions</option>
-                @foreach ($this->actions as $actionOption)
-                    <option value="{{ $actionOption }}">{{ $actionOption }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="hf-field">
-            <label class="hf-label" for="auditEntityType">Entity type</label>
-            <select class="hf-select" id="auditEntityType" wire:model.live="entity_type" data-testid="audit-entity-filter">
-                <option value="all">All entities</option>
-                @foreach ($this->entityTypes as $entityOption)
-                    <option value="{{ $entityOption }}">{{ $entityOption }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="hf-field">
-            <label class="hf-label" for="auditDateFrom">From</label>
-            <input class="hf-input" id="auditDateFrom" type="date" wire:model.live="date_from" data-testid="audit-date-from">
-        </div>
-        <div class="hf-field">
-            <label class="hf-label" for="auditDateTo">To</label>
-            <input class="hf-input" id="auditDateTo" type="date" wire:model.live="date_to" data-testid="audit-date-to">
-        </div>
-    </div>
-    <div class="hf-btn-row hf-mt-2">
-        <button type="button" class="hf-btn hf-btn--sm" wire:click="clearFilters" data-testid="audit-clear-filters">Clear filters</button>
-        <span class="hf-small hf-muted" data-testid="audit-count">{{ $logs->count() }} entries</span>
-    </div>
-</div>
-
-<div class="hf-card" data-testid="audit-list">
-    @if ($logs->isEmpty())
-        <div class="hf-empty" data-testid="audit-empty">
-            <i class="bi bi-clock-history" aria-hidden="true"></i>
-            <h3>No audit entries match</h3>
-            <p>Try another action, entity type, or date range.</p>
-        </div>
-    @else
-        <div class="hf-table-wrap">
-            <table class="hf-table" data-testid="audit-table">
-                <thead>
-                    <tr>
-                        <th scope="col">When</th>
-                        <th scope="col">Actor</th>
-                        <th scope="col">Action</th>
-                        <th scope="col">Entity</th>
-                        <th scope="col">Details</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($logs as $log)
-                        <tr data-testid="audit-entry-{{ $log->id }}">
-                            <td>{{ $log->created_at?->format('M d, Y H:i') ?? '' }}</td>
-                            <td>{{ $log->actorUser?->name ?? 'Unknown' }}</td>
-                            <td>{{ $log->action }}</td>
-                            <td>
-                                {{ $log->entity_type }}
-                                @if ($log->entity_id !== null)
-                                    <span class="hf-mono">#{{ $log->entity_id }}</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if (is_array($log->after_json))
-                                    {{ json_encode($log->after_json) }}
-                                @elseif (is_array($log->before_json))
-                                    {{ json_encode($log->before_json) }}
-                                @else
-                                    {{ $log->ip }}
-                                @endif
-                            </td>
-                        </tr>
+    <section class="hf-card hf-mb-3" aria-label="Audit filters" data-testid="audit-filters">
+        <div class="hf-form-grid">
+            <div class="hf-field">
+                <label class="hf-label" for="auditEntity">Entity</label>
+                <select class="hf-select" id="auditEntity" wire:model.live="entityType" data-testid="audit-entity-filter">
+                    <option value="all">All entities</option>
+                    @foreach ($this->entityTypes as $entityType)
+                        <option value="{{ $entityType }}">{{ $this->entityTypeLabel($entityType) }}</option>
                     @endforeach
-                </tbody>
-            </table>
+                </select>
+            </div>
+            <div class="hf-field">
+                <label class="hf-label" for="auditActor">Actor</label>
+                <select class="hf-select" id="auditActor" wire:model.live="actor" data-testid="audit-actor-filter">
+                    <option value="all">All actors</option>
+                    @foreach ($this->actors as $actorOption)
+                        <option value="{{ $actorOption['id'] }}">{{ $actorOption['name'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="hf-field hf-field--full">
+                <label class="hf-label" for="auditSearch">Search</label>
+                <input
+                    class="hf-input"
+                    id="auditSearch"
+                    type="search"
+                    placeholder="Summary, action, actor, or entity id"
+                    wire:model.live.debounce.150ms="search"
+                    data-testid="audit-search"
+                >
+            </div>
         </div>
-    @endif
-</div>
+        <div class="hf-between hf-mt-2">
+            <span class="hf-small hf-muted" data-testid="audit-count">{{ $entries->count() }} of {{ $allEntries->count() }} entries</span>
+            <button type="button" class="hf-btn hf-btn--sm" wire:click="clearFilters" data-testid="audit-clear">Clear filters</button>
+        </div>
+    </section>
+
+    <div id="auditList" data-testid="audit-list">
+        @if ($entries->isEmpty())
+            <div class="hf-empty" data-testid="audit-empty">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <h3>No audit entries match</h3>
+                <p>Try another entity, actor, or search term.</p>
+                <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="audit-clear-inline">Clear filters</button>
+            </div>
+        @else
+            <div class="hf-timeline">
+                @foreach ($entries as $log)
+                    @php
+                        $author = $log->actorUser;
+                        $entity = $this->entityInfo($log);
+                        $changes = $this->changes($log);
+                    @endphp
+                    <article class="hf-timeline-item" data-testid="audit-entry-{{ $log->id }}">
+                        <div class="hf-timeline-meta">
+                            <span>
+                                <i class="bi bi-clock" aria-hidden="true"></i>
+                                {{ $log->created_at?->format('M j, Y · g:i A') ?? 'TBD' }}
+                            </span>
+                            <span>{{ $author?->name ?? 'System' }}</span>
+                            <span class="hf-chip hf-chip--slate" style="text-transform: capitalize">{{ $this->actorRole($log) }}</span>
+                        </div>
+                        <h3>{{ $this->actionLabel($log) }}</h3>
+                        <p>{{ $this->summary($log) }}</p>
+                        <div class="hf-flex hf-wrap hf-gap-1 hf-mt-1">
+                            @if ($entity !== null && $entity['url'] !== null)
+                                <a
+                                    class="hf-section-link"
+                                    href="{{ $entity['url'] }}"
+                                    data-testid="audit-{{ $log->entity_type }}-link-{{ $log->id }}"
+                                >{{ $entity['label'] }}</a>
+                            @elseif ($log->entity_id !== null)
+                                <span class="hf-mono">{{ $log->entity_id }}</span>
+                            @endif
+
+                            @foreach ($changes as $change)
+                                <span class="hf-change">{{ $change }}</span>
+                            @endforeach
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+    </div>
 </div>

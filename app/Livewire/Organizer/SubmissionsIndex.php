@@ -4,6 +4,7 @@ namespace App\Livewire\Organizer;
 
 use App\Models\Registration;
 use App\Models\Tournament;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -124,6 +125,15 @@ class SubmissionsIndex extends Component
             'decided_at' => now(),
         ]);
 
+        app(AuditLogger::class)->log(
+            'team.approve',
+            'team',
+            $registration->team_id,
+            ['status' => 'submitted'],
+            ['status' => 'approved'],
+            $registration->team?->organization_id,
+        );
+
         $this->dispatch('hf-toast', title: 'Team approved', message: 'The team is eligible for seeding and its roster locks for the coach.', tone: 'success');
     }
 
@@ -141,6 +151,15 @@ class SubmissionsIndex extends Component
             'decided_by' => auth()->id(),
             'decided_at' => now(),
         ]);
+
+        app(AuditLogger::class)->log(
+            'team.reject',
+            'team',
+            $registration->team_id,
+            ['status' => 'submitted'],
+            ['status' => 'rejected', 'reason' => $reason],
+            $registration->team?->organization_id,
+        );
 
         $this->dispatch('hf-toast', title: 'Team rejected', message: 'The reason is shown to the coach and written to the audit log.', tone: 'success');
     }

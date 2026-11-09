@@ -182,7 +182,7 @@
 
     @if ($showEditSlots)
         @php
-            $slotMatchIds = collect($slots)->pluck('matchId');
+            $slotMatchIds = collect($slotAssignments)->pluck('matchId');
             $slotMatches = \App\Models\MatchModel::query()->whereIn('id', $slotMatchIds)->get()->keyBy('id');
         @endphp
         <dialog
@@ -215,11 +215,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($slots as $index => $assignment)
+                            @foreach ($slotAssignments as $index => $assignment)
                                 <tr wire:key="bracket-slot-{{ $assignment['matchId'] }}">
                                     <td>{{ $slotMatches->get($assignment['matchId'])?->match_number ?? $loop->iteration }}</td>
                                     <td>
-                                        <select class="hf-select" wire:model="slots.{{ $index }}.home" aria-label="Team 1 for slot {{ $loop->iteration }}">
+                                        <select class="hf-select" wire:model="slotAssignments.{{ $index }}.home" aria-label="Team 1 for slot {{ $loop->iteration }}">
                                             <option value="">— bye —</option>
                                             @foreach ($approved as $registration)
                                                 <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
@@ -227,7 +227,7 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <select class="hf-select" wire:model="slots.{{ $index }}.away" aria-label="Team 2 for slot {{ $loop->iteration }}">
+                                        <select class="hf-select" wire:model="slotAssignments.{{ $index }}.away" aria-label="Team 2 for slot {{ $loop->iteration }}">
                                             <option value="">— bye —</option>
                                             @foreach ($approved as $registration)
                                                 <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
