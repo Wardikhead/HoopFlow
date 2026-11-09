@@ -14,6 +14,7 @@ use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\BracketService;
 use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
@@ -24,6 +25,14 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
+});
+
+it('persists the explicit audit log id', function () {
+    $log = app(AuditLogger::class)->log('test.action', 'tournament', 1);
+
+    expect($log->id)->not->toBeNull();
+    expect((int) $log->id)->toBeGreaterThan(0);
+    expect($log->fresh()?->id)->toBe($log->id);
 });
 
 it('records an audit entry when a tournament is created', function () {
