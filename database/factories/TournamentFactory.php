@@ -21,6 +21,8 @@ class TournamentFactory extends Factory
             'start_date' => fake()->date(),
             'end_date' => fake()->date(),
             'status' => 'draft',
+            'payment_method' => 'GCash',
+            'payment_account' => '09489666136',
             'rules_json' => null,
             'created_by' => User::factory(),
         ];

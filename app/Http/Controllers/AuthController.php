@@ -14,6 +14,11 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    public function showRegister(): View
+    {
+        return view('auth.register');
+    }
+
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([

@@ -49,3 +49,22 @@ document.addEventListener('click', (event) => {
 
 syncTheme();
 document.addEventListener('hf:theme-changed', syncTheme);
+
+// Native <dialog> elements keep their open state outside the DOM attributes that
+// Livewire morphs. Re-open any server-rendered modal after a morph so score
+// buttons, forfeit changes, and other roundtrips do not close the dialog.
+function keepModalsOpen() {
+    Livewire.hook('morphed', ({ el }) => {
+        el.querySelectorAll?.('dialog.hf-dialog').forEach((dialog) => {
+            if (!dialog.open) {
+                dialog.showModal();
+            }
+        });
+    });
+}
+
+if (window.Livewire) {
+    keepModalsOpen();
+} else {
+    document.addEventListener('livewire:init', keepModalsOpen);
+}

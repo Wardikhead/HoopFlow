@@ -1,111 +1,91 @@
 <div>
-@php
-    $matches = $this->matches;
-    $groups = $matches->groupBy(function ($match) {
-        $slot = $match->matchSlots->first();
+    @php
+        $tournament = $this->currentTournament;
+        $matches = $this->matches;
+        $groups = $matches->groupBy(function ($match) {
+            return $match->matchSlots->first()?->start_at?->format('Y-m-d') ?? 'unscheduled';
+        });
+    @endphp
 
-        return $slot?->start_at?->format('Y-m-d') ?? 'unscheduled';
-    });
-    $roundLabel = function ($roundNumber) {
-        return match ((int) $roundNumber) {
-            2 => 'Final',
-            4 => 'Semifinals',
-            8 => 'Quarterfinals',
-            16 => 'Round of 16',
-            32 => 'Round of 32',
-            default => 'Round ' . $roundNumber,
-        };
-    };
-@endphp
+    @section('title', 'Matchups')
 
-@section('title', 'Matches')
-
-<header class="hf-page-head hf-mb-3">
-    <div>
-        <span class="hf-eyebrow">Matchups</span>
-        <h1 class="hf-page-title">Matches</h1>
-        <p class="hf-page-desc">Every bracket game, filterable by tournament and round, with a link to the official box score.</p>
-    </div>
-</header>
-
-<div class="hf-card hf-mb-3">
-    <div class="hf-form-grid">
-        <div class="hf-field">
-            <label class="hf-label" for="matchTournament">Tournament</label>
-            <select class="hf-select" id="matchTournament" wire:model.live="tournament" data-testid="match-tournament-filter">
-                <option value="">All tournaments</option>
-                @foreach ($this->tournaments as $tournamentOption)
-                    <option value="{{ $tournamentOption->id }}">{{ $tournamentOption->name }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="hf-field">
-            <label class="hf-label" for="matchRound">Round</label>
-            <select class="hf-select" id="matchRound" wire:model.live="round" data-testid="match-round-filter">
-                <option value="">All rounds</option>
-                @foreach ($this->rounds as $roundNumber)
-                    <option value="{{ $roundNumber }}">{{ $roundLabel($roundNumber) }}</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
-    <div class="hf-btn-row hf-mt-2">
-        <button type="button" class="hf-btn hf-btn--sm" wire:click="clearFilters" data-testid="match-clear-filters">Clear filters</button>
-    </div>
-</div>
-
-<div id="matchList" data-testid="match-list">
-    @if ($matches->isEmpty())
+    @if (! $tournament)
         <div class="hf-empty">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <h3>No matchups match</h3>
-            <p>Clear the tournament or round filter and try again.</p>
+            <i class="bi bi-list-ul" aria-hidden="true"></i>
+            <h3>Tournament not found</h3>
+            <p>The matchup link is invalid or the demo has been reset.</p>
+            <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
     @else
-        @foreach ($groups as $day => $dayMatches)
-            <section class="hf-mb-3" data-testid="match-day-{{ $day }}">
-                <div class="hf-section-head">
-                    <h2 class="hf-section-title">{{ $day === 'unscheduled' ? 'Unscheduled' : \Carbon\Carbon::parse($day)->format('M d, Y') }}</h2>
-                    <span class="hf-chip hf-chip--slate">{{ $dayMatches->count() }} games</span>
+        <header class="hf-page-head hf-mb-3">
+            <div>
+                <span class="hf-eyebrow">{{ $tournament->divisions->first()?->name ?? $tournament->name }} · {{ $tournament->name }}</span>
+                <h1 class="hf-page-title">Matchups</h1>
+                <p class="hf-page-desc">Every bracket game grouped by matchday, with court, status, and a link to the official box score.</p>
+            </div>
+            <div class="hf-page-actions">
+                <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="matches-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
+                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="matches-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
+            </div>
+        </header>
+
+        <div class="hf-card hf-mb-3">
+            <div class="hf-form-grid">
+                <div class="hf-field hf-field--full">
+                    <label class="hf-label" for="matchSearch">Search</label>
+                    <input class="hf-input" id="matchSearch" type="search" placeholder="Team or round" wire:model.live.debounce.150ms="search" data-testid="match-search">
                 </div>
-                <div class="hf-grid hf-grid--2">
-                    @foreach ($dayMatches as $match)
-                        @php
-                            $home = $match->homeTeam;
-                            $away = $match->awayTeam;
-                            $winnerHome = $match->winner_team_id !== null && $match->winner_team_id === $match->home_team_id;
-                            $winnerAway = $match->winner_team_id !== null && $match->winner_team_id === $match->away_team_id;
-                            $court = $match->matchSlots->first()?->court;
-                            $when = $match->matchSlots->first()?->start_at?->format('g:i A') ?? 'Time TBD';
-                            $currentRoundLabel = $roundLabel($match->round_number);
-                        @endphp
-                        <a class="hf-match-card hf-match-card--{{ $match->status }}"
-                           data-match-id="{{ $match->id }}"
-                           data-testid="match-card-{{ $match->id }}"
-                           href="{{ route('gameStats', ['match' => $match->id]) }}">
-                            <div class="hf-match-head">
-                                <span>{{ $currentRoundLabel }}{{ $court ? ' · ' . $court->name : '' }}</span>
-                                <span class="hf-chip hf-chip--slate">{{ ucfirst($match->status) }}</span>
-                            </div>
-                            <div class="hf-match-team {{ $winnerHome ? 'is-winner' : ($match->status !== 'scheduled' ? 'is-loser' : '') }}">
-                                <span class="hf-shield hf-shield--sm">{{ strtoupper(substr($home?->name ?? 'TBD', 0, 1)) }}</span>
-                                <span>{{ $home?->name ?? 'TBD' }}</span>
-                                <span class="hf-score {{ $match->home_score === null ? 'hf-score--muted' : '' }}">{{ $match->home_score ?? '–' }}</span>
-                            </div>
-                            <div class="hf-match-team {{ $winnerAway ? 'is-winner' : ($match->status !== 'scheduled' ? 'is-loser' : '') }}">
-                                <span class="hf-shield hf-shield--sm">{{ strtoupper(substr($away?->name ?? 'TBD', 0, 1)) }}</span>
-                                <span>{{ $away?->name ?? 'TBD' }}</span>
-                                <span class="hf-score {{ $match->away_score === null ? 'hf-score--muted' : '' }}">{{ $match->away_score ?? '–' }}</span>
-                            </div>
-                            <div class="hf-match-head">
-                                <span>{{ $when }}</span>
-                                <span>{{ $currentRoundLabel }}</span>
-                            </div>
-                        </a>
-                    @endforeach
+                <div class="hf-field">
+                    <label class="hf-label" for="matchDate">Day</label>
+                    <input class="hf-input" id="matchDate" type="date" wire:model.live="day" data-testid="match-date-filter">
                 </div>
-            </section>
-        @endforeach
+                <div class="hf-field">
+                    <label class="hf-label" for="matchCourt">Court</label>
+                    <select class="hf-select" id="matchCourt" wire:model.live="court" data-testid="match-court-filter">
+                        <option value="all">All courts</option>
+                        @foreach ($this->courts as $court)
+                            <option value="{{ $court->id }}">{{ $court->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label" for="matchStatus">Status</label>
+                    <select class="hf-select" id="matchStatus" wire:model.live="status" data-testid="match-status-filter">
+                        <option value="all">All statuses</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="final">Final</option>
+                        <option value="forfeit">Forfeit</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="matchList" data-testid="match-list">
+            @if ($matches->isEmpty())
+                <div class="hf-empty">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <h3>No matchups match</h3>
+                    <p>Clear the day, court, or status filter and try again.</p>
+                    <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="match-clear-filters">Clear filters</button>
+                </div>
+            @else
+                @foreach ($groups as $day => $dayMatches)
+                    <section class="hf-mb-3" data-testid="match-day-{{ $day }}">
+                        <div class="hf-section-head">
+                            <h2 class="hf-section-title">{{ $day === 'unscheduled' ? 'Unscheduled' : \Carbon\Carbon::parse($day)->format('l, F j, Y') }}</h2>
+                            <span class="hf-chip hf-chip--slate">{{ $dayMatches->count() }} games</span>
+                        </div>
+                        <div class="hf-grid hf-grid--2">
+                            @foreach ($dayMatches as $match)
+                                <x-match-card
+                                    :match="$match"
+                                    :href="route('gameStats', ['match' => $match->id])"
+                                />
+                            @endforeach
+                        </div>
+                    </section>
+                @endforeach
+            @endif
+        </div>
     @endif
-</div>
 </div>

@@ -8,23 +8,6 @@
         $role = 'coach';
     }
 
-    $statusMeta = [
-        'approved' => ['tone' => 'success', 'label' => 'Approved', 'icon' => 'check-circle-fill'],
-        'pending' => ['tone' => 'warning', 'label' => 'Pending', 'icon' => 'hourglass-split'],
-        'rejected' => ['tone' => 'danger', 'label' => 'Rejected', 'icon' => 'x-circle-fill'],
-        'paid' => ['tone' => 'success', 'label' => 'Paid', 'icon' => 'cash-coin'],
-        'partial' => ['tone' => 'warning', 'label' => 'Partial', 'icon' => 'circle-half'],
-        'final' => ['tone' => 'success', 'label' => 'Final', 'icon' => 'flag-fill'],
-        'forfeit' => ['tone' => 'danger', 'label' => 'Forfeit', 'icon' => 'shield-x'],
-        'scheduled' => ['tone' => 'slate', 'label' => 'Scheduled', 'icon' => 'clock'],
-        'draft' => ['tone' => 'slate', 'label' => 'Draft', 'icon' => 'pencil'],
-        'registration-open' => ['tone' => 'success', 'label' => 'Registration open', 'icon' => 'unlock'],
-        'active' => ['tone' => 'primary', 'label' => 'Active', 'icon' => 'broadcast'],
-        'upcoming' => ['tone' => 'slate', 'label' => 'Upcoming', 'icon' => 'calendar-event'],
-        'verified' => ['tone' => 'success', 'label' => 'Verified', 'icon' => 'patch-check-fill'],
-        'missing' => ['tone' => 'danger', 'label' => 'Missing', 'icon' => 'file-earmark-x'],
-    ];
-
     $money = fn ($value) => '₱' . number_format((int) ($value ?? 0));
 @endphp
 
@@ -74,17 +57,15 @@
     </div>
 </div>
 
+<div id="tournamentList" data-testid="tournament-list">
     @forelse ($this->tournaments as $tournament)
         @php
-            $meta = $statusMeta[$tournament->status] ?? ['tone' => 'slate', 'label' => ucwords(str_replace('-', ' ', (string) $tournament->status)), 'icon' => 'circle'];
             $division = $tournament->divisions->first();
-            $slots = (int) ($tournament->rules_json['slots'] ?? $division?->max_teams ?? 0);
-            $fee = $division?->entry_fee ?? ($tournament->rules_json['fee'] ?? 0);
             $approved = $tournament->registrations->where('status', 'approved')->count();
             $pending = $tournament->registrations->whereIn('status', ['submitted', 'pending'])->count();
             $matchesPlayed = $tournament->matches->whereIn('status', ['final', 'forfeit'])->count();
-            $courts = $tournament->matchSlots->pluck('court_id')->unique()->count();
-            $seedLocked = $tournament->matches->contains(fn ($match) => in_array($match->status, ['final', 'forfeit'], true));
+            $courts = $tournament->courtCount();
+            $seedLocked = $tournament->seedsLocked();
 
             $coachTeam = null;
             if ($role === 'coach' && $user) {
@@ -93,43 +74,41 @@
                     ->whereHas('registrations', fn ($query) => $query->where('tournament_id', $tournament->id))
                     ->first();
             }
-
-            if ($role === 'coach' && $tournament->status === 'registration-open' && ! $coachTeam) {
-                $action = '<a class="hf-btn hf-btn--primary" href="' . route('teamRegister', ['tournament' => $tournament->id]) . '" data-testid="tournament-register-' . $tournament->id . '">Register team</a>';
-            } elseif ($coachTeam) {
-                $action = '<a class="hf-btn" href="' . route('myTeam', ['team' => $coachTeam->id]) . '" data-testid="tournament-my-team-' . $tournament->id . '">My team</a>';
-            } else {
-                $action = '<a class="hf-btn" href="' . route('tournaments') . '" data-testid="tournament-open-' . $tournament->id . '">Open desk</a>';
-            }
         @endphp
         <article class="hf-card hf-mb-2" data-testid="tournament-card-{{ $tournament->id }}" wire:key="tournament-{{ $tournament->id }}">
             <div class="hf-between">
                 <div>
                     <span class="hf-flex hf-wrap hf-gap-1">
-                        <span class="hf-chip hf-chip--{{ $meta['tone'] }}"><i class="bi bi-{{ $meta['icon'] }}" aria-hidden="true"></i>{{ $meta['label'] }}</span>
-                        <span class="hf-chip hf-chip--slate">{{ $division?->name }}</span>
+                        <x-status-chip :status="$tournament->status" />
+                        <span class="hf-chip hf-chip--slate">{{ $division?->name ?? 'Division' }}</span>
                         @if ($seedLocked)
                             <span class="hf-chip hf-chip--gold">Seeds locked</span>
                         @endif
                     </span>
                     <h2 class="hf-section-title hf-mt-1">{{ $tournament->name }}</h2>
                     <p class="hf-small hf-muted hf-mb-0">
-                        {{ $tournament->matchSlots->first()?->court?->venue?->name ?? 'Venue' }} · {{ optional($tournament->start_date)->format('M d, Y') }} to {{ optional($tournament->end_date)->format('M d, Y') }}
+                        {{ $tournament->venueName() }} · {{ $tournament->start_date?->format('M d, Y') ?? 'TBD' }} to {{ $tournament->end_date?->format('M d, Y') ?? 'TBD' }}
                     </p>
                 </div>
                 <div class="hf-text-right">
                     <span class="hf-kpi-label">Teams</span>
-                    <strong class="hf-kpi-value" style="font-size: 32px">{{ $approved }}/{{ $slots }}</strong>
+                    <strong class="hf-kpi-value" style="font-size: 32px">{{ $approved }}/{{ $tournament->slotCount() }}</strong>
                 </div>
             </div>
             <div class="hf-flex hf-wrap hf-gap-3 hf-mt-2 hf-small hf-muted">
                 <span><i class="bi bi-geo-alt"></i> {{ $courts }} courts</span>
-                <span><i class="bi bi-cash"></i> {{ $money($fee) }} entry</span>
+                <span><i class="bi bi-cash"></i> {{ $money($tournament->entryFee()) }} entry</span>
                 <span><i class="bi bi-diagram-3"></i> {{ $matchesPlayed }} played</span>
                 <span><i class="bi bi-hourglass-split"></i> {{ $pending }} pending</span>
             </div>
             <div class="hf-btn-row hf-mt-2">
-                {!! $action !!}
+                @if ($role === 'coach' && $tournament->status === 'registration-open' && ! $coachTeam)
+                    <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $tournament->id]) }}" data-testid="tournament-register-{{ $tournament->id }}">Register team</a>
+                @elseif ($coachTeam)
+                    <a class="hf-btn" href="{{ route('myTeam') }}" data-testid="tournament-my-team-{{ $tournament->id }}">My team</a>
+                @else
+                    <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="tournament-open-{{ $tournament->id }}">Open desk</a>
+                @endif
                 <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}">Bracket</a>
                 <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}">Schedule</a>
             </div>

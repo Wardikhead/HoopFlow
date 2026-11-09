@@ -3,16 +3,21 @@
 namespace App\Livewire\Organizer;
 
 use App\Models\Announcement;
-use App\Models\Organization;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\AnnouncementService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+/**
+ * @property-read Collection<int, Tournament> $tournaments
+ * @property-read Collection<int, User> $users
+ */
 #[Layout('layouts.public')]
 #[Title('New announcement')]
 class AnnouncementCreate extends Component
@@ -23,56 +28,126 @@ class AnnouncementCreate extends Component
 
     public string $body = '';
 
+    public string $category = 'general';
+
     public string $audience = 'all';
 
-    public string $status = 'draft';
+    /** @var array<int, int|string> */
+    public array $target_user_ids = [];
+
+    public bool $pinned = false;
+
+    public function mount(): void
+    {
+        $requested = request()->query('id') ?? request()->query('tournament');
+
+        if (is_numeric($requested)) {
+            $tournament = Tournament::query()->find((int) $requested);
+
+            if ($tournament instanceof Tournament) {
+                $this->tournament_id = (int) $tournament->id;
+            }
+        }
+
+        if ($this->tournament_id === null) {
+            $default = Tournament::query()->where('status', 'active')->orderBy('id')->first()
+                ?? Tournament::query()->orderBy('id')->first();
+
+            $this->tournament_id = $default instanceof Tournament ? (int) $default->id : null;
+        }
+    }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, mixed>>
      */
     protected function rules(): array
     {
         return [
-            'tournament_id' => ['required', 'integer', 'exists:tournaments,id'],
+            'tournament_id' => ['required', 'integer', Rule::exists('tournaments', 'id')],
             'title' => ['required', 'string', 'min:4', 'max:90'],
             'body' => ['required', 'string', 'min:10', 'max:320'],
-            'audience' => ['required', 'string', 'in:all,coaches,organizers,fans,specific'],
-            'status' => ['required', 'string', 'in:draft,published'],
+            'category' => ['required', 'string', Rule::in(array_keys(Announcement::CATEGORIES))],
+            'audience' => ['required', 'string', Rule::in(array_keys(Announcement::AUDIENCES))],
+            'target_user_ids' => ['array', Rule::requiredIf($this->audience === 'specific')],
+            'target_user_ids.*' => ['integer', Rule::exists('users', 'id')],
+            'pinned' => ['boolean'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function messages(): array
+    {
+        return [
+            'tournament_id.required' => 'Choose a tournament.',
+            'tournament_id.exists' => 'Choose a valid tournament.',
+            'title.required' => 'Use at least 4 characters.',
+            'title.min' => 'Use at least 4 characters.',
+            'title.max' => 'Keep the headline under 90 characters.',
+            'body.required' => 'Write at least 10 characters.',
+            'body.min' => 'Write at least 10 characters.',
+            'body.max' => 'Keep the message under 320 characters.',
+            'category.required' => 'Choose a category.',
+            'audience.required' => 'Choose an audience.',
+            'target_user_ids.required_if' => 'Select at least one target user.',
+            'target_user_ids.*.exists' => 'One of the selected users is no longer available.',
+        ];
+    }
+
+    public function save(): void
+    {
+        $validated = $this->validate();
+
+        $user = auth()->user();
+        $actor = $user instanceof User ? $user : null;
+
+        $targetUserIds = $validated['audience'] === 'specific'
+            ? array_values(array_map('intval', $validated['target_user_ids']))
+            : [];
+
+        $announcement = app(AnnouncementService::class)->publish([
+            'tournament_id' => (int) $validated['tournament_id'],
+            'title' => trim((string) $validated['title']),
+            'body' => trim((string) $validated['body']),
+            'category' => (string) $validated['category'],
+            'audience' => (string) $validated['audience'],
+            'target_user_ids' => $targetUserIds,
+            'pinned' => (bool) $validated['pinned'],
+        ], $actor);
+
+        session()->flash('announcement_toast', [
+            'title' => 'Announcement published',
+            'message' => 'The bulletin is live for its audience.',
+            'tone' => 'success',
+        ]);
+
+        $this->redirect(route('announcements', ['id' => $announcement->tournament_id]));
     }
 
     /**
      * @return Collection<int, Tournament>
      */
     #[Computed]
-    public function tournaments()
+    public function tournaments(): Collection
     {
-        return Tournament::query()->orderBy('name')->get();
+        return Tournament::query()
+            ->with('divisions')
+            ->orderBy('name')
+            ->get();
     }
 
-    public function save(): void
+    /**
+     * @return Collection<int, User>
+     */
+    #[Computed]
+    public function users(): Collection
     {
-        $this->validate();
-
-        $organization = Organization::firstOrCreate(
-            ['slug' => 'default'],
-            ['name' => 'Default Organization'],
-        );
-
-        $user = auth()->user();
-
-        Announcement::create([
-            'organization_id' => $organization->id,
-            'tournament_id' => $this->tournament_id,
-            'title' => $this->title,
-            'body' => $this->body,
-            'audience' => $this->audience,
-            'status' => $this->status,
-            'published_at' => $this->status === 'published' ? now() : null,
-            'created_by' => $user instanceof User ? $user->id : null,
-        ]);
-
-        $this->redirectRoute('announcements');
+        return User::query()
+            ->with('roles')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
     }
 
     public function render(): View

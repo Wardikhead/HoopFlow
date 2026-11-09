@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['bracket_id', 'tournament_id', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason'])]
+#[Fillable(['bracket_id', 'tournament_id', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason', 'quarters_json'])]
 class MatchModel extends Model
 {
     public $incrementing = false;
@@ -36,7 +36,40 @@ class MatchModel extends Model
     {
         return [
             'completed_at' => 'datetime',
+            'quarters_json' => 'array',
         ];
+    }
+
+    /**
+     * A bye is a final game with one team, no opponent, and no recorded score.
+     */
+    public function isByeGame(): bool
+    {
+        return $this->status === 'final'
+            && (($this->home_team_id !== null) !== ($this->away_team_id !== null))
+            && $this->home_score === null
+            && $this->away_score === null;
+    }
+
+    public function roundLabel(): string
+    {
+        $rules = $this->tournament?->rules_json;
+        $format = is_array($rules) && isset($rules['format']) && is_string($rules['format'])
+            ? $rules['format']
+            : 'single-elimination';
+
+        if ($format === 'round-robin') {
+            return 'Matchday '.$this->round_number;
+        }
+
+        return match ((int) $this->round_number) {
+            2 => 'Championship Final',
+            4 => 'Semifinals',
+            8 => 'Quarterfinals',
+            16 => 'Round of 16',
+            32 => 'Round of 32',
+            default => 'Round '.$this->round_number,
+        };
     }
 
     /**

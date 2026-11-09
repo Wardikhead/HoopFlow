@@ -41,9 +41,22 @@ it('generates match slots for a tournament', function () {
 
     $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
 
+    MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereNotNull('home_team_id')
+        ->whereNotNull('away_team_id')
+        ->update([
+            'status' => 'scheduled',
+            'home_score' => null,
+            'away_score' => null,
+            'winner_team_id' => null,
+            'completed_at' => null,
+        ]);
+
     (new SchedulingService)->generate($tournament);
 
-    expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe(15);
+    // 15 bracket games minus one bye; byes are never scheduled.
+    expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe(14);
 });
 
 it('computes standings on seeded tournament and returns non-empty collection', function () {

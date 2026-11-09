@@ -1,10 +1,40 @@
-<div>
+<div
+    x-data="{
+        mobileRound: 0,
+        toasts: [],
+        pushToast(detail) {
+            const toast = {
+                id: Date.now() + Math.random(),
+                title: (detail && detail.title) || '',
+                message: (detail && detail.message) || '',
+                tone: (detail && detail.tone) || 'primary'
+            };
+            this.toasts.push(toast);
+            setTimeout(() => this.dismissToast(toast.id), 4200);
+        },
+        dismissToast(id) {
+            this.toasts = this.toasts.filter((toast) => toast.id !== id);
+        },
+        toastIcon(tone) {
+            return tone === 'danger' ? 'x-circle-fill' : tone === 'warning' ? 'exclamation-triangle-fill' : tone === 'success' ? 'check-circle-fill' : 'info-circle-fill';
+        }
+    }"
+    x-on:hf-toast.window="pushToast($event.detail)"
+>
     @php
         $tournament = $this->tournament;
         $bracket = $this->bracket;
-        $role = auth()->user()?->hasRole('organizer') ? 'organizer' : (auth()->user()?->hasRole('coach') ? 'coach' : 'fan');
-        $canGenerate = $role === 'organizer' && $tournament && $tournament->registrations->where('status', 'approved')->count() >= 2;
-        $approved = $tournament ? $tournament->registrations->where('status', 'approved') : collect();
+        $kpis = $this->kpis;
+        $approved = $this->approvedTeams;
+        $isOrganizer = auth()->user()?->hasRole('organizer') ?? false;
+        $format = $this->format;
+        $rules = $tournament?->rules_json;
+        $tournamentSlots = is_array($rules) && isset($rules['slots']) && is_numeric($rules['slots'])
+            ? (int) $rules['slots']
+            : (int) ($tournament?->divisions?->first()?->max_teams ?? 0);
+        $courtCount = $tournament !== null
+            ? $tournament->matchSlots->pluck('court_id')->filter()->unique()->count()
+            : 0;
     @endphp
 
     @if (! $tournament)
@@ -18,62 +48,59 @@
                 <h1 class="hf-page-title">{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
                 <p class="hf-page-desc">
                     @if ($bracket['hasBracket'])
-                        {{ $tournament->name }} · {{ count($bracket['rounds']) }} rounds
+                        {{ $tournament->name }} · {{ $format }} · {{ count($bracket['rounds']) }} rounds
                     @else
-                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournament->divisions?->first()?->max_teams ?? 0 }}-slot single-elimination bracket.
+                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournamentSlots }}-slot {{ $format }} bracket.
                     @endif
                 </p>
             </div>
             <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}"><i class="bi bi-arrow-left"></i> Tournament</a>
-                <a class="hf-btn" href="{{ route('schedule') }}"><i class="bi bi-calendar3"></i> Schedule</a>
-                <a class="hf-btn" href="{{ route('standings') }}"><i class="bi bi-bar-chart"></i> Standings</a>
-                @if ($role === 'organizer' && $bracket['hasBracket'] && $tournament->matches->where('status', 'final')->isEmpty())
-                    <button type="button" class="hf-btn" wire:click="regenerateBracket" data-testid="bracket-regenerate">Regenerate bracket</button>
-                    <button type="button" class="hf-btn" wire:click="editSlots" data-testid="bracket-edit-slots">Edit slots</button>
+                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="bracket-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
+                <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="bracket-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
+                <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="bracket-standings"><i class="bi bi-bar-chart"></i> Standings</a>
+                @if ($isOrganizer && $bracket['hasBracket'] && $kpis['matchesPlayed'] === 0)
+                    <button type="button" class="hf-btn" wire:click="requestRegenerate" data-testid="bracket-regenerate">Regenerate bracket</button>
+                    <button type="button" class="hf-btn" wire:click="openEditSlots" data-testid="bracket-edit-slots">Edit slots</button>
                 @endif
             </div>
         </header>
 
         @if (! $bracket['hasBracket'])
             <div class="hf-grid hf-grid--3 hf-mb-3">
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">Approved teams</span>
-                    <strong class="hf-kpi-value">{{ $approved->count() }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->divisions?->first()?->max_teams ?? 0 }} bracket slots</p>
-                </div>
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">First-round games</span>
-                    <strong class="hf-kpi-value">{{ (int) (($tournament->divisions?->first()?->max_teams ?? 0) / 2) }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">Byes fill empty slots</p>
-                </div>
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">Courts</span>
-                    <strong class="hf-kpi-value">{{ $tournament->matchSlots->pluck('court_id')->filter()->unique()->count() }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->name }}</p>
-                </div>
+                <x-kpi-tile label="Approved teams" :value="$approved->count()" :hint="$tournamentSlots.' bracket slots'" tone="primary" testid="bracket-kpi-approved" />
+                <x-kpi-tile label="First-round games" :value="(int) ($tournamentSlots / 2)" hint="Byes fill empty slots" tone="gold" testid="bracket-kpi-games" />
+                <x-kpi-tile label="Courts" :value="$courtCount" :hint="$tournament->name" tone="slate" testid="bracket-kpi-courts" />
             </div>
 
             <div class="hf-card" data-testid="bracket-empty">
                 <h2 class="hf-section-title">Seed preview</h2>
-                <p class="hf-small hf-muted">Teams are seeded by registration seed. Empty slots become byes.</p>
+                <p class="hf-small hf-muted">Teams are seeded by their registration seed, then the bracket pairs 1–16, 8–9, 5–12, 4–13, and so on. Empty slots become byes.</p>
                 <div class="hf-grid hf-grid--2 hf-mt-2">
-                    @forelse ($approved->sortBy('seed') as $reg)
-                        <div class="hf-flex hf-items-center hf-gap-2 hf-card hf-card--flat">
-                            <span><strong>{{ $reg->team?->name ?? 'Team' }}</strong><span class="hf-small hf-muted" style="display:block">seed {{ $reg->seed ?? 'TBD' }}</span></span>
+                    @forelse ($approved as $registration)
+                        <div class="hf-flex hf-items-center hf-gap-2 hf-card hf-card--flat" data-testid="bracket-seed-{{ $registration->id }}">
+                            <x-team-shield :team="$registration->team" />
+                            <span>
+                                <strong>{{ $registration->team?->name ?? 'Team' }}</strong>
+                                <span class="hf-small hf-muted" style="display:block">{{ $registration->team?->city ?? 'City TBD' }} · seed {{ $registration->seed ?? 'TBD' }}</span>
+                            </span>
                         </div>
                     @empty
-                        <div class="hf-card hf-card--flat">
-                            <p class="hf-muted hf-small hf-mb-0">No approved teams. Approve at least two teams before generating.</p>
+                        <div class="hf-empty">
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <h3>No approved teams</h3>
+                            <p>Approve at least two teams before generating the bracket.</p>
                         </div>
                     @endforelse
                 </div>
                 <div class="hf-btn-row hf-mt-3">
-                    @if ($canGenerate)
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="generateBracket" data-testid="bracket-generate">Generate bracket</button>
+                    @if ($isOrganizer && $approved->count() >= 2)
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGenerate" data-testid="bracket-generate" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="requestGenerate,confirm">Generate bracket</span>
+                            <span wire:loading wire:target="requestGenerate,confirm">Seeding...</span>
+                        </button>
                     @else
                         <button type="button" class="hf-btn" disabled data-testid="bracket-generate-disabled">Generate bracket</button>
-                        <p class="hf-small hf-muted hf-mb-0">{{ $role === 'organizer' ? 'At least two approved teams are required.' : 'Organizer access required.' }}</p>
+                        <p class="hf-small hf-muted hf-mb-0">{{ $isOrganizer ? 'At least two approved teams are required.' : 'Organizer access required.' }}</p>
                     @endif
                 </div>
             </div>
@@ -82,112 +109,387 @@
                 <section class="hf-bracket-champion hf-mb-3" data-testid="bracket-champion">
                     <span class="hf-eyebrow" style="color: var(--hf-gold)">Champion</span>
                     <div class="hf-flex hf-items-center hf-gap-3 hf-mt-1">
+                        <x-team-shield :team="$bracket['champion']" size="lg" />
                         <div>
                             <h1>{{ $bracket['champion']->name }}</h1>
+                            <p class="hf-mb-0">{{ $bracket['champion']->coach_name ?? 'Coach TBD' }} · {{ $bracket['champion']->city ?? 'City TBD' }}</p>
                         </div>
                     </div>
                 </section>
             @endif
 
             <div class="hf-grid hf-grid--4 hf-mb-3">
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">Rounds</span>
-                    <strong class="hf-kpi-value">{{ count($bracket['rounds']) }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->divisions?->first()?->max_teams ?? 0 }}-team bracket</p>
-                </div>
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">Played</span>
-                    <strong class="hf-kpi-value">{{ $tournament->matches->where('status', 'final')->count() }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $tournament->matches->where('status', 'scheduled')->count() }} scheduled</p>
-                </div>
-                <div class="hf-card hf-card--flat">
-                    <span class="hf-kpi-label">Champion</span>
-                    <strong class="hf-kpi-value">{{ $bracket['champion']?->name ?? 'TBD' }}</strong>
-                    <p class="hf-small hf-muted hf-mb-0">{{ $bracket['champion'] ? 'Final played' : 'Final not played' }}</p>
-                </div>
+                <x-kpi-tile label="Rounds" :value="count($bracket['rounds'])" :hint="$tournamentSlots.'-team bracket'" tone="primary" testid="bracket-kpi-rounds" />
+                <x-kpi-tile label="Played" :value="$kpis['matchesPlayed']" :hint="$kpis['matchesScheduled'].' scheduled'" tone="success" testid="bracket-kpi-played" />
+                <x-kpi-tile label="Champion" :value="$bracket['champion']?->shortLabel() ?? 'TBD'" :hint="$bracket['champion']?->name ?? 'Final not played'" tone="gold" testid="bracket-kpi-champion" />
+                <x-kpi-tile label="Corrections" :value="$kpis['corrections']" hint="Audited score changes" tone="alert" testid="bracket-kpi-corrections" />
             </div>
 
             <div class="hf-flex hf-wrap hf-gap-2 hf-mb-2 hf-small hf-muted">
                 <span class="hf-chip hf-chip--slate"><i class="bi bi-clock"></i> Scheduled</span>
                 <span class="hf-chip hf-chip--success"><i class="bi bi-flag-fill"></i> Final</span>
                 <span class="hf-chip hf-chip--danger"><i class="bi bi-shield-x"></i> Forfeit</span>
-                <span>{{ $role === 'organizer' ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
+                <span>{{ $isOrganizer ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
             </div>
 
-            @foreach ($bracket['rounds'] as $round)
-                <div class="hf-card hf-mb-3">
-                    <h2 class="hf-section-title">{{ $round['label'] }}</h2>
-                    <div class="hf-grid hf-grid--2">
+            <div class="hf-bracket" data-testid="bracket-tree">
+                @foreach ($bracket['rounds'] as $round)
+                    <div class="hf-bracket-round">
+                        <div class="hf-bracket-round-title">{{ $round['label'] }} <span class="hf-small hf-muted">{{ $round['matches']->count() }}</span></div>
                         @foreach ($round['matches'] as $match)
-                            <div class="hf-card hf-card--flat" data-testid="bracket-match-{{ $match->id }}">
-                                <div class="hf-between">
-                                    <span>{{ $match->homeTeam?->name ?? 'TBD' }}</span>
-                                    <strong>{{ $match->home_score ?? 0 }} – {{ $match->away_score ?? 0 }}</strong>
-                                    <span>{{ $match->awayTeam?->name ?? 'TBD' }}</span>
-                                </div>
-                                <p class="hf-small hf-muted hf-mb-0">{{ $match->status }}</p>
-                                @if ($role === 'organizer')
-                                    <div class="hf-btn-row hf-mt-2">
-                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openScoreConsole({{ $match->id }})">Score</button>
-                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openCorrection({{ $match->id }})">Correct</button>
-                                    </div>
-                                @endif
-                            </div>
+                            <x-bracket-match :match="$match" :round-label="$round['label']" />
                         @endforeach
                     </div>
-                </div>
-            @endforeach
-        @endif
+                @endforeach
+            </div>
 
-        {{-- Edit slots modal --}}
-        @if ($showEditSlots)
-            <div class="hf-card hf-mt-3">
-                <h2 class="hf-section-title">Edit first-round slots</h2>
-                @foreach ($slots as $i => $assignment)
-                    <div class="hf-flex hf-gap-2 hf-mb-2">
-                        <span>Match {{ $assignment['matchId'] }}</span>
-                        <input type="number" wire:model="slots.{{ $i }}.teamId" class="hf-input" style="width:120px" placeholder="Team ID">
+            @php $roundCount = count($bracket['rounds']); @endphp
+            <div class="hf-bracket-mobile" data-testid="bracket-mobile" x-cloak x-init="mobileRound = Math.min(mobileRound, {{ max(0, $roundCount - 1) }})">
+                <div class="hf-round-pager">
+                    @foreach ($bracket['rounds'] as $index => $round)
+                        <button
+                            type="button"
+                            x-bind:class="{ 'is-active': mobileRound === {{ $index }} }"
+                            x-on:click="mobileRound = {{ $index }}"
+                            data-testid="bracket-round-tab-{{ $index }}"
+                        >{{ $round['label'] }}</button>
+                    @endforeach
+                </div>
+                <div class="hf-round-progress"><span x-bind:style="'width: ' + (((mobileRound + 1) / {{ $roundCount }}) * 100) + '%'"></span></div>
+                @foreach ($bracket['rounds'] as $index => $round)
+                    <div x-show="mobileRound === {{ $index }}" x-cloak>
+                        @foreach ($round['matches'] as $match)
+                            <x-bracket-match :match="$match" :round-label="$round['label']" />
+                        @endforeach
                     </div>
                 @endforeach
-                <div class="hf-btn-row">
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="saveSlots">Save</button>
-                    <button type="button" class="hf-btn" wire:click="$set('showEditSlots', false)">Cancel</button>
+                <div class="hf-between hf-mt-2">
+                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.max(0, mobileRound - 1)" x-bind:disabled="mobileRound === 0" data-testid="bracket-prev-round">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
+                    <span class="hf-small hf-muted" x-text="(mobileRound + 1) + ' of {{ $roundCount }}'"></span>
+                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.min({{ $roundCount - 1 }}, mobileRound + 1)" x-bind:disabled="mobileRound === {{ $roundCount - 1 }}" data-testid="bracket-next-round">
+                        Next <i class="bi bi-arrow-right"></i>
+                    </button>
                 </div>
             </div>
-        @endif
 
-        {{-- Score console --}}
-        @if ($showScoreConsole)
-            <div class="hf-card hf-mt-3">
-                <h2 class="hf-section-title">Score console</h2>
-                <div class="hf-flex hf-gap-2 hf-mb-2">
-                    <input type="number" wire:model="score1" class="hf-input" placeholder="Home score">
-                    <input type="number" wire:model="score2" class="hf-input" placeholder="Away score">
-                </div>
-                <input type="text" wire:model="reason" class="hf-input hf-mb-2" placeholder="Reason (optional for entry)">
-                @error('reason') <p class="text-danger small">{{ $message }}</p> @enderror
-                <div class="hf-btn-row">
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="submitScore">Submit</button>
-                    <button type="button" class="hf-btn" wire:click="$set('showScoreConsole', false)">Cancel</button>
-                </div>
-            </div>
-        @endif
-
-        {{-- Correction dialog --}}
-        @if ($showCorrection)
-            <div class="hf-card hf-mt-3">
-                <h2 class="hf-section-title">Correct score</h2>
-                <div class="hf-flex hf-gap-2 hf-mb-2">
-                    <input type="number" wire:model="score1" class="hf-input" placeholder="Home score">
-                    <input type="number" wire:model="score2" class="hf-input" placeholder="Away score">
-                </div>
-                <input type="text" wire:model="reason" class="hf-input hf-mb-2" placeholder="Reason (required)">
-                @error('reason') <p class="text-danger small">{{ $message }}</p> @enderror
-                <div class="hf-btn-row">
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="submitCorrection">Submit correction</button>
-                    <button type="button" class="hf-btn" wire:click="$set('showCorrection', false)">Cancel</button>
-                </div>
+            <div class="hf-card hf-card--flat hf-mt-3">
+                <p class="hf-small hf-muted hf-mb-0">Bracket progress is computed from match results. A correction that changes a winner rewrites the next-round slot, team record, standings, and audit trail in one action.</p>
             </div>
         @endif
     @endif
+
+    @if ($showEditSlots)
+        @php
+            $slotMatchIds = collect($slots)->pluck('matchId');
+            $slotMatches = \App\Models\MatchModel::query()->whereIn('id', $slotMatchIds)->get()->keyBy('id');
+        @endphp
+        <dialog
+            class="hf-dialog hf-dialog--wide"
+            x-data
+            x-init="if (! $el.open) $el.showModal()"
+            x-on:cancel.prevent="$wire.closeEditSlots()"
+            x-on:click="if ($event.target === $el) $wire.closeEditSlots()"
+            wire:key="bracket-edit-slots-dialog"
+            data-testid="bracket-edit-slots-dialog"
+        >
+            <div class="hf-dialog__head">
+                <h2 class="hf-dialog__title">Edit bracket slots</h2>
+                <button type="button" class="hf-icon-btn" wire:click="closeEditSlots" aria-label="Close dialog" data-testid="dialog-close">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="hf-dialog__body">
+                <p class="hf-small hf-muted">Reassign approved teams to first-round slots. Save to apply.</p>
+                @error('slots')
+                    <p class="hf-field-error hf-mb-2">{{ $message }}</p>
+                @enderror
+                <div class="hf-table-wrap">
+                    <table class="hf-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Slot</th>
+                                <th scope="col">Team 1</th>
+                                <th scope="col">Team 2</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($slots as $index => $assignment)
+                                <tr wire:key="bracket-slot-{{ $assignment['matchId'] }}">
+                                    <td>{{ $slotMatches->get($assignment['matchId'])?->match_number ?? $loop->iteration }}</td>
+                                    <td>
+                                        <select class="hf-select" wire:model="slots.{{ $index }}.home" aria-label="Team 1 for slot {{ $loop->iteration }}">
+                                            <option value="">— bye —</option>
+                                            @foreach ($approved as $registration)
+                                                <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="hf-select" wire:model="slots.{{ $index }}.away" aria-label="Team 2 for slot {{ $loop->iteration }}">
+                                            <option value="">— bye —</option>
+                                            @foreach ($approved as $registration)
+                                                <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="hf-dialog__foot">
+                <button type="button" class="hf-btn" wire:click="closeEditSlots" data-testid="edit-slots-cancel">Cancel</button>
+                <button type="button" class="hf-btn hf-btn--primary" wire:click="saveSlots" data-testid="edit-slots-save">Save slots</button>
+            </div>
+        </dialog>
+    @endif
+
+    @if ($showMatchDetail)
+        @php
+            $detailMatch = $this->selectedMatch;
+            $detailHome = $detailMatch?->homeTeam;
+            $detailAway = $detailMatch?->awayTeam;
+            $detailSlot = $detailMatch?->matchSlots->first();
+            $detailStart = $detailSlot?->start_at;
+            $detailCorrection = $this->selectedCorrection;
+            $detailBye = $detailMatch !== null && $detailMatch->status === 'final'
+                && (($detailMatch->home_team_id !== null) !== ($detailMatch->away_team_id !== null))
+                && $detailMatch->home_score === null
+                && $detailMatch->away_score === null;
+        @endphp
+        @if ($detailMatch)
+            <dialog
+                class="hf-dialog hf-dialog--wide"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closeMatchDetail()"
+                x-on:click="if ($event.target === $el) $wire.closeMatchDetail()"
+                wire:key="bracket-match-dialog-{{ $detailMatch->id }}"
+                data-testid="bracket-match-detail-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">{{ $this->selectedRoundLabel }} · Slot {{ $detailMatch->match_number }}</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closeMatchDetail" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    @if ($detailBye)
+                        <p class="hf-small hf-muted">This is a bye. The seeded team advances automatically.</p>
+                    @endif
+                    <div class="hf-card hf-card--flat" data-testid="bracket-match-detail">
+                        <div class="hf-between hf-match-team {{ $detailMatch->winner_team_id !== null && (int) $detailMatch->winner_team_id === (int) $detailMatch->home_team_id ? 'is-winner' : '' }}">
+                            <span class="hf-flex hf-items-center hf-gap-2">
+                                <x-team-shield :team="$detailHome" />
+                                <strong>{{ $detailHome?->name ?? 'TBD' }}</strong>
+                            </span>
+                            <span class="hf-score">{{ $detailMatch->home_score !== null ? $detailMatch->home_score : '–' }}</span>
+                        </div>
+                        <div class="hf-between hf-match-team {{ $detailMatch->winner_team_id !== null && (int) $detailMatch->winner_team_id === (int) $detailMatch->away_team_id ? 'is-winner' : '' }}">
+                            <span class="hf-flex hf-items-center hf-gap-2">
+                                <x-team-shield :team="$detailAway" />
+                                <strong>{{ $detailAway?->name ?? 'TBD' }}</strong>
+                            </span>
+                            <span class="hf-score">{{ $detailMatch->away_score !== null ? $detailMatch->away_score : '–' }}</span>
+                        </div>
+                        <div class="hf-stat-strip hf-mt-2">
+                            <div><span>Status</span><strong>{{ $detailMatch->status }}</strong></div>
+                            <div><span>Court</span><strong>{{ $detailSlot?->court?->name ?? 'TBD' }}</strong></div>
+                            <div><span>Date</span><strong>{{ $detailStart?->format('M j, Y') ?? 'TBD' }}</strong></div>
+                            <div><span>Tip-off</span><strong>{{ $detailStart?->format('g:i A') ?? 'TBD' }}</strong></div>
+                        </div>
+                    </div>
+                    @if ($detailCorrection)
+                        <div class="hf-card hf-card--flat hf-mt-2">
+                            <span class="hf-chip hf-chip--danger">Corrected</span>
+                            <p class="hf-small hf-muted hf-mt-1 hf-mb-0">{{ $detailCorrection['reason'] }} · previous {{ $detailCorrection['previous1'] ?? '–' }}–{{ $detailCorrection['previous2'] ?? '–' }}</p>
+                        </div>
+                    @endif
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="closeMatchDetail" data-testid="bracket-match-close">Close</button>
+                    <a class="hf-btn" href="{{ route('gameStats', ['match' => $detailMatch->id]) }}" data-testid="bracket-match-stats">Game stats</a>
+                    @if ($isOrganizer && $this->selectedCanScore)
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole({{ $detailMatch->id }})" data-testid="bracket-enter-score">Enter final score</button>
+                    @endif
+                    @if ($isOrganizer && $this->selectedCanCorrect)
+                        <button type="button" class="hf-btn hf-btn--danger" wire:click="openCorrection({{ $detailMatch->id }})" data-testid="bracket-correct-score">Correct score</button>
+                    @endif
+                </div>
+            </dialog>
+        @endif
+    @endif
+
+    @if ($showScoreConsole)
+        @php
+            $scoreMatch = $this->selectedMatch;
+            $scoreHome = $scoreMatch?->homeTeam;
+            $scoreAway = $scoreMatch?->awayTeam;
+            $display1 = $forfeitSide === 2 ? 20 : ($forfeitSide === 1 ? 0 : (int) ($score1 ?? 0));
+            $display2 = $forfeitSide === 1 ? 20 : ($forfeitSide === 2 ? 0 : (int) ($score2 ?? 0));
+        @endphp
+        @if ($scoreMatch)
+            <dialog
+                class="hf-dialog hf-dialog--wide"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closeScoreConsole()"
+                x-on:click="if ($event.target === $el) $wire.closeScoreConsole()"
+                wire:key="bracket-score-dialog-{{ $scoreMatch->id }}"
+                data-testid="bracket-score-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">{{ $scoreHome?->shortLabel() ?? 'TBD' }} vs {{ $scoreAway?->shortLabel() ?? 'TBD' }}</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closeScoreConsole" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <p class="hf-small hf-muted">{{ $this->selectedRoundLabel }} · Slot {{ $scoreMatch->match_number }}. Use the score buttons or a forfeit, then finalize. The winner advances immediately.</p>
+                    <div class="hf-grid hf-grid--2">
+                        <div class="hf-card hf-card--flat" data-team-panel="1">
+                            <span class="hf-flex hf-items-center hf-gap-2">
+                                <x-team-shield :team="$scoreHome" />
+                                <strong>{{ $scoreHome?->name ?? 'TBD' }}</strong>
+                            </span>
+                            <div class="hf-score" data-score-display="1" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display1 }}</div>
+                            <label class="hf-label" for="scoreInput1">Final score</label>
+                            <input id="scoreInput1" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score1" value="{{ $display1 }}" data-score-input="1" data-testid="score-input-1" @disabled($forfeitSide !== 0)>
+                            <div class="hf-btn-row">
+                                @foreach ([1, 2, 3] as $points)
+                                    <button type="button" class="hf-btn" wire:click="addScore(1, {{ $points }})" data-add-score data-team="1" data-points="{{ $points }}" data-testid="score-add-1-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="hf-card hf-card--flat" data-team-panel="2">
+                            <span class="hf-flex hf-items-center hf-gap-2">
+                                <x-team-shield :team="$scoreAway" />
+                                <strong>{{ $scoreAway?->name ?? 'TBD' }}</strong>
+                            </span>
+                            <div class="hf-score" data-score-display="2" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display2 }}</div>
+                            <label class="hf-label" for="scoreInput2">Final score</label>
+                            <input id="scoreInput2" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score2" value="{{ $display2 }}" data-score-input="2" data-testid="score-input-2" @disabled($forfeitSide !== 0)>
+                            <div class="hf-btn-row">
+                                @foreach ([1, 2, 3] as $points)
+                                    <button type="button" class="hf-btn" wire:click="addScore(2, {{ $points }})" data-add-score data-team="2" data-points="{{ $points }}" data-testid="score-add-2-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hf-card hf-card--flat hf-mt-2">
+                        <label class="hf-label" for="scoreForfeit">Forfeit</label>
+                        <select class="hf-select" id="scoreForfeit" wire:model.live="forfeitSide" data-testid="score-forfeit">
+                            <option value="0">No forfeit</option>
+                            <option value="1">{{ $scoreHome?->name ?? 'Home' }} forfeits · {{ $scoreAway?->shortLabel() ?? 'Away' }} wins 20–0</option>
+                            <option value="2">{{ $scoreAway?->name ?? 'Away' }} forfeits · {{ $scoreHome?->shortLabel() ?? 'Home' }} wins 20–0</option>
+                        </select>
+                        @if ($forfeitSide !== 0)
+                            <p class="hf-small hf-muted hf-mt-1 hf-mb-0">FIBA forfeit score is 20–0. Score buttons are disabled while a forfeit is selected.</p>
+                        @endif
+                        @if ($errors->has('score1') || $errors->has('score2'))
+                            <p class="hf-field-error hf-mt-1">{{ $errors->first('score1') ?: $errors->first('score2') }}</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="undoScore" data-testid="score-undo" @disabled($forfeitSide !== 0 || $scoreHistory === [])>Undo</button>
+                    <button type="button" class="hf-btn" wire:click="closeScoreConsole" data-testid="score-cancel">Cancel</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestFinalizeScore" data-testid="score-finalize" wire:loading.attr="disabled">Finalize score</button>
+                </div>
+            </dialog>
+        @endif
+    @endif
+
+    @if ($showCorrection)
+        @php
+            $correctionMatch = $this->selectedMatch;
+            $correctionHome = $correctionMatch?->homeTeam;
+            $correctionAway = $correctionMatch?->awayTeam;
+            $correction = $this->selectedCorrection;
+        @endphp
+        @if ($correctionMatch)
+            <dialog
+                class="hf-dialog hf-dialog--wide"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closeCorrection()"
+                x-on:click="if ($event.target === $el) $wire.closeCorrection()"
+                wire:key="bracket-correction-dialog-{{ $correctionMatch->id }}"
+                data-testid="bracket-correction-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">Correct score · {{ $correctionHome?->shortLabel() ?? 'Home' }} vs {{ $correctionAway?->shortLabel() ?? 'Away' }}</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closeCorrection" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <p class="hf-small hf-muted">Current result: {{ $correctionMatch->home_score ?? '–' }}–{{ $correctionMatch->away_score ?? '–' }}@if ($correction) (corrected from {{ $correction['previous1'] ?? '–' }}–{{ $correction['previous2'] ?? '–' }})@endif. A correction requires a reason and rewrites the downstream bracket if the winner changes.</p>
+                    <div class="hf-form-grid">
+                        <div class="hf-field">
+                            <label class="hf-label" for="correctionScore1">{{ $correctionHome?->name ?? 'Home' }}</label>
+                            <input class="hf-input" id="correctionScore1" type="number" min="0" wire:model.blur="score1" data-testid="correction-score-1">
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="correctionScore2">{{ $correctionAway?->name ?? 'Away' }}</label>
+                            <input class="hf-input" id="correctionScore2" type="number" min="0" wire:model.blur="score2" data-testid="correction-score-2">
+                        </div>
+                        <div class="hf-field hf-field--full">
+                            <label class="hf-label" for="correctionReason">Reason</label>
+                            <textarea class="hf-textarea" id="correctionReason" rows="3" placeholder="Shot-clock correction after referee review." wire:model.blur="reason" data-testid="correction-reason"></textarea>
+                        </div>
+                    </div>
+                    @if ($errors->any())
+                        <p class="hf-field-error hf-mt-1">{{ $errors->first() }}</p>
+                    @endif
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="closeCorrection" data-testid="correction-cancel">Cancel</button>
+                    <button type="button" class="hf-btn hf-btn--danger" wire:click="requestCorrection" data-testid="correction-save" wire:loading.attr="disabled">Save correction</button>
+                </div>
+            </dialog>
+        @endif
+    @endif
+
+    @if ($showConfirm)
+        <dialog
+            class="hf-dialog"
+            x-data
+            x-init="if (! $el.open) $el.showModal()"
+            x-on:cancel.prevent="$wire.cancelConfirm()"
+            x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
+            wire:key="bracket-confirm-dialog"
+            data-testid="bracket-confirm-dialog"
+        >
+            <div class="hf-dialog__head">
+                <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="hf-dialog__body">
+                <p class="hf-mb-0">{{ $confirmMessage }}</p>
+            </div>
+            <div class="hf-dialog__foot">
+                <button type="button" class="hf-btn" wire:click="cancelConfirm" data-testid="confirm-cancel">Cancel</button>
+                <button type="button" class="hf-btn hf-btn--{{ $confirmTone }}" wire:click="confirm" data-testid="confirm-ok" wire:loading.attr="disabled">{{ $confirmLabel }}</button>
+            </div>
+        </dialog>
+    @endif
+
+    <div class="hf-toast-region" aria-live="polite" aria-atomic="false">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div class="hf-toast" x-bind:class="'hf-toast--' + toast.tone" x-bind:role="toast.tone === 'danger' ? 'alert' : 'status'">
+                <i class="bi" x-bind:class="'bi-' + toastIcon(toast.tone)" aria-hidden="true"></i>
+                <div>
+                    <strong x-show="toast.title !== ''" x-text="toast.title"></strong>
+                    <p x-text="toast.message"></p>
+                </div>
+                <button type="button" aria-label="Dismiss notification" data-testid="toast-dismiss" x-on:click="dismissToast(toast.id)">&times;</button>
+            </div>
+        </template>
+    </div>
 </div>

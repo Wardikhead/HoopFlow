@@ -822,6 +822,7 @@ class BracketService
             $match->away_score = $score2;
             $match->winner_team_id = $winnerId;
             $match->status = 'final';
+            $match->forfeit_reason = null;
             if ($match->completed_at === null) {
                 $match->completed_at = now();
             }
@@ -831,31 +832,115 @@ class BracketService
                 $this->propagateMatchResult($match, $winnerId);
             }
 
-            $orgId = $match->tournament?->organization_id;
+            $this->writeAudit($match, 'score.correct', [
+                'home_score' => $previousScore1,
+                'away_score' => $previousScore2,
+                'winner_team_id' => $previousWinnerId,
+            ], [
+                'home_score' => $score1,
+                'away_score' => $score2,
+                'winner_team_id' => $winnerId,
+                'reason' => $reason,
+            ]);
+        });
+    }
 
-            $auditId = (int) (AuditLog::max('id') ?? 0) + 1;
+    public function recordScore(MatchModel $match, int $score1, int $score2): void
+    {
+        if ($score1 < 0 || $score2 < 0) {
+            throw new \InvalidArgumentException('Scores must be zero or positive whole numbers.');
+        }
+        if ($score1 === $score2) {
+            throw new \InvalidArgumentException('Elimination games cannot end in a tie.');
+        }
 
-            AuditLog::create([
-                'id' => $auditId,
-                'organization_id' => $orgId,
-                'actor_user_id' => null,
-                'action' => 'score.correct',
-                'entity_type' => 'match',
-                'entity_id' => $match->id,
-                'before_json' => [
-                    'home_score' => $previousScore1,
-                    'away_score' => $previousScore2,
-                    'winner_team_id' => $previousWinnerId,
-                ],
-                'after_json' => [
-                    'home_score' => $score1,
-                    'away_score' => $score2,
-                    'winner_team_id' => $winnerId,
-                    'reason' => $reason,
-                ],
-                'ip' => null,
-                'user_agent' => null,
-                'created_at' => now(),
+        DB::transaction(function () use ($match, $score1, $score2): void {
+            $match->refresh();
+
+            if (in_array($match->status, ['final', 'forfeit'], true)) {
+                throw new \InvalidArgumentException('Use correction to change a recorded result.');
+            }
+
+            if ($match->home_team_id === null || $match->away_team_id === null) {
+                throw new \InvalidArgumentException('Both teams must be known before entering a score.');
+            }
+
+            $homeTeamId = (int) $match->home_team_id;
+            $awayTeamId = (int) $match->away_team_id;
+            $winnerId = $score1 > $score2 ? $homeTeamId : $awayTeamId;
+
+            $previousHomeScore = $match->home_score;
+            $previousAwayScore = $match->away_score;
+            $previousWinnerId = $match->winner_team_id;
+
+            $match->home_score = $score1;
+            $match->away_score = $score2;
+            $match->winner_team_id = $winnerId;
+            $match->status = 'final';
+            $match->completed_at = now();
+            $match->forfeit_reason = null;
+            $match->save();
+
+            $this->propagateMatchResult($match, $winnerId);
+
+            $this->writeAudit($match, 'score.save', [
+                'home_score' => $previousHomeScore,
+                'away_score' => $previousAwayScore,
+                'winner_team_id' => $previousWinnerId,
+            ], [
+                'home_score' => $score1,
+                'away_score' => $score2,
+                'winner_team_id' => $winnerId,
+            ]);
+        });
+    }
+
+    public function recordForfeit(MatchModel $match, int $forfeitSide): void
+    {
+        if (! in_array($forfeitSide, [1, 2], true)) {
+            throw new \InvalidArgumentException('Choose which team forfeited.');
+        }
+
+        DB::transaction(function () use ($match, $forfeitSide): void {
+            $match->refresh();
+
+            if (in_array($match->status, ['final', 'forfeit'], true)) {
+                throw new \InvalidArgumentException('Only a scheduled game can be recorded as a forfeit.');
+            }
+
+            if ($match->home_team_id === null || $match->away_team_id === null) {
+                throw new \InvalidArgumentException('Both teams must be known before recording a forfeit.');
+            }
+
+            $homeTeamId = (int) $match->home_team_id;
+            $awayTeamId = (int) $match->away_team_id;
+            $winnerId = $forfeitSide === 1 ? $awayTeamId : $homeTeamId;
+            $score1 = $forfeitSide === 1 ? 0 : 20;
+            $score2 = $forfeitSide === 2 ? 0 : 20;
+
+            $previousHomeScore = $match->home_score;
+            $previousAwayScore = $match->away_score;
+            $previousWinnerId = $match->winner_team_id;
+
+            $match->home_score = $score1;
+            $match->away_score = $score2;
+            $match->winner_team_id = $winnerId;
+            $match->status = 'forfeit';
+            $match->completed_at = now();
+            $match->forfeit_reason = 'Forfeit recorded';
+            $match->save();
+
+            $this->propagateMatchResult($match, $winnerId);
+
+            $this->writeAudit($match, 'score.forfeit', [
+                'home_score' => $previousHomeScore,
+                'away_score' => $previousAwayScore,
+                'winner_team_id' => $previousWinnerId,
+            ], [
+                'home_score' => $score1,
+                'away_score' => $score2,
+                'winner_team_id' => $winnerId,
+                'forfeit_side' => $forfeitSide,
             ]);
         });
     }
@@ -896,6 +981,31 @@ class BracketService
 
             $this->propagateMatchResult($match, $winnerId);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     */
+    protected function writeAudit(MatchModel $match, string $action, array $before, array $after): void
+    {
+        $match->loadMissing('tournament');
+
+        $auditId = (int) (AuditLog::max('id') ?? 0) + 1;
+
+        AuditLog::create([
+            'id' => $auditId,
+            'organization_id' => $match->tournament?->organization_id,
+            'actor_user_id' => null,
+            'action' => $action,
+            'entity_type' => 'match',
+            'entity_id' => $match->id,
+            'before_json' => $before,
+            'after_json' => $after,
+            'ip' => null,
+            'user_agent' => null,
+            'created_at' => now(),
+        ]);
     }
 
     protected function propagateMatchResult(MatchModel $match, ?int $winnerId): void

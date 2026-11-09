@@ -19,7 +19,7 @@
             <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}">Schedule</a>
             <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}">Standings</a>
             @if(auth()->user()?->hasRole('organizer'))
-                <a class="hf-btn" href="{{ route('announcements') }}">Announce</a>
+                <a class="hf-btn" href="{{ route('announcementCreate', ['id' => $tournament->id]) }}">Announce</a>
             @endif
         </div>
     </section>

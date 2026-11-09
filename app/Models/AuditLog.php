@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<string, mixed>|null $before_json
+ * @property array<string, mixed>|null $after_json
+ */
 #[Fillable(['organization_id', 'actor_user_id', 'action', 'entity_type', 'entity_id', 'before_json', 'after_json', 'ip', 'user_agent', 'created_at'])]
 class AuditLog extends Model
 {
