@@ -7,7 +7,19 @@ beforeEach(function () {
 });
 
 it('login page loads', function () {
-    $this->get('/login')->assertOk();
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee('Quick-fill accounts')
+        ->assertSee('login-password-toggle', false)
+        ->assertSee('quick-login-organizer', false)
+        ->assertSee(route('register'), false);
+});
+
+it('login normalizes the email address', function () {
+    $this->post('/login', [
+        'email' => 'ORGANIZER@HOOPFLOW.PH',
+        'password' => 'password',
+    ])->assertRedirect(route('dashboard'));
 });
 
 it('valid login redirects to dashboard', function () {

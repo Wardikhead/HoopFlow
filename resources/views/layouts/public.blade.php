@@ -24,7 +24,7 @@
     @vite(['resources/css/app.scss', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body>
+<body class="@yield('body-class')">
     <a class="visually-hidden-focusable" href="#main">Skip to content</a>
 
     @guest
@@ -33,12 +33,10 @@
                 <img src="{{ asset('img/logo.png') }}" alt="">
                 HoopFlow
             </a>
-            @if (! request()->routeIs('login'))
-                <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
-            @endif
+            <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
         </header>
 
-        <main id="main">
+        <main id="main" class="@yield('main-class')" tabindex="-1">
             {{ $slot ?? '' }}
             @yield('content')
         </main>
