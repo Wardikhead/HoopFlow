@@ -88,7 +88,7 @@
                 <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="show-standings">Standings</a>
                 @if ($role === 'coach')
                     @if ($coachTeam)
-                        <a class="hf-btn" href="{{ route('myTeam') }}" data-testid="show-my-team">My team status</a>
+                        <a class="hf-btn" href="{{ route('myTeam', ['team' => $coachTeam->id, 'tournament' => $tournament->id]) }}" data-testid="show-my-team">My team status</a>
                     @elseif ($tournament->status === 'registration-open')
                         <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $tournament->id]) }}" data-testid="show-register">Register team</a>
                     @endif

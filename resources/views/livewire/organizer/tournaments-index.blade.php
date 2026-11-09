@@ -105,7 +105,7 @@
                 @if ($role === 'coach' && $tournament->status === 'registration-open' && ! $coachTeam)
                     <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $tournament->id]) }}" data-testid="tournament-register-{{ $tournament->id }}">Register team</a>
                 @elseif ($coachTeam)
-                    <a class="hf-btn" href="{{ route('myTeam') }}" data-testid="tournament-my-team-{{ $tournament->id }}">My team</a>
+                    <a class="hf-btn" href="{{ route('myTeam', ['team' => $coachTeam->id, 'tournament' => $tournament->id]) }}" data-testid="tournament-my-team-{{ $tournament->id }}">My team</a>
                 @else
                     <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="tournament-open-{{ $tournament->id }}">Open desk</a>
                 @endif

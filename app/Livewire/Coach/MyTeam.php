@@ -46,6 +46,8 @@ class MyTeam extends Component
 
     public ?int $teamId = null;
 
+    public ?int $tournamentId = null;
+
     public bool $showPlayerDialog = false;
 
     public ?int $editingPlayerId = null;
@@ -79,15 +81,38 @@ class MyTeam extends Component
         $user = auth()->user();
 
         $teams = $user !== null
-            ? Team::query()->where('coach_user_id', $user->id)->orderBy('name')->get()
+            ? Team::query()
+                ->where('coach_user_id', $user->id)
+                ->with('registrations')
+                ->orderBy('name')
+                ->get()
             : new Collection;
 
-        $requested = request()->query('team');
-        $first = $teams->first();
+        $requestedTournament = request()->query('tournament');
+        $this->tournamentId = is_numeric($requestedTournament)
+            ? Tournament::query()->whereKey((int) $requestedTournament)->value('id')
+            : null;
 
-        $this->teamId = is_numeric($requested) && $teams->contains('id', (int) $requested)
-            ? (int) $requested
-            : ($first instanceof Team ? (int) $first->id : null);
+        $requestedTeam = request()->query('team');
+        $requestedTeamId = is_numeric($requestedTeam) ? (int) $requestedTeam : null;
+
+        $fallbackTeamId = $teams->contains('id', $requestedTeamId)
+            ? $requestedTeamId
+            : $teams->first()?->id;
+
+        if ($this->tournamentId === null) {
+            $this->teamId = $fallbackTeamId;
+
+            return;
+        }
+
+        $tournamentTeams = $teams->filter(
+            fn (Team $team): bool => $team->registrations->contains('tournament_id', $this->tournamentId)
+        );
+
+        $this->teamId = $tournamentTeams->contains('id', $requestedTeamId)
+            ? $requestedTeamId
+            : ($tournamentTeams->first()->id ?? $fallbackTeamId);
     }
 
     /**
@@ -130,12 +155,40 @@ class MyTeam extends Component
             ->find($this->teamId);
     }
 
+    protected function registrationForTeam(Team $team): ?Registration
+    {
+        $registrations = $team->registrations;
+
+        if ($this->tournamentId !== null) {
+            $registrations = $registrations->where('tournament_id', $this->tournamentId);
+        }
+
+        $registration = $registrations->sortByDesc('id')->first();
+
+        return $registration instanceof Registration ? $registration : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function registrationStatuses(): array
+    {
+        $statuses = [];
+
+        foreach ($this->teams as $team) {
+            $statuses[(int) $team->id] = $this->registrationForTeam($team)->status ?? 'submitted';
+        }
+
+        return $statuses;
+    }
+
     #[Computed]
     public function registration(): ?Registration
     {
-        $registration = $this->team?->registrations->sortByDesc('id')->first();
+        $team = $this->team;
 
-        return $registration instanceof Registration ? $registration : null;
+        return $team instanceof Team ? $this->registrationForTeam($team) : null;
     }
 
     #[Computed]
