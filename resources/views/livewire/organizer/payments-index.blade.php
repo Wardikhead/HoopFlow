@@ -36,9 +36,9 @@
     <div id="paymentKpis" class="hf-grid hf-grid--4 hf-mb-3">
         @php
             $paymentKpis = [
-                ['label' => 'Collected', 'value' => number_format((float) $this->kpis['collected'], 2), 'hint' => $this->kpis['paidCount'].' teams paid', 'tone' => 'success', 'testid' => 'payment-kpi-collected'],
-                ['label' => 'Outstanding', 'value' => number_format((float) $this->kpis['outstanding'], 2), 'hint' => $this->kpis['pendingCount'].' pending · '.$this->kpis['partialCount'].' partial', 'tone' => 'alert', 'testid' => 'payment-kpi-outstanding'],
-                ['label' => 'Expected', 'value' => number_format((float) $this->kpis['expected'], 2), 'hint' => 'Entry fees for billable teams', 'tone' => 'slate', 'testid' => 'payment-kpi-expected'],
+                ['label' => 'Collected', 'value' => '₱'.number_format((float) $this->kpis['collected']), 'hint' => $this->kpis['paidCount'].' teams paid', 'tone' => 'success', 'testid' => 'payment-kpi-collected'],
+                ['label' => 'Outstanding', 'value' => '₱'.number_format((float) $this->kpis['outstanding']), 'hint' => $this->kpis['pendingCount'].' pending · '.$this->kpis['partialCount'].' partial', 'tone' => 'alert', 'testid' => 'payment-kpi-outstanding'],
+                ['label' => 'Expected', 'value' => '₱'.number_format((float) $this->kpis['expected']), 'hint' => 'Entry fees for billable teams', 'tone' => 'slate', 'testid' => 'payment-kpi-expected'],
                 ['label' => 'Collection rate', 'value' => $this->kpis['rate'].'%', 'hint' => 'Collected against expected', 'tone' => 'primary', 'testid' => 'payment-kpi-rate'],
             ];
         @endphp
@@ -67,7 +67,7 @@
             </div>
             <div class="hf-field">
                 <label class="hf-label" for="paymentStatus">Status</label>
-                <select class="hf-select" id="paymentStatus" wire:model="status" data-testid="payment-status-filter">
+                <select class="hf-select" id="paymentStatus" wire:model.live="status" data-testid="payment-status-filter">
                     <option value="pending">Pending</option>
                     <option value="partial">Partial</option>
                     <option value="paid">Paid</option>
@@ -77,7 +77,7 @@
             </div>
             <div class="hf-field">
                 <label class="hf-label" for="paymentTournament">Tournament</label>
-                <select class="hf-select" id="paymentTournament" wire:model="tournament" data-testid="payment-tournament-filter">
+                <select class="hf-select" id="paymentTournament" wire:model.live="tournament" data-testid="payment-tournament-filter">
                     <option value="all">All tournaments</option>
                     @foreach ($this->tournaments as $tournament)
                         <option value="{{ $tournament->id }}">{{ $tournament->name }}</option>
@@ -105,22 +105,23 @@
                         $team = $registration?->team;
                         $tournament = $registration?->tournament;
                         $pstatus = $payment->status ?? 'pending';
+                        $pstatusChip = $pstatus === 'verified' ? 'paid' : $pstatus;
                     @endphp
                     <article class="hf-card hf-card--flat" data-testid="payment-row-{{ $payment->id }}" wire:key="payment-{{ $payment->id }}">
                         <div class="hf-between">
                             <span class="hf-flex hf-items-center hf-gap-2">
-                                <span class="hf-shield hf-shield--lg" style="background: {{ $team?->displayColor() ?? '#64748b' }}; color: #ffffff">{{ strtoupper(substr($team?->name ?? '?', 0, 1)) }}</span>
+                                <x-team-shield :team="$team" size="lg" />
                                 <span>
                                     <strong>{{ $team?->name ?? 'Unknown team' }}</strong>
                                     <span class="hf-small hf-muted" style="display:block">{{ $tournament?->name ?? '' }} · {{ $team?->coach_name ?? 'Coach' }}</span>
                                 </span>
                             </span>
-                            @include('components.status-chip', ['status' => $pstatus])
+                            @include('components.status-chip', ['status' => $pstatusChip])
                         </div>
                         <div class="hf-flex hf-wrap hf-gap-3 hf-mt-2 hf-small">
                             <span><span class="hf-kpi-label">Method</span><strong style="display:block">{{ $payment->method ?: '—' }}</strong></span>
                             <span><span class="hf-kpi-label">Reference</span><strong style="display:block">{{ $payment->reference_no ?: '—' }}</strong></span>
-                            <span><span class="hf-kpi-label">Amount</span><strong style="display:block">{{ number_format((float) $payment->amount, 2) }}</strong></span>
+                            <span><span class="hf-kpi-label">Amount</span><strong style="display:block">{{ '₱'.number_format((float) $payment->amount) }}</strong></span>
                             <span><span class="hf-kpi-label">Verified</span><strong style="display:block">{{ $payment->paid_at ? $payment->paid_at->format('M d, Y') : '—' }}</strong></span>
                         </div>
                         <div class="hf-btn-row hf-mt-2">
@@ -150,7 +151,7 @@
                     <button type="button" class="hf-icon-btn" wire:click="closeVerify()" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
                 <div class="hf-dialog__body">
-                    <p class="hf-small hf-muted">Entry fee is {{ number_format($verifyFee, 2) }}. A saved verification updates collected totals and writes an audit entry.</p>
+                    <p class="hf-small hf-muted">Entry fee is {{ '₱'.number_format($verifyFee) }}. A saved verification updates collected totals and writes an audit entry.</p>
                     <div class="hf-form-grid">
                         <div class="hf-field">
                             <label class="hf-label" for="verifyMethod">Method</label>
