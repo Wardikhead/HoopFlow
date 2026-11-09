@@ -3,7 +3,6 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
-use App\Http\Controllers\TournamentController;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Livewire\Organizer\AnnouncementsIndex;
@@ -16,12 +15,13 @@ use App\Livewire\Organizer\ScheduleShow;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Livewire\Organizer\TournamentCreate;
+use App\Livewire\Organizer\TournamentShow;
 use App\Livewire\Organizer\TournamentsIndex;
-use App\Models\Tournament;
-use App\Services\StandingsService;
+use App\Livewire\Public\StandingsShow;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
@@ -32,7 +32,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/tournaments', TournamentsIndex::class)->name('tournaments');
     Route::get('/tournaments/create', TournamentCreate::class)->name('tournamentCreate')->middleware('role:organizer');
-    Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournamentShow');
+    Route::get('/tournaments/{tournament}', TournamentShow::class)->name('tournamentShow');
 
     Route::get('/teams', TeamsIndex::class)->name('teams');
     Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teamShow');
@@ -58,16 +58,5 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/submissions', SubmissionsIndex::class)->name('submissions')->middleware('role:organizer');
 
-    Route::get('/standings', function () {
-        $id = request()->query('id') ?? request()->query('tournament');
-        $tournament = is_numeric($id)
-            ? Tournament::find((int) $id)
-            : Tournament::where('status', 'active')->first() ?? Tournament::first();
-
-        $standings = $tournament
-            ? app(StandingsService::class)->compute($tournament)
-            : collect();
-
-        return view('pages.standings', compact('tournament', 'standings'));
-    })->name('standings');
+    Route::get('/standings', StandingsShow::class)->name('standings');
 });

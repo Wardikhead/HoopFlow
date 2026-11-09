@@ -3,66 +3,313 @@
 namespace App\Services;
 
 use App\Models\Court;
+use App\Models\GameRule;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Tournament;
 use App\Models\Venue;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use InvalidArgumentException;
 
 class SchedulingService
 {
     /**
-     * @param  array<string, mixed>  $options
+     * Prototype round start hours, keyed by the round's size (number of teams).
+     *
+     * @var array<int, int>
      */
-    public function generate(Tournament $tournament, array $options = []): void
+    private const ROUND_START_HOUR = [
+        32 => 8,
+        16 => 9,
+        8 => 13,
+        4 => 15,
+        2 => 16,
+    ];
+
+    /**
+     * Build a schedule plan without writing it to the database.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array{
+     *     assignments: array<int, array{matchId: int, courtId: int, scheduledAt: string}>,
+     *     courts: Collection<int, Court>,
+     *     slotMinutes: int,
+     *     restMinutes: int,
+     *     startDate: string
+     * }
+     */
+    public function plan(Tournament $tournament, array $options = []): array
     {
-        $slotMinutes = (int) ($options['slotMinutes'] ?? 30);
-        $restMinutes = (int) ($options['restMinutes'] ?? 15);
-        $startDate = (string) ($options['startDate'] ?? $tournament->start_date ?? now()->format('Y-m-d'));
+        $matches = MatchModel::query()
+            ->where('tournament_id', $tournament->id)
+            ->get()
+            ->reject(fn (MatchModel $match): bool => $match->isByeGame())
+            ->values();
 
-        $matches = MatchModel::where('tournament_id', $tournament->id)->get();
-
-        // Delete existing slots for this tournament's matches
-        MatchSlot::whereIn('match_id', $matches->pluck('id'))->delete();
-
-        $courts = $this->resolveCourts($tournament);
-        if (empty($courts)) {
-            $courts = [null];
+        if ($matches->isEmpty()) {
+            throw new InvalidArgumentException('Generate a bracket before scheduling.');
         }
 
-        $courtCount = count($courts);
-        $cursor = strtotime($startDate.' 09:00:00');
+        $hasResults = MatchModel::query()
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('status', ['final', 'forfeit'])
+            ->get()
+            ->contains(fn (MatchModel $match): bool => ! $match->isByeGame());
 
-        foreach ($matches as $index => $match) {
-            $courtId = $courts[$index % $courtCount];
-            $startAt = date('Y-m-d H:i:s', $cursor);
-            $endAt = date('Y-m-d H:i:s', $cursor + ($slotMinutes * 60));
+        if ($hasResults) {
+            throw new InvalidArgumentException('The schedule is locked because results exist.');
+        }
+
+        $courts = $this->courts($tournament);
+
+        if ($courts->isEmpty()) {
+            throw new InvalidArgumentException('Choose at least one court.');
+        }
+
+        $startDate = isset($options['startDate']) && is_string($options['startDate']) && $options['startDate'] !== ''
+            ? Carbon::parse($options['startDate'])->format('Y-m-d')
+            : $this->startDate($tournament);
+
+        $slotMinutes = isset($options['slotMinutes']) && is_numeric($options['slotMinutes'])
+            ? (int) $options['slotMinutes']
+            : $this->slotMinutes($tournament);
+
+        if ($slotMinutes < 10) {
+            throw new InvalidArgumentException('Slot length must be at least 10 minutes.');
+        }
+
+        $restMinutes = isset($options['restMinutes']) && is_numeric($options['restMinutes'])
+            ? (int) $options['restMinutes']
+            : $this->restMinutes($tournament);
+
+        $rounds = $matches
+            ->pluck('round_number')
+            ->map(fn ($round): int => (int) $round)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $courtSlots = [];
+        $teamTimes = [];
+        $assignments = [];
+        $baseDate = Carbon::parse($startDate)->startOfDay();
+
+        foreach ($rounds as $roundIndex => $round) {
+            $roundMatches = $matches
+                ->where('round_number', $round)
+                ->sortBy('match_number')
+                ->values();
+
+            $date = $baseDate->copy()->addDays((int) $roundIndex);
+            $baseHour = self::ROUND_START_HOUR[(int) $round] ?? 9;
+
+            foreach ($roundMatches as $index => $match) {
+                $wave = intdiv($index, $courts->count());
+                $court = $courts[$index % $courts->count()];
+                $totalMinutes = $baseHour * 60 + $wave * $slotMinutes;
+                $start = $date->copy()->setTime(intdiv($totalMinutes, 60), $totalMinutes % 60);
+                $scheduledAt = $start->format('Y-m-d H:i:s');
+                $key = $court->id.'|'.$scheduledAt;
+
+                if (isset($courtSlots[$key])) {
+                    throw new InvalidArgumentException($court->name.' is double-booked at '.$scheduledAt.'.');
+                }
+
+                $courtSlots[$key] = true;
+
+                foreach ([$match->home_team_id, $match->away_team_id] as $teamId) {
+                    if ($teamId === null) {
+                        continue;
+                    }
+
+                    $startTimestamp = $start->getTimestamp();
+
+                    foreach ($teamTimes[$teamId] ?? [] as $otherTimestamp) {
+                        if (abs($otherTimestamp - $startTimestamp) < ($slotMinutes + $restMinutes) * 60) {
+                            throw new InvalidArgumentException('A team would play without the required rest.');
+                        }
+                    }
+
+                    $teamTimes[$teamId][] = $startTimestamp;
+                }
+
+                $assignments[] = [
+                    'matchId' => (int) $match->id,
+                    'courtId' => (int) $court->id,
+                    'scheduledAt' => $scheduledAt,
+                ];
+            }
+        }
+
+        return [
+            'assignments' => $assignments,
+            'courts' => $courts,
+            'slotMinutes' => $slotMinutes,
+            'restMinutes' => $restMinutes,
+            'startDate' => $startDate,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function generate(Tournament $tournament, array $options = []): int
+    {
+        $plan = $this->plan($tournament, $options);
+        $matchIds = $tournament->matches()->pluck('id');
+
+        if ($matchIds->isNotEmpty()) {
+            MatchSlot::query()->whereIn('match_id', $matchIds)->delete();
+        }
+
+        foreach ($plan['assignments'] as $assignment) {
+            $start = Carbon::parse($assignment['scheduledAt']);
 
             MatchSlot::create([
-                'match_id' => $match->id,
+                'match_id' => $assignment['matchId'],
                 'tournament_id' => $tournament->id,
-                'court_id' => $courtId,
-                'start_at' => $startAt,
-                'end_at' => $endAt,
+                'court_id' => $assignment['courtId'],
+                'start_at' => $start,
+                'end_at' => $start->copy()->addMinutes($plan['slotMinutes']),
                 'status' => 'published',
                 'version' => 1,
                 'published_at' => now(),
             ]);
-
-            // advance cursor: after slot minutes + rest, wrap to next court row
-            if (($index + 1) % $courtCount === 0) {
-                $cursor += ($slotMinutes + $restMinutes) * 60;
-            }
         }
+
+        return count($plan['assignments']);
+    }
+
+    public function reschedule(MatchModel $match, ?int $courtId, ?string $scheduledAt): MatchSlot
+    {
+        $tournament = $match->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            throw new InvalidArgumentException('This match is not attached to a tournament.');
+        }
+
+        $courtId ??= $match->matchSlots()->value('court_id');
+
+        if ($courtId === null || ! $this->courts($tournament)->contains('id', $courtId)) {
+            throw new InvalidArgumentException('Unknown court.');
+        }
+
+        if ($scheduledAt === null || trim($scheduledAt) === '') {
+            throw new InvalidArgumentException('Choose a date and time.');
+        }
+
+        try {
+            $start = Carbon::parse($scheduledAt);
+        } catch (\Exception) {
+            throw new InvalidArgumentException('Invalid date/time.');
+        }
+
+        $slotMinutes = $this->slotMinutes($tournament);
+        $restMinutes = $this->restMinutes($tournament);
+        $newStart = $start->copy();
+        $newEnd = $start->copy()->addMinutes($slotMinutes + $restMinutes);
+
+        $conflict = MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('court_id', $courtId)
+            ->where('match_id', '!=', $match->id)
+            ->get()
+            ->contains(function (MatchSlot $other) use ($newStart, $newEnd, $slotMinutes, $restMinutes): bool {
+                if ($other->start_at === null) {
+                    return false;
+                }
+
+                $otherStart = $other->start_at->copy();
+                $otherEnd = $otherStart->copy()->addMinutes($slotMinutes + $restMinutes);
+
+                return $newStart->lt($otherEnd) && $otherStart->lt($newEnd);
+            });
+
+        if ($conflict) {
+            throw new InvalidArgumentException('This court is already booked at that time.');
+        }
+
+        $slot = $match->matchSlots()->first();
+
+        if (! $slot instanceof MatchSlot) {
+            $slot = new MatchSlot;
+            $slot->match_id = $match->id;
+            $slot->tournament_id = $tournament->id;
+            $slot->status = 'published';
+            $slot->version = 1;
+            $slot->published_at = now();
+        }
+
+        $slot->court_id = $courtId;
+        $slot->start_at = $start;
+        $slot->end_at = $start->copy()->addMinutes($slotMinutes);
+        $slot->save();
+
+        return $slot;
     }
 
     /**
-     * @return array<int, int|null>
+     * @return Collection<int, Court>
      */
-    protected function resolveCourts(Tournament $tournament): array
+    public function courts(Tournament $tournament): Collection
     {
-        $venueIds = Venue::where('organization_id', $tournament->organization_id)->pluck('id');
-        $courts = Court::whereIn('venue_id', $venueIds)->pluck('id')->all();
+        $venueIds = MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->with('court:id,venue_id')
+            ->get()
+            ->pluck('court.venue_id')
+            ->filter()
+            ->unique()
+            ->values();
 
-        return $courts;
+        if ($venueIds->isEmpty()) {
+            $rules = $tournament->rules_json;
+            $venueId = is_array($rules) && isset($rules['venue_id']) && is_numeric($rules['venue_id'])
+                ? (int) $rules['venue_id']
+                : null;
+
+            if ($venueId !== null) {
+                $venueIds = collect([$venueId]);
+            }
+        }
+
+        if ($venueIds->isEmpty()) {
+            $venueIds = Venue::query()
+                ->where('organization_id', $tournament->organization_id)
+                ->pluck('id');
+        }
+
+        return Court::query()
+            ->whereIn('venue_id', $venueIds)
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function startDate(Tournament $tournament): string
+    {
+        return $tournament->start_date?->format('Y-m-d') ?? now()->format('Y-m-d');
+    }
+
+    public function slotMinutes(Tournament $tournament): int
+    {
+        $rules = $tournament->rules_json;
+        $value = is_array($rules) ? ($rules['slotMinutes'] ?? $rules['slot_minutes'] ?? null) : null;
+
+        return is_numeric($value) && (int) $value >= 10 ? (int) $value : 30;
+    }
+
+    public function restMinutes(Tournament $tournament): int
+    {
+        $rules = $tournament->rules_json;
+        $value = is_array($rules) ? ($rules['restMinutes'] ?? $rules['rest_minutes'] ?? null) : null;
+
+        if (is_numeric($value)) {
+            return max(0, (int) $value);
+        }
+
+        $rule = GameRule::query()->where('tournament_id', $tournament->id)->first();
+
+        return $rule?->rest_minutes !== null ? (int) $rule->rest_minutes : 15;
     }
 }

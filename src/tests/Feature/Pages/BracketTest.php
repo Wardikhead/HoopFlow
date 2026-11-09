@@ -1,8 +1,12 @@
 <?php
 
+use App\Livewire\Organizer\BracketShow;
+use App\Models\AuditLog;
+use App\Models\MatchModel;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -27,4 +31,164 @@ it('bracket page loads for fan', function () {
 
 it('guest redirected from bracket', function () {
     $this->get('/bracket')->assertRedirect('/login');
+});
+
+it('opens the requested match from the match query parameter', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $match = MatchModel::where('round_number', 8)->where('match_number', 3)->firstOrFail();
+
+    $this->actingAs($organizer)
+        ->get('/bracket?id='.$match->tournament_id.'&match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="bracket-match-detail-dialog"')
+        ->assertSee('Kapitolyo Knights')
+        ->assertSee('Kalawaan Comets');
+});
+
+it('renders bracket KPIs, team shields, and the mobile round pager', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->assertSee('Round of 16')
+        ->assertSee('Quarterfinals')
+        ->assertSee('Championship Final')
+        ->assertSee('VPR')
+        ->assertSee('10')
+        ->assertSee('5 scheduled')
+        ->assertSeeHtml('data-testid="bracket-kpi-played"')
+        ->assertSeeHtml('data-testid="bracket-tree"')
+        ->assertSeeHtml('data-testid="bracket-mobile"')
+        ->assertSeeHtml('data-testid="bracket-round-tab-0"')
+        ->assertDontSeeHtml('data-testid="bracket-regenerate"')
+        ->assertDontSeeHtml('data-testid="bracket-edit-slots"');
+});
+
+it('opens the match detail and score console for a scheduled game', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->call('openMatchDetail', 11)
+        ->assertSet('showMatchDetail', true)
+        ->assertSet('selectedMatchId', 11)
+        ->assertSee('Kapitolyo Knights')
+        ->call('openScoreConsole', 11)
+        ->assertSet('showScoreConsole', true)
+        ->assertSet('showMatchDetail', false)
+        ->assertSee('Use the score buttons or a forfeit')
+        ->call('addScore', 1, 2)
+        ->assertSet('score1', 2)
+        ->call('addScore', 2, 3)
+        ->assertSet('score2', 3)
+        ->call('undoScore')
+        ->assertSet('score2', 0)
+        ->call('undoScore')
+        ->assertSet('score1', 0)
+        ->call('undoScore')
+        ->assertSet('score1', 0);
+});
+
+it('finalizes a score through the confirmation dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->call('openScoreConsole', 11)
+        ->set('score1', 77)
+        ->set('score2', 70)
+        ->call('requestFinalizeScore')
+        ->assertSet('showConfirm', true)
+        ->assertSet('confirmAction', 'finalize')
+        ->assertSee('Finalize score?')
+        ->call('confirm')
+        ->assertSet('showConfirm', false)
+        ->assertSet('showScoreConsole', false)
+        ->assertDispatched('hf-toast');
+
+    $match = MatchModel::findOrFail(11);
+    expect($match->home_score)->toBe(77);
+    expect($match->away_score)->toBe(70);
+    expect($match->status)->toBe('final');
+    expect($match->winner_team_id)->toBe($match->home_team_id);
+});
+
+it('records a forfeit through the confirmation dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->call('openScoreConsole', 12)
+        ->set('forfeitSide', 1)
+        ->call('requestFinalizeScore')
+        ->assertSet('confirmAction', 'forfeit')
+        ->assertSee('Record forfeit?')
+        ->call('confirm')
+        ->assertSet('showScoreConsole', false)
+        ->assertDispatched('hf-toast');
+
+    $match = MatchModel::findOrFail(12);
+    expect($match->home_score)->toBe(0);
+    expect($match->away_score)->toBe(20);
+    expect($match->status)->toBe('forfeit');
+    expect($match->winner_team_id)->toBe($match->away_team_id);
+    expect($match->forfeit_reason)->not->toBeNull();
+    expect(AuditLog::where('action', 'score.forfeit')->where('entity_id', 12)->count())->toBe(1);
+});
+
+it('applies a correct score through the confirmation dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $match = MatchModel::findOrFail(2);
+    $previousWinner = $match->winner_team_id;
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->call('openCorrection', 2)
+        ->assertSet('showCorrection', true)
+        ->set('score1', 61)
+        ->set('score2', 66)
+        ->set('reason', 'Referee review of the final possession')
+        ->call('requestCorrection')
+        ->assertSet('confirmAction', 'correction')
+        ->assertSee('Apply correction?')
+        ->call('confirm')
+        ->assertSet('showCorrection', false)
+        ->assertDispatched('hf-toast');
+
+    $match->refresh();
+    expect($match->home_score)->toBe(61);
+    expect($match->away_score)->toBe(66);
+    expect($match->winner_team_id)->toBe($match->away_team_id);
+    expect($match->winner_team_id)->not->toBe($previousWinner);
+    expect(AuditLog::where('action', 'score.correct')->where('entity_id', 2)->count())->toBe(1);
+});
+
+it('generates a bracket through the confirmation dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => 2])
+        ->call('requestGenerate')
+        ->assertSet('showConfirm', true)
+        ->assertSet('confirmAction', 'generate')
+        ->assertSee('Generate bracket?')
+        ->call('confirm')
+        ->assertSet('showConfirm', false)
+        ->assertDispatched('hf-toast');
+
+    expect(MatchModel::where('tournament_id', 2)->count())->toBe(15);
+});
+
+it('forbids non-organizers from generating or scoring', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($fan)
+        ->test(BracketShow::class, ['id' => 2])
+        ->call('requestGenerate')
+        ->assertForbidden();
+
+    Livewire::actingAs($fan)
+        ->test(BracketShow::class)
+        ->call('openScoreConsole', 11)
+        ->assertForbidden();
 });

@@ -12,7 +12,21 @@ use Illuminate\Support\Collection;
 class StandingsService
 {
     /**
-     * @return Collection<int, array{team_id: int, team_name: string|null, played: int, wins: int, losses: int, points: int, points_for: int, points_against: int, point_diff: int}>
+     * @return Collection<int, array{
+     *     team_id: int,
+     *     team_name: string|null,
+     *     team: Team|null,
+     *     played: int,
+     *     wins: int,
+     *     losses: int,
+     *     points: int,
+     *     points_for: int,
+     *     points_against: int,
+     *     point_diff: int,
+     *     seed: int|null,
+     *     rank: int,
+     *     qualified: bool
+     * }>
      */
     public function compute(Tournament|Division $target): Collection
     {
@@ -45,8 +59,9 @@ class StandingsService
             ->values();
 
         $teams = Team::whereIn('id', $teamIds)->get()->keyBy('id');
+        $seeds = $registrations->pluck('seed', 'team_id');
 
-        $rows = $teamIds->map(function ($teamId) use ($teams, $matches): array {
+        $rows = $teamIds->map(function ($teamId) use ($teams, $matches, $seeds): array {
             $team = $teams->get($teamId);
 
             $teamMatches = $matches->filter(
@@ -75,9 +90,12 @@ class StandingsService
                 }
             }
 
+            $seed = $seeds->get($teamId);
+
             return [
                 'team_id' => (int) $teamId,
-                'team_name' => $team?->name,
+                'team_name' => $team instanceof Team ? $team->name : null,
+                'team' => $team instanceof Team ? $team : null,
                 'played' => $wins + $losses,
                 'wins' => $wins,
                 'losses' => $losses,
@@ -85,12 +103,53 @@ class StandingsService
                 'points_for' => $pointsFor,
                 'points_against' => $pointsAgainst,
                 'point_diff' => $pointsFor - $pointsAgainst,
+                'seed' => $seed !== null ? (int) $seed : null,
+                'rank' => 0,
+                'qualified' => false,
             ];
         });
 
-        return $rows->sort(function (array $a, array $b): int {
-            return [$b['wins'], $b['point_diff'], $b['points_for']]
-                <=> [$a['wins'], $a['point_diff'], $a['points_for']];
-        })->values();
+        $cut = $this->playoffCut($target);
+
+        return $rows
+            ->sort(function (array $a, array $b): int {
+                $seedA = $a['seed'] ?? PHP_INT_MAX;
+                $seedB = $b['seed'] ?? PHP_INT_MAX;
+
+                return [$b['wins'], $b['point_diff'], $b['points_for'], $seedA]
+                    <=> [$a['wins'], $a['point_diff'], $a['points_for'], $seedB];
+            })
+            ->values()
+            ->map(function (array $row, int $index) use ($cut): array {
+                $row['rank'] = $index + 1;
+                $row['qualified'] = $index < $cut;
+
+                return $row;
+            })
+            ->values();
+    }
+
+    public function playoffCut(Tournament|Division $target): int
+    {
+        if ($target instanceof Tournament) {
+            $rules = $target->rules_json;
+            $slots = is_array($rules) ? (int) ($rules['slots'] ?? 0) : 0;
+
+            if ($slots <= 0) {
+                $slots = (int) $target->divisions()->max('max_teams');
+            }
+
+            if ($slots <= 0) {
+                $slots = (int) $target->registrations()->where('status', 'approved')->count();
+            }
+        } else {
+            $slots = (int) ($target->max_teams ?? 0);
+
+            if ($slots <= 0) {
+                $slots = (int) $target->registrations()->where('status', 'approved')->count();
+            }
+        }
+
+        return $slots > 0 ? (int) ceil($slots / 2) : 0;
     }
 }

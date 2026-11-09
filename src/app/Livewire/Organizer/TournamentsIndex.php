@@ -51,17 +51,6 @@ class TournamentsIndex extends Component
     {
         $query = Tournament::query()->with(['divisions', 'registrations', 'matches', 'matchSlots.court.venue']);
 
-        $term = trim($this->search);
-
-        if ($term !== '') {
-            $query->where(function ($builder) use ($term) {
-                $builder
-                    ->where('name', 'like', "%{$term}%")
-                    ->orWhereHas('divisions', fn ($divisionQuery) => $divisionQuery->where('name', 'like', "%{$term}%"))
-                    ->orWhereHas('matchSlots.court.venue', fn ($venueQuery) => $venueQuery->where('name', 'like', "%{$term}%"));
-            });
-        }
-
         if ($this->status !== '') {
             $query->where('status', $this->status);
         }
@@ -70,7 +59,20 @@ class TournamentsIndex extends Component
             $query->whereHas('divisions', fn ($divisionQuery) => $divisionQuery->where('name', $this->division));
         }
 
-        return $query->get();
+        $tournaments = $query->get();
+        $term = mb_strtolower(trim($this->search));
+
+        if ($term === '') {
+            return $tournaments;
+        }
+
+        return $tournaments
+            ->filter(function (Tournament $tournament) use ($term): bool {
+                $haystack = $tournament->name.' '.$tournament->venueName().' '.$tournament->divisions->pluck('name')->implode(' ');
+
+                return str_contains(mb_strtolower($haystack), $term);
+            })
+            ->values();
     }
 
     public function render(): View

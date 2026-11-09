@@ -61,3 +61,19 @@ it('excludes non-final matches', function () {
 
     expect($rows->sum('played'))->toBe(18);
 });
+
+it('assigns rank, seed, and playoff qualification for the seeded tournament', function () {
+    $this->artisan('db:seed', ['--class' => 'PrototypeSeeder'])->assertExitCode(0);
+
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $service = new StandingsService;
+    $rows = $service->compute($tournament);
+    $cut = $service->playoffCut($tournament);
+
+    expect($cut)->toBe(8)
+        ->and($rows->pluck('rank')->all())->toBe(range(1, $rows->count()))
+        ->and($rows->where('qualified', true))->toHaveCount($cut)
+        ->and($rows->where('qualified', false))->toHaveCount($rows->count() - $cut)
+        ->and($rows->every(fn (array $row): bool => array_key_exists('seed', $row)))->toBeTrue();
+});

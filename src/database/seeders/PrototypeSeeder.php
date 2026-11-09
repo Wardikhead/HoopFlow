@@ -196,6 +196,8 @@ class PrototypeSeeder extends Seeder
                 'start_date' => $d['start'],
                 'end_date' => $d['end'],
                 'status' => $d['status'],
+                'payment_method' => 'GCash',
+                'payment_account' => '09489666136',
                 'rules_json' => ['slots' => $d['slots'], 'fee' => $d['fee'], 'format' => 'single-elimination'],
                 'created_by' => $this->organizer->id,
             ]);
@@ -222,6 +224,11 @@ class PrototypeSeeder extends Seeder
                 $court = Court::firstOrCreate(['venue_id' => $venue->id, 'name' => $cname], ['notes' => null]);
                 $this->courtMap[$d['slug'].':'.$cid] = $court;
             }
+
+            $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+            $rules['venue_id'] = $venue->id;
+            $tournament->rules_json = $rules;
+            $tournament->save();
         }
     }
 
@@ -272,9 +279,13 @@ class PrototypeSeeder extends Seeder
 
         foreach ($activeTeams as $i => $row) {
             [$name, $short, $coach, $city, $color, $payStatus, $payRef] = $row;
-            $team = Team::firstOrCreate(['slug' => strtolower($short)], [
+            $team = Team::updateOrCreate(['slug' => strtolower($short)], [
                 'organization_id' => $this->org->id,
                 'name' => $name,
+                'short_name' => $short,
+                'avatar_color' => $color,
+                'city' => $city,
+                'coach_name' => $coach,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
@@ -326,9 +337,13 @@ class PrototypeSeeder extends Seeder
         }
 
         // rejected team
-        $rejected = Team::firstOrCreate(['slug' => 'npc'], [
+        $rejected = Team::updateOrCreate(['slug' => 'npc'], [
             'organization_id' => $this->org->id,
             'name' => 'Napico Nuggets',
+            'short_name' => 'NPC',
+            'avatar_color' => '#64748b',
+            'city' => 'Pasig City',
+            'coach_name' => 'Vic Sotto',
             'logo_url' => null,
             'coach_user_id' => null,
         ]);
@@ -388,9 +403,13 @@ class PrototypeSeeder extends Seeder
 
         foreach ($openTeams as $i => $row) {
             [$name, $short, $coach, $city, $color, $status, $payStatus, $payRef] = $row;
-            $team = Team::firstOrCreate(['slug' => strtolower($short).'-open'], [
+            $team = Team::updateOrCreate(['slug' => strtolower($short).'-open'], [
                 'organization_id' => $this->org->id,
                 'name' => $name,
+                'short_name' => $short,
+                'avatar_color' => $color,
+                'city' => $city,
+                'coach_name' => $coach,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
@@ -458,9 +477,13 @@ class PrototypeSeeder extends Seeder
 
         foreach ($cdoTeams as $i => $row) {
             [$name, $short, $coach, $city] = $row;
-            $team = Team::firstOrCreate(['slug' => strtolower($short).'-cdo'], [
+            $team = Team::updateOrCreate(['slug' => strtolower($short).'-cdo'], [
                 'organization_id' => $this->org->id,
                 'name' => $name,
+                'short_name' => $short,
+                'avatar_color' => '#64748b',
+                'city' => $city,
+                'coach_name' => $coach,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
@@ -570,7 +593,8 @@ class PrototypeSeeder extends Seeder
             ['r16-7', 7, 'Mandaluyong Tigers', 'Caniogan Cardinals', 20, 0, 'forfeit', false],
             ['r16-8', 8, 'Maybunga Titans', 'Manggahan Jets', 65, 60, 'final', false],
         ];
-        foreach ($r16 as $idx => [$pid, $mslot, $t1name, $t2name, $s1, $s2, $status, $bye]) {
+        $gameIndex = 0;
+        foreach ($r16 as [$pid, $mslot, $t1name, $t2name, $s1, $s2, $status, $bye]) {
             $home = $byName[$t1name];
             $away = $t2name ? $byName[$t2name] : null;
             $winner = null;
@@ -608,7 +632,8 @@ class PrototypeSeeder extends Seeder
 
             if (! $bye) {
                 $sched = in_array($pid, ['r16-5', 'r16-6', 'r16-7', 'r16-8']) ? '2026-05-16 09:30:00' : '2026-05-16 09:00:00';
-                $courtId = $courtIds[$idx % count($courtIds)];
+                $courtId = $courtIds[$gameIndex % count($courtIds)];
+                $gameIndex++;
                 MatchSlot::firstOrCreate(['match_id' => $m->id], [
                     'id' => $this->nextMatchSlotId(),
                     'tournament_id' => $t1->id,
@@ -624,12 +649,12 @@ class PrototypeSeeder extends Seeder
 
         // QF
         $qf = [
-            ['qf-1', 1, 'San Antonio Vipers', 'Pinagbuhatan Warriors', 78, 70, 'final', '2026-05-18 13:00:00'],
-            ['qf-2', 2, 'Dela Paz Dragons', 'Ugong Blue Hawks', 64, 69, 'final', '2026-05-18 13:00:00'],
-            ['qf-3', 3, 'Kapitolyo Knights', 'Kalawaan Comets', null, null, 'scheduled', '2026-05-18 14:00:00'],
-            ['qf-4', 4, 'Mandaluyong Tigers', 'Maybunga Titans', null, null, 'scheduled', '2026-05-18 14:00:00'],
+            ['qf-1', 1, 'San Antonio Vipers', 'Pinagbuhatan Warriors', 78, 70, 'final', '2026-05-18 13:00:00', ['team1' => [20, 20, 19, 19], 'team2' => [18, 18, 17, 17]]],
+            ['qf-2', 2, 'Dela Paz Dragons', 'Ugong Blue Hawks', 64, 69, 'final', '2026-05-18 13:00:00', ['team1' => [16, 16, 16, 16], 'team2' => [18, 17, 17, 17]]],
+            ['qf-3', 3, 'Kapitolyo Knights', 'Kalawaan Comets', null, null, 'scheduled', '2026-05-18 14:00:00', null],
+            ['qf-4', 4, 'Mandaluyong Tigers', 'Maybunga Titans', null, null, 'scheduled', '2026-05-18 14:00:00', null],
         ];
-        foreach ($qf as [$pid, $mslot, $t1name, $t2name, $s1, $s2, $status, $sched]) {
+        foreach ($qf as [$pid, $mslot, $t1name, $t2name, $s1, $s2, $status, $sched, $quarters]) {
             $home = $byName[$t1name];
             $away = $byName[$t2name];
             $winner = null;
@@ -649,11 +674,12 @@ class PrototypeSeeder extends Seeder
                     'status' => $status,
                     'completed_at' => $sched,
                     'forfeit_reason' => null,
+                    'quarters_json' => $quarters,
                 ]
             );
             $this->matchMap[$pid] = $m;
 
-            $courtId = $courtIds[($mslot - 1) % count($courtIds)];
+            $courtId = $courtIds[($mslot - 1) % min(2, count($courtIds))];
             MatchSlot::firstOrCreate(['match_id' => $m->id], [
                 'id' => $this->nextMatchSlotId(),
                 'tournament_id' => $t1->id,
@@ -797,18 +823,21 @@ class PrototypeSeeder extends Seeder
         $t3 = $this->tournMap['tournament-3'];
 
         $defs = [
-            [$t1, 'Championship week moves to Court 1', 'All semifinal and final games will be played on Court 1. Gate opens 45 minutes before tip-off.', 'all', '2026-05-18 18:00:00'],
-            [$t1, 'Roster verification deadline is May 19', 'Coaches must upload the final PSA birth certificate and guardian consent for every player before the semifinals.', 'coaches', '2026-05-17 10:00:00'],
-            [$t2, 'Pasig Youth Hoopfest registration closes June 1', 'Submit your team registration, twelve-player roster, and GCash reference before the deadline.', 'all', '2026-05-20 09:00:00'],
-            [$t3, 'Court assignments posted for the CDO Classic', 'The preliminary court assignments are available on the tournament page. Brackets will be generated after the seeding meeting.', 'all', '2026-06-02 11:00:00'],
+            [$t1, 'Championship week moves to Court 1', 'All semifinal and final games will be played on Court 1. Gate opens 45 minutes before tip-off.', 'venue', 'all', [], true, '2026-05-18 18:00:00'],
+            [$t1, 'Roster verification deadline is May 19', 'Coaches must upload the final PSA birth certificate and guardian consent for every player before the semifinals.', 'eligibility', 'coaches', [], false, '2026-05-17 10:00:00'],
+            [$t2, 'Pasig Youth Hoopfest registration closes June 1', 'Submit your team registration, twelve-player roster, and GCash reference before the deadline.', 'schedule', 'all', [], false, '2026-05-20 09:00:00'],
+            [$t3, 'Court assignments posted for the CDO Classic', 'The preliminary court assignments are available on the tournament page. Brackets will be generated after the seeding meeting.', 'venue', 'all', [], false, '2026-06-02 11:00:00'],
         ];
-        foreach ($defs as [$tourn, $title, $body, $audience, $at]) {
-            Announcement::firstOrCreate(
+        foreach ($defs as [$tourn, $title, $body, $category, $audience, $targetUserIds, $pinned, $at]) {
+            Announcement::updateOrCreate(
                 ['tournament_id' => $tourn->id, 'title' => $title],
                 [
                     'organization_id' => $this->org->id,
                     'body' => $body,
+                    'category' => $category,
                     'audience' => $audience,
+                    'target_user_ids' => $targetUserIds,
+                    'pinned' => $pinned,
                     'status' => 'published',
                     'published_at' => $at,
                     'created_by' => $this->organizer->id,
@@ -826,7 +855,7 @@ class PrototypeSeeder extends Seeder
         $ann1 = Announcement::where('title', 'Championship week moves to Court 1')->first();
 
         $entries = [
-            ['2026-11-18 16:20:00', 'user-organizer', 'score.correct', 'match', $qf1->id, ['previousScore1' => 74, 'previousScore2' => 70], ['score1' => 78, 'score2' => 70]],
+            ['2026-05-18 16:20:00', 'user-organizer', 'score.correct', 'match', $qf1->id, ['previousScore1' => 74, 'previousScore2' => 70], ['score1' => 78, 'score2' => 70, 'reason' => 'Shot-clock correction after referee review.']],
             ['2026-11-18 15:40:00', 'user-organizer', 'payment.verify', 'team', $vipers->id, ['status' => 'pending'], ['status' => 'paid', 'ref' => 'GCASH-9823412']],
             ['2026-11-16 08:00:00', 'user-organizer', 'bracket.generate', 'tournament', $t1->id, null, ['teams' => 15, 'byes' => 1]],
             ['2026-11-15 17:00:00', 'user-organizer', 'schedule.generate', 'tournament', $t1->id, null, ['courts' => 4, 'slotMinutes' => 30, 'restMinutes' => 15]],

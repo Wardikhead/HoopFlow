@@ -1,179 +1,370 @@
-<div>
-@php
-    $tournament = $this->tournament;
-    $matchSlots = $tournament?->matchSlots()->with(['match.homeTeam', 'match.awayTeam', 'court'])->get() ?? collect();
-    $slotsByDay = $matchSlots->groupBy(fn ($slot) => optional($slot->start_at)->format('Y-m-d'));
-    $selectedDay = $this->selectedDay;
-    if (! $selectedDay) {
-        $selectedDay = $slotsByDay->keys()->first() ?? optional($tournament?->start_date)->format('Y-m-d') ?? now()->format('Y-m-d');
-    }
-    $currentMonth = $this->currentMonth ?: substr($selectedDay, 0, 7);
-    $monthDate = \Carbon\Carbon::createFromFormat('Y-m', $currentMonth) ?: now();
-    $firstOfMonth = $monthDate->copy()->startOfMonth();
-    $startCell = $firstOfMonth->copy()->startOfWeek(\Carbon\Carbon::SUNDAY);
-    $cells = [];
-    for ($i = 0; $i < 42; $i++) {
-        $cells[] = $startCell->copy()->addDays($i)->format('Y-m-d');
-    }
-    $daySlots = ($slotsByDay[$selectedDay] ?? collect())->sortBy('start_at')->values();
-    $user = auth()->user();
-    $isOrganizer = $user && $user->hasRole('organizer');
-    $scheduledCount = $matchSlots->count();
-    $matchDayCount = $slotsByDay->count();
-    $courtCount = $matchSlots->pluck('court_id')->filter()->unique()->count();
-    $resultsCount = $tournament?->matches()->whereIn('status', ['final', 'forfeit'])->count() ?? 0;
-    $unscheduledCount = $tournament ? $tournament->matches()->whereDoesntHave('matchSlots')->count() : 0;
-@endphp
+<div
+    x-data="{
+        toasts: [],
+        pushToast(detail) {
+            const toast = {
+                id: Date.now() + Math.random(),
+                title: (detail && detail.title) || '',
+                message: (detail && detail.message) || '',
+                tone: (detail && detail.tone) || 'primary'
+            };
+            this.toasts.push(toast);
+            setTimeout(() => this.dismissToast(toast.id), 4200);
+        },
+        dismissToast(id) {
+            this.toasts = this.toasts.filter((toast) => toast.id !== id);
+        },
+        toastIcon(tone) {
+            return tone === 'danger' ? 'x-circle-fill' : tone === 'warning' ? 'exclamation-triangle-fill' : tone === 'success' ? 'check-circle-fill' : 'info-circle-fill';
+        }
+    }"
+    x-on:hf-toast.window="pushToast($event.detail)"
+>
+    @php
+        $tournament = $this->tournament;
+    @endphp
 
-<header class="hf-page-head hf-mb-3">
-    <div>
-        <span class="hf-eyebrow">{{ $tournament?->divisions?->first()?->name ?? 'Tournament' }} · {{ $tournament?->name ?? 'Schedule' }}</span>
-        <h1 class="hf-page-title">Court schedule</h1>
-        <p class="hf-page-desc">
-            @if ($tournament)
-                {{ optional($tournament->start_date)->format('M d, Y') }} to {{ optional($tournament->end_date)->format('M d, Y') }} · {{ $courtCount }} courts · {{ $tournament->slotMinutes ?? 30 }}-minute slots
-            @else
-                No tournament selected.
-            @endif
-        </p>
-    </div>
-    <div class="hf-page-actions">
-        @if ($tournament)
-            <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
-            <a class="hf-btn" href="{{ route('bracket') }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-        @endif
-        @if ($isOrganizer && $matchSlots->isNotEmpty())
-            <button type="button" class="hf-btn" wire:click="generateSchedule" data-testid="schedule-regenerate">Regenerate schedule</button>
-        @endif
-    </div>
-</header>
-
-<div class="hf-grid hf-grid--4 hf-mb-3">
-    <div class="hf-card hf-card--flat" data-testid="schedule-kpi-scheduled">
-        <span class="hf-kpi-label">Scheduled</span>
-        <strong class="hf-kpi-value">{{ $scheduledCount }}</strong>
-        <span class="hf-small hf-muted">of {{ $tournament?->matches()->count() ?? 0 }} bracket games</span>
-    </div>
-    <div class="hf-card hf-card--flat" data-testid="schedule-kpi-days">
-        <span class="hf-kpi-label">Matchdays</span>
-        <strong class="hf-kpi-value">{{ $matchDayCount }}</strong>
-        <span class="hf-small hf-muted">Days with at least one game</span>
-    </div>
-    <div class="hf-card hf-card--flat" data-testid="schedule-kpi-courts">
-        <span class="hf-kpi-label">Courts</span>
-        <strong class="hf-kpi-value">{{ $courtCount }}</strong>
-        <span class="hf-small hf-muted">{{ $tournament?->name ?? '' }}</span>
-    </div>
-    <div class="hf-card hf-card--flat" data-testid="schedule-kpi-results">
-        <span class="hf-kpi-label">Results</span>
-        <strong class="hf-kpi-value">{{ $resultsCount }}</strong>
-        <span class="hf-small hf-muted">Final and forfeit</span>
-    </div>
-</div>
-
-<div class="hf-split">
-    <div>
-        <div class="hf-card hf-mb-3">
-            <div class="hf-between hf-mb-2">
-                <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(-1)" data-testid="schedule-month-prev">
-                    <i class="bi bi-chevron-left"></i> Prev
-                </button>
-                <strong class="hf-section-title hf-mb-0" data-testid="schedule-month-label">{{ $monthDate->format('F Y') }}</strong>
-                <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(1)" data-testid="schedule-month-next">
-                    Next <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-            <div class="hf-calendar" data-testid="schedule-calendar">
-                @foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $weekday)
-                    <div class="hf-calendar-head">{{ $weekday }}</div>
-                @endforeach
-                @foreach ($cells as $cell)
-                    @php
-                        $count = isset($slotsByDay[$cell]) ? $slotsByDay[$cell]->count() : 0;
-                        $outside = substr($cell, 0, 7) !== $currentMonth;
-                    @endphp
-                    <button type="button"
-                            class="hf-calendar-cell {{ $count ? 'has-events' : '' }} {{ $cell === $selectedDay ? 'is-selected' : '' }}"
-                            wire:click="selectDay('{{ $cell }}')"
-                            data-testid="schedule-day-{{ $cell }}"
-                            style="{{ $outside ? 'opacity: .45' : '' }}">
-                        <span>{{ (int) substr($cell, 8, 2) }}</span>
-                        @if ($count)
-                            <span class="hf-calendar-count">{{ $count }} games</span>
-                        @endif
-                    </button>
-                @endforeach
-            </div>
+    @if (! $tournament)
+        <div class="hf-empty" data-testid="schedule-empty">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
+            <h3>Tournament not found</h3>
+            <p>The schedule link is invalid or the demo has been reset.</p>
+            <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
+    @else
+        @php
+            $courts = $this->courts;
+            $daySlots = $this->daySlots;
+        @endphp
 
-        <div class="hf-card hf-mb-3">
-            <div class="hf-between hf-mb-2">
-                <span class="hf-label hf-mb-0">Selected day</span>
-                <span class="hf-chip hf-chip--slate">{{ $daySlots->count() }} games</span>
-            </div>
-            <div class="hf-grid hf-grid--2" data-testid="schedule-day-list">
-                @forelse ($daySlots as $slot)
-                    <div class="hf-card hf-card--flat" data-testid="schedule-match-{{ $slot->match?->id ?? $slot->id }}">
-                        <div class="hf-between">
-                            <span>{{ $slot->match?->homeTeam?->name ?? 'TBD' }}</span>
-                            <strong>vs</strong>
-                            <span>{{ $slot->match?->awayTeam?->name ?? 'TBD' }}</span>
-                        </div>
-                        <p class="hf-small hf-muted hf-mb-0">
-                            {{ $slot->court?->name ?? 'Court TBD' }} · {{ optional($slot->start_at)->format('g:i A') }}
-                        </p>
-                    </div>
-                @empty
-                    <div class="hf-empty">
-                        <i class="bi bi-calendar3" aria-hidden="true"></i>
-                        <h3>No games scheduled</h3>
-                        <p>Choose another day or publish a schedule.</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    <aside>
-        <div class="hf-card hf-mb-3">
-            <span class="hf-kpi-label">Selected day</span>
-            <h3 class="hf-section-title hf-mt-1">{{ \Carbon\Carbon::parse($selectedDay)->format('l, M d, Y') }}</h3>
-            <p class="hf-small hf-muted hf-mb-2" data-testid="schedule-day-summary">
-                {{ $daySlots->count() }} games · {{ $daySlots->pluck('court_id')->filter()->unique()->count() }} courts · first tip-off {{ $daySlots->first()?->start_at?->format('g:i A') ?? 'TBD' }}
-            </p>
-            @if ($tournament)
-                <a class="hf-btn hf-btn--sm" href="{{ route('matches') }}" data-testid="schedule-open-day">Open day list</a>
-            @endif
-        </div>
-
-        <div class="hf-card hf-mb-3">
-            <span class="hf-kpi-label">Schedule generation</span>
-            @if (! $tournament || $tournament->matches()->count() === 0)
-                <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Generate the bracket before assigning courts.</p>
-            @elseif ($matchSlots->isEmpty())
-                <p class="hf-small hf-muted hf-mt-1">The planner checks court double-bookings and team rest before publishing.</p>
-                @if ($isOrganizer)
-                    <button type="button" class="hf-btn hf-btn--primary hf-mt-1" wire:click="generateSchedule" data-testid="schedule-generate">Preview schedule</button>
-                @endif
-            @else
-                <p class="hf-small hf-muted hf-mt-1 hf-mb-0">
-                    {{ $matchSlots->isEmpty() ? '' : 'The court schedule is already published.' }}
+        <header class="hf-page-head hf-mb-3">
+            <div>
+                <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? 'Tournament' }} · {{ $this->venueName }}</span>
+                <h1 class="hf-page-title">Court schedule</h1>
+                <p class="hf-page-desc">
+                    {{ $tournament->start_date?->format('M d, Y') ?? 'TBD' }} to {{ $tournament->end_date?->format('M d, Y') ?? 'TBD' }} · {{ $courts->count() }} courts · {{ $this->slotMinutes }}-minute slots with {{ $this->restMinutes }} minutes of rest.
                 </p>
-                @if ($isOrganizer && $resultsCount === 0)
-                    <button type="button" class="hf-btn hf-mt-1" wire:click="generateSchedule" data-testid="schedule-regenerate">Regenerate schedule</button>
-                @elseif ($resultsCount > 0)
-                    <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Results exist, so the schedule is locked.</p>
+            </div>
+            <div class="hf-page-actions">
+                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
+                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
+                <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-matches"><i class="bi bi-list-ul"></i> Matchups</a>
+                @if ($this->isOrganizer && $this->hasScheduledGames && $this->resultsCount === 0)
+                    <button type="button" class="hf-btn" wire:click="requestRegenerate" data-testid="schedule-regenerate" wire:loading.attr="disabled">Regenerate schedule</button>
                 @endif
-            @endif
+                @if ($this->isOrganizer && $this->hasScheduledGames)
+                    <button type="button" class="hf-btn" wire:click="openReschedule" data-testid="schedule-reschedule" wire:loading.attr="disabled">Reschedule match</button>
+                    <button type="button" class="hf-btn" wire:click="manualManage" data-testid="schedule-manual-manage">Manual manage</button>
+                @endif
+            </div>
+        </header>
+
+        <div class="hf-grid hf-grid--4 hf-mb-3">
+            <x-kpi-tile label="Scheduled" :value="$this->scheduledCount" :hint="'of '.$this->totalMatches.' bracket games'" tone="primary" testid="schedule-kpi-scheduled" />
+            <x-kpi-tile label="Matchdays" :value="$this->matchDayCount" hint="Days with at least one game" tone="gold" testid="schedule-kpi-days" />
+            <x-kpi-tile label="Courts" :value="$courts->count()" :hint="$this->venueName" tone="slate" testid="schedule-kpi-courts" />
+            <x-kpi-tile label="Results" :value="$this->resultsCount" hint="Final and forfeit" tone="success" testid="schedule-kpi-results" />
         </div>
 
-        <div class="hf-card">
-            <span class="hf-kpi-label">Unscheduled</span>
-            <h3 class="hf-section-title hf-mt-1">{{ $unscheduledCount }} games</h3>
-            <p class="hf-small hf-muted hf-mb-0">
-                {{ $unscheduledCount ? 'These bracket games still need a court and time.' : 'Every non-bye game has a court and time.' }}
-            </p>
+        <div class="hf-split">
+            <div>
+                <div class="hf-card hf-mb-3">
+                    <div class="hf-between hf-mb-2">
+                        <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(-1)" data-testid="schedule-month-prev">
+                            <i class="bi bi-chevron-left"></i> Prev
+                        </button>
+                        <strong class="hf-section-title hf-mb-0" data-testid="schedule-month-label">{{ $this->monthLabel }}</strong>
+                        <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(1)" data-testid="schedule-month-next">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="hf-calendar" data-testid="schedule-calendar">
+                        @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $weekday)
+                            <div class="hf-calendar-head">{{ $weekday }}</div>
+                        @endforeach
+                        @foreach ($this->monthCells as $cell)
+                            <button type="button"
+                                    class="hf-calendar-cell {{ $cell['count'] ? 'has-events' : '' }} {{ $cell['key'] === $this->selectedDay ? 'is-selected' : '' }}"
+                                    wire:click="selectDay('{{ $cell['key'] }}')"
+                                    data-testid="schedule-day-{{ $cell['key'] }}"
+                                    aria-label="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['count'] ? ', '.$cell['count'].' games' : '' }}"
+                                    style="{{ $cell['outside'] ? 'opacity: .45' : '' }}">
+                                <span>{{ $cell['day'] }}</span>
+                                @if ($cell['count'])
+                                    <span class="hf-calendar-count">{{ $cell['count'] }} games</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <div class="hf-week-strip" data-testid="schedule-week">
+                        @foreach ($this->weekDays as $day)
+                            <button type="button"
+                                    class="{{ $day['key'] === $this->selectedDay ? 'is-selected' : '' }}"
+                                    wire:click="selectDay('{{ $day['key'] }}')"
+                                    data-testid="schedule-week-{{ $day['key'] }}">
+                                <small>{{ $day['weekday'] }}</small>
+                                <strong>{{ $day['day'] }}</strong>
+                                @if ($day['count'])
+                                    <span class="hf-calendar-count">{{ $day['count'] }}</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <div class="hf-between hf-mt-2">
+                        <button type="button" class="hf-btn hf-btn--sm" wire:click="shiftWeek(-1)" data-testid="schedule-week-prev">
+                            <i class="bi bi-arrow-left"></i> Week
+                        </button>
+                        <button type="button" class="hf-btn hf-btn--sm" wire:click="firstMatchday" data-testid="schedule-first-day">First matchday</button>
+                        <button type="button" class="hf-btn hf-btn--sm" wire:click="shiftWeek(1)" data-testid="schedule-week-next">
+                            Week <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="hf-card hf-mb-3">
+                    <div class="hf-between hf-mb-2">
+                        <span class="hf-label hf-mb-0">Court filters</span>
+                        <button type="button" class="hf-section-link" wire:click="allCourts" data-testid="schedule-all-courts">All courts</button>
+                    </div>
+                    <div class="hf-filter-row" data-court-filters>
+                        @foreach ($courts as $court)
+                            @php
+                                $active = in_array((int) $court->id, $this->selectedCourtIds, true);
+                            @endphp
+                            <button type="button"
+                                    class="hf-chip hf-chip--{{ $active ? 'primary' : 'slate' }}"
+                                    wire:click="toggleCourt({{ $court->id }})"
+                                    aria-pressed="{{ $active ? 'true' : 'false' }}"
+                                    data-testid="schedule-court-{{ $court->id }}">
+                                <i class="bi bi-geo-alt"></i> {{ $court->name }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div id="scheduleList" data-testid="schedule-list">
+                    <div class="hf-section-head">
+                        <h2 class="hf-section-title">{{ $daySlots->isNotEmpty() ? $this->selectedDayLabel : 'No games on this day' }}</h2>
+                        <span class="hf-chip hf-chip--slate">{{ $daySlots->count() }} games</span>
+                    </div>
+                    @if ($daySlots->isNotEmpty())
+                        <div class="hf-grid hf-grid--2" data-testid="schedule-day-list">
+                            @foreach ($daySlots as $slot)
+                                @if ($slot->match)
+                                    <x-match-card
+                                        :match="$slot->match"
+                                        :href="route('gameStats', ['match' => $slot->match_id])"
+                                        :testid="'schedule-match-'.$slot->match_id"
+                                    />
+                                @endif
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="hf-empty">
+                            <i class="bi bi-calendar3" aria-hidden="true"></i>
+                            <h3>No games scheduled</h3>
+                            <p>Choose another day, re-enable a court filter, or publish a schedule from the tournament desk.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <aside>
+                <div class="hf-card hf-mb-3">
+                    <span class="hf-kpi-label">Selected day</span>
+                    <h3 class="hf-section-title hf-mt-1">{{ $this->selectedDayLabel }}</h3>
+                    <p class="hf-small hf-muted hf-mb-2" data-testid="schedule-day-summary">
+                        {{ $this->daySummary['games'] }} games · {{ $this->daySummary['courts'] }} courts · first tip-off {{ $this->daySummary['first'] }}
+                    </p>
+                    <a class="hf-btn hf-btn--sm" href="{{ route('matches', ['id' => $tournament->id, 'date' => $this->selectedDay]) }}" data-testid="schedule-open-day">Open day list</a>
+                </div>
+
+                <div class="hf-card hf-mb-3">
+                    <span class="hf-kpi-label">Schedule generation</span>
+                    @if (! $this->hasBracket)
+                        <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Generate the bracket before assigning courts.</p>
+                    @elseif ($this->canGenerate)
+                        <p class="hf-small hf-muted hf-mt-1">The planner checks court double-bookings and team rest before publishing.</p>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openPreview" data-testid="schedule-generate" wire:loading.attr="disabled">Preview schedule</button>
+                    @else
+                        <p class="hf-small hf-muted hf-mt-1 hf-mb-0">
+                            {{ $this->locked ? 'Results exist, so the schedule is locked.' : 'The court schedule is already published.' }}
+                        </p>
+                        <a class="hf-btn hf-btn--sm hf-mt-1" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-view-all">View all matchups</a>
+                    @endif
+                </div>
+
+                <div class="hf-card">
+                    <span class="hf-kpi-label">Unscheduled</span>
+                    <h3 class="hf-section-title hf-mt-1">{{ $this->unscheduledCount }} games</h3>
+                    <p class="hf-small hf-muted hf-mb-0">
+                        {{ $this->unscheduledCount ? 'These bracket games still need a court and time.' : 'Every non-bye game has a court and time.' }}
+                    </p>
+                </div>
+            </aside>
         </div>
-    </aside>
-</div>
+
+        @if ($showPreview)
+            <dialog
+                class="hf-dialog hf-dialog--wide"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closePreview()"
+                x-on:click="if ($event.target === $el) $wire.closePreview()"
+                wire:key="schedule-preview-dialog"
+                data-testid="schedule-preview-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">Schedule preview</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closePreview" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <p class="hf-small hf-muted">
+                        {{ count($previewPlan['assignments'] ?? []) }} games across {{ count($previewPlan['courts'] ?? []) }} courts. No court double-bookings; every team keeps at least {{ $previewPlan['restMinutes'] ?? $this->restMinutes }} minutes of rest.
+                    </p>
+                    <div class="hf-table-wrap">
+                        <table class="hf-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Round</th>
+                                    <th scope="col">Match</th>
+                                    <th scope="col">Court</th>
+                                    <th scope="col">Slot</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($this->previewRows as $row)
+                                    <tr>
+                                        <td>{{ $row['round'] }}</td>
+                                        <td>{{ $row['match'] }}</td>
+                                        <td>{{ $row['court'] }}</td>
+                                        <td>{{ $row['slot'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="closePreview" data-testid="schedule-preview-cancel">Cancel</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="publishSchedule" data-testid="schedule-preview-publish" wire:loading.attr="disabled">Publish schedule</button>
+                </div>
+            </dialog>
+        @endif
+
+        @if ($showReschedule)
+            <dialog
+                class="hf-dialog hf-dialog--wide"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closeReschedule()"
+                x-on:click="if ($event.target === $el) $wire.closeReschedule()"
+                wire:key="schedule-reschedule-dialog"
+                data-testid="schedule-reschedule-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">Reschedule match</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closeReschedule" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <div class="hf-form-grid">
+                        <div class="hf-field hf-field--full">
+                            <label class="hf-label" for="rescheduleMatch">Match</label>
+                            <select
+                                id="rescheduleMatch"
+                                class="hf-select"
+                                wire:model="rescheduleMatchId"
+                                data-testid="reschedule-match"
+                                x-on:change="
+                                    const option = $event.target.selectedOptions[0];
+                                    if (! option) return;
+                                    if (option.dataset.courtId) {
+                                        $refs.rescheduleCourt.value = option.dataset.courtId;
+                                        $refs.rescheduleCourt.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                    if (option.dataset.scheduledAt) {
+                                        $refs.rescheduleTime.value = option.dataset.scheduledAt;
+                                        $refs.rescheduleTime.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                "
+                            >
+                                @foreach ($this->scheduledMatchOptions as $option)
+                                    <option
+                                        value="{{ $option['id'] }}"
+                                        data-court-id="{{ $option['courtId'] }}"
+                                        data-scheduled-at="{{ $option['scheduledAt'] }}"
+                                    >{{ $option['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="rescheduleCourt">Court</label>
+                            <select id="rescheduleCourt" class="hf-select" wire:model="rescheduleCourtId" x-ref="rescheduleCourt" data-testid="reschedule-court">
+                                @foreach ($courts as $court)
+                                    <option value="{{ $court->id }}">{{ $court->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="rescheduleTime">Date &amp; time</label>
+                            <input id="rescheduleTime" class="hf-input" type="datetime-local" wire:model="rescheduleScheduledAt" x-ref="rescheduleTime" data-testid="reschedule-time">
+                        </div>
+                    </div>
+                    @error('rescheduleScheduledAt')
+                        <p class="hf-field-error hf-mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="closeReschedule" data-testid="reschedule-cancel">Cancel</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="saveReschedule" data-testid="reschedule-save" wire:loading.attr="disabled">Save</button>
+                </div>
+            </dialog>
+        @endif
+
+        @if ($showConfirm)
+            <dialog
+                class="hf-dialog"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.cancelConfirm()"
+                x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
+                wire:key="schedule-confirm-dialog"
+                data-testid="schedule-confirm-dialog"
+            >
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <p class="hf-mb-0">{{ $confirmMessage }}</p>
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="cancelConfirm" data-testid="confirm-cancel">Cancel</button>
+                    <button type="button" class="hf-btn hf-btn--{{ $confirmTone }}" wire:click="confirm" data-testid="confirm-ok" wire:loading.attr="disabled">{{ $confirmLabel }}</button>
+                </div>
+            </dialog>
+        @endif
+    @endif
+
+    <div class="hf-toast-region" aria-live="polite" aria-atomic="false">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div class="hf-toast" x-bind:class="'hf-toast--' + toast.tone" x-bind:role="toast.tone === 'danger' ? 'alert' : 'status'">
+                <i class="bi" x-bind:class="'bi-' + toastIcon(toast.tone)" aria-hidden="true"></i>
+                <div>
+                    <strong x-show="toast.title !== ''" x-text="toast.title"></strong>
+                    <p x-text="toast.message"></p>
+                </div>
+                <button type="button" aria-label="Dismiss notification" data-testid="toast-dismiss" x-on:click="dismissToast(toast.id)">&times;</button>
+            </div>
+        </template>
+    </div>
 </div>

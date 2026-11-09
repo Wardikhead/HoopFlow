@@ -137,7 +137,7 @@
 
             <div class="hf-between hf-mb-2">
                 <h2 class="hf-section-title hf-mb-0">Recent results</h2>
-                <a class="hf-section-link" href="{{ route('schedule') }}">All matchups</a>
+                <a class="hf-section-link" href="{{ route('matches', $tournament ? ['id' => $tournament->id] : []) }}">All matchups</a>
             </div>
             <div class="hf-grid hf-grid--2">
                 @forelse ($recentResults as $match)

@@ -13,5 +13,9 @@ parameters:
 
     level: 6
 
+    # Models declare casts in casts() methods rather than $casts properties.
+    # Enabling this lets Larastan infer the real attribute types (Carbon, array, etc.).
+    parseModelCastsMethod: true
+
     excludePaths:
         - app/Providers/*

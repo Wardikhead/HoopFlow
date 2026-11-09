@@ -3,6 +3,7 @@
 namespace App\Livewire\Organizer;
 
 use App\Models\Payment;
+use App\Models\Tournament;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -10,11 +11,100 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+/**
+ * @property-read Collection<int, Payment> $payments
+ * @property-read Collection<int, Tournament> $tournaments
+ * @property-read Tournament|null $destinationTournament
+ * @property-read array{collected: float, outstanding: float, expected: float, rate: int, paidCount: int, pendingCount: int, partialCount: int} $kpis
+ */
 #[Layout('layouts.public')]
 #[Title('Payments')]
 class PaymentsIndex extends Component
 {
-    public string $status = 'all';
+    public const METHODS = ['GCash', 'Maya', 'Bank transfer', 'Cash'];
+
+    public string $status = 'pending';
+
+    public string $search = '';
+
+    public string $tournament = 'all';
+
+    public ?int $verifyingId = null;
+
+    public string $verifyMethod = 'GCash';
+
+    public string $verifyStatus = 'paid';
+
+    public string $verifyRef = '';
+
+    public ?int $verifyAmount = null;
+
+    public function openVerify(int $paymentId): void
+    {
+        $payment = Payment::query()->with(['registration.team', 'registration.tournament'])->find($paymentId);
+
+        if (! $payment instanceof Payment) {
+            return;
+        }
+
+        $this->verifyingId = (int) $payment->id;
+        $this->verifyMethod = $payment->method ?? 'GCash';
+        $this->verifyStatus = $payment->status === 'partial' ? 'partial' : 'paid';
+        $this->verifyRef = $payment->reference_no ?? '';
+        $this->verifyAmount = (int) $payment->amount;
+    }
+
+    public function closeVerify(): void
+    {
+        $this->verifyingId = null;
+        $this->verifyMethod = 'GCash';
+        $this->verifyStatus = 'paid';
+        $this->verifyRef = '';
+        $this->verifyAmount = null;
+        $this->resetValidation();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->search = '';
+        $this->status = 'pending';
+        $this->tournament = 'all';
+    }
+
+    public function saveVerify(): void
+    {
+        if ($this->verifyingId === null) {
+            return;
+        }
+
+        $this->validate([
+            'verifyRef' => ['required', 'string', 'min:1'],
+            'verifyAmount' => ['required', 'integer', 'min:1'],
+        ], [
+            'verifyRef.required' => 'Enter the payment reference.',
+            'verifyAmount.required' => 'Amount must be greater than zero.',
+            'verifyAmount.integer' => 'Amount must be a whole number.',
+            'verifyAmount.min' => 'Amount must be greater than zero.',
+        ]);
+
+        $payment = Payment::query()->find($this->verifyingId);
+
+        if (! $payment instanceof Payment) {
+            return;
+        }
+
+        $payment->update([
+            'method' => $this->verifyMethod,
+            'reference_no' => $this->verifyRef,
+            'amount' => $this->verifyAmount,
+            'status' => $this->verifyStatus === 'paid' ? 'verified' : 'partial',
+            'paid_at' => $this->verifyStatus === 'paid' ? now() : $payment->paid_at,
+            'recorded_by' => auth()->id(),
+        ]);
+
+        $this->closeVerify();
+        $this->dispatch('hf-toast', title: 'Payment verified', message: 'Payment recorded and written to the audit trail.', tone: 'success');
+    }
 
     /**
      * @return Collection<int, Payment>
@@ -22,43 +112,87 @@ class PaymentsIndex extends Component
     #[Computed]
     public function payments(): Collection
     {
-        $query = Payment::query()->with(['registration.team', 'recordedBy']);
+        $query = Payment::query()
+            ->with(['registration.team', 'registration.tournament', 'registration.division', 'registration.payment', 'recordedBy']);
 
         if ($this->status !== '' && $this->status !== 'all') {
-            $query->where('status', $this->status);
+            if ($this->status === 'unpaid') {
+                $query->where('status', '!=', 'verified');
+            } else {
+                $query->where('status', $this->status);
+            }
+        }
+
+        if ($this->tournament !== '' && $this->tournament !== 'all') {
+            $query->whereHas('registration', function ($q): void {
+                $q->where('tournament_id', $this->tournament);
+            });
+        }
+
+        if ($this->search !== '') {
+            $term = '%'.$this->search.'%';
+            $query->where(function ($q) use ($term): void {
+                $q->whereHas('registration.team', function ($teamQuery) use ($term): void {
+                    $teamQuery->where('name', 'LIKE', $term)
+                        ->orWhere('city', 'LIKE', $term)
+                        ->orWhere('coach_name', 'LIKE', $term);
+                })->orWhere('reference_no', 'LIKE', $term)
+                    ->orWhere('method', 'LIKE', $term);
+            });
         }
 
         return $query->orderByDesc('created_at')->get();
     }
 
-    public function verify(int $paymentId): void
+    /**
+     * @return Collection<int, Tournament>
+     */
+    #[Computed]
+    public function tournaments(): Collection
     {
-        $payment = Payment::query()->find($paymentId);
-
-        if ($payment === null || $payment->status !== 'pending') {
-            return;
-        }
-
-        $payment->update([
-            'status' => 'verified',
-            'paid_at' => now(),
-            'recorded_by' => auth()->id(),
-        ]);
+        return Tournament::query()->orderBy('name')->get();
     }
 
-    public function refund(int $paymentId): void
+    #[Computed]
+    public function destinationTournament(): ?Tournament
     {
-        $payment = Payment::query()->find($paymentId);
-
-        if ($payment === null || $payment->status !== 'verified') {
-            return;
+        if ($this->tournament === '' || $this->tournament === 'all') {
+            return null;
         }
 
-        $payment->update([
-            'status' => 'refunded',
-            'refunded_at' => now(),
-            'refunded_amount' => $payment->amount,
-        ]);
+        return Tournament::find($this->tournament);
+    }
+
+    /**
+     * @return array{collected: float, outstanding: float, expected: float, rate: int, paidCount: int, pendingCount: int, partialCount: int}
+     */
+    #[Computed]
+    public function kpis(): array
+    {
+        $registrations = $this->payments->pluck('registration')->filter()->unique('id')->values();
+
+        $billable = $registrations->filter(fn ($registration): bool => $registration->status !== 'rejected');
+
+        $expected = (float) $billable->sum(fn ($registration): float => (float) ($registration->division->entry_fee ?? 0));
+
+        $paidTeams = $billable->filter(fn ($registration): bool => $registration->payment->status === 'verified');
+        $collected = (float) $paidTeams->sum(fn ($registration): float => (float) $registration->payment->amount);
+
+        $pendingCount = $billable->filter(fn ($registration): bool => $registration->payment->status === 'pending')->count();
+        $partialCount = $billable->filter(fn ($registration): bool => $registration->payment->status === 'partial')->count();
+
+        $outstanding = max(0.0, $expected - $collected);
+        $rate = $expected > 0 ? (int) round(($collected / $expected) * 100) : 0;
+
+        return [
+            'collected' => $collected,
+            'outstanding' => $outstanding,
+            'expected' => $expected,
+            'rate' => $rate,
+            'paidCount' => $paidTeams->count(),
+            'pendingCount' => $pendingCount,
+            'partialCount' => $partialCount,
+        ];
     }
 
     public function render(): View
