@@ -16,6 +16,7 @@ use Livewire\Component;
  * @property-read string $role
  * @property-read Tournament|null $selectedTournament
  * @property-read Collection<int, Tournament> $tournaments
+ * @property-read Tournament|null $openTournamentForCoach
  * @property-read array<int, string> $divisions
  * @property-read Collection<int, Team> $scopedTeams
  * @property-read Collection<int, Team> $teams
@@ -111,6 +112,33 @@ class TeamsIndex extends Component
             ->orderBy('start_date')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * The first open tournament the current coach has not joined yet.
+     */
+    #[Computed]
+    public function openTournamentForCoach(): ?Tournament
+    {
+        if ($this->role !== 'coach') {
+            return null;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $joinedTournamentIds = Registration::query()
+            ->whereIn('team_id', Team::query()->where('coach_user_id', $user->id)->select('id'))
+            ->pluck('tournament_id')
+            ->all();
+
+        return $this->tournaments->first(
+            fn (Tournament $tournament): bool => $tournament->status === 'registration-open'
+                && ! in_array($tournament->id, $joinedTournamentIds, true)
+        );
     }
 
     #[Computed]

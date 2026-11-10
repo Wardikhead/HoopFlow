@@ -99,7 +99,12 @@ class DashboardController extends Controller
                 : 0;
             $data['openTournaments'] = Tournament::query()
                 ->where('status', 'registration-open')
-                ->with('divisions')
+                ->with([
+                    'divisions',
+                    'registrations' => fn ($query) => $query
+                        ->whereHas('team', fn ($teamQuery) => $teamQuery->where('coach_user_id', $user->id))
+                        ->with('team'),
+                ])
                 ->orderBy('start_date')
                 ->get();
         } else {

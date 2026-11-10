@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Registration;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\DashboardService;
@@ -21,6 +23,39 @@ it('dashboard loads for organizer', function () {
 it('dashboard loads for coach', function () {
     $user = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
     $this->actingAs($user)->get('/dashboard')->assertOk();
+});
+
+it('hides the register action for an open tournament the coach already joined', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $joinedTeam = Team::factory()->create([
+        'coach_user_id' => $coach->id,
+        'organization_id' => $tournament->organization_id,
+        'name' => 'Already Joined Ballers',
+        'slug' => 'already-joined-ballers',
+    ]);
+    Registration::factory()->create([
+        'tournament_id' => $tournament->id,
+        'division_id' => $tournament->divisions()->firstOrFail()->id,
+        'team_id' => $joinedTeam->id,
+        'status' => 'submitted',
+    ]);
+
+    $this->actingAs($coach)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertDontSee('data-testid="coach-register-'.$tournament->id.'"', false)
+        ->assertSee('data-testid="coach-my-team-'.$tournament->id.'"', false);
+});
+
+it('keeps the register action for open tournaments the coach has not joined', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+
+    $this->actingAs($coach)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertSee('data-testid="coach-register-'.$tournament->id.'"', false);
 });
 
 it('dashboard loads for fan', function () {

@@ -27,6 +27,46 @@ it('teams index loads for coach', function () {
     $this->actingAs($user)->get('/teams')->assertStatus(200);
 });
 
+it('points the teams register action at an open tournament the coach has not joined', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $pasig = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+
+    $summerCup->update(['status' => 'registration-open']);
+
+    $this->actingAs($coach)
+        ->get('/teams?tournament='.$summerCup->id)
+        ->assertOk()
+        ->assertSee(route('teamRegister', ['tournament' => $pasig->id]), false)
+        ->assertDontSee(route('teamRegister', ['tournament' => $summerCup->id]), false);
+});
+
+it('hides the teams register action when the coach has joined every open tournament', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $pasig = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+
+    $summerCup->update(['status' => 'registration-open']);
+
+    $joinedTeam = Team::factory()->create([
+        'coach_user_id' => $coach->id,
+        'organization_id' => $pasig->organization_id,
+        'name' => 'All In Ballers',
+        'slug' => 'all-in-ballers',
+    ]);
+    Registration::factory()->create([
+        'tournament_id' => $pasig->id,
+        'division_id' => $pasig->divisions()->firstOrFail()->id,
+        'team_id' => $joinedTeam->id,
+        'status' => 'submitted',
+    ]);
+
+    $this->actingAs($coach)
+        ->get('/teams?tournament='.$summerCup->id)
+        ->assertOk()
+        ->assertDontSee('data-testid="teams-register"', false);
+});
+
 it('teams index loads for fan', function () {
     $user = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
     $this->actingAs($user)->get('/teams')->assertStatus(200);
