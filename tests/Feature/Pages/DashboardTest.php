@@ -73,24 +73,31 @@ it('organizer billing excludes rejected registrations', function () {
         'outstanding' => 3000,
         'pendingCount' => 2,
     ]);
+});
+
+it('organizer dashboard kpis total every tournament', function () {
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $service = app(DashboardService::class);
 
     expect($service->organizerKpis($summerCup))->toMatchArray([
-        'registered' => 16,
-        'approved' => 15,
-        'collected' => 19500,
-        'expected' => 22500,
-        'uncollected' => 3000,
-        'pendingCount' => 2,
+        'tournaments' => 3,
+        'pending' => 2,
+        'approved' => 29,
+        'registered' => 32,
+        'collected' => 33500,
+        'expected' => 42500,
+        'uncollected' => 9000,
+        'pendingCount' => 6,
     ]);
 });
 
-it('organizer dashboard shows the prototype uncollected total', function () {
+it('organizer dashboard shows all-tournament team and payment totals', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 
     $this->actingAs($organizer)
         ->get('/dashboard')
         ->assertOk()
-        ->assertSee('₱3,000')
-        ->assertSee('2 teams unpaid')
-        ->assertDontSee('₱4,500');
+        ->assertSee('₱9,000')
+        ->assertSee('6 teams unpaid')
+        ->assertDontSee('₱3,000');
 });
