@@ -23,3 +23,18 @@ it('shows a dashboard link instead of auth calls to action when signed in', func
         ->assertSee('Dashboard')
         ->assertDontSee(route('login'), false);
 });
+
+it('renders the read-only feature lab with a bracket', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSeeText('Poke around.')
+        ->assertSeeText('Nothing breaks.')
+        ->assertSeeText('Preview only')
+        ->assertSeeText('San Isidro Vipers')
+        ->assertSeeText('Quarterfinals')
+        ->assertSee('data-testid="landing-lab"', false)
+        ->assertSee('data-testid="demo-tab-bracket"', false)
+        ->assertSee('data-testid="demo-tab-schedule"', false)
+        ->assertSee('data-testid="demo-tab-standings"', false)
+        ->assertSee('data-testid="demo-panel-bracket"', false);
+});

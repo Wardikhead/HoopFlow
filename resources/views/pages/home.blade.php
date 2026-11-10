@@ -13,4 +13,10 @@
         'next' => $showcase->nextGame(),
         'teams' => $teams,
     ])
+
+    @include('landing.lab', [
+        'tournament' => $showcase->tournament(),
+        'bracket' => $showcase->bracket(),
+        'teams' => $teams,
+    ])
 @endsection

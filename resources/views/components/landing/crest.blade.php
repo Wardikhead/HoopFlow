@@ -1,7 +1,7 @@
 @props(['team' => null, 'label' => null, 'size' => 'sm'])
 
 @php
-    $short = $team['short'] ?? $label ?? 'TBD';
+    $short = $team['short'] ?? 'TBD';
     $color = $team['color'] ?? '#64748b';
 @endphp
 
