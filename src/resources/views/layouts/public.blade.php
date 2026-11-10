@@ -62,6 +62,7 @@
                 'myTeam' => ['label' => 'My team', 'icon' => 'person-lines-fill', 'route' => 'myTeam'],
                 'teamRegister' => ['label' => 'Register team', 'icon' => 'plus-circle', 'route' => 'teamRegister'],
                 'gameStats' => ['label' => 'Game stats', 'icon' => 'graph-up', 'route' => 'gameStats'],
+                'gameManage' => ['label' => 'Game scoring', 'icon' => 'clipboard-pulse', 'route' => 'gameManage'],
                 'createTournament' => ['label' => 'Create tournament', 'icon' => 'plus-lg', 'route' => 'tournamentCreate'],
                 'profile' => ['label' => 'Profile', 'icon' => 'person', 'route' => 'profile'],
             ];
@@ -69,7 +70,7 @@
             $matchdayKeys = ['dashboard', 'tournaments', 'teams', 'bracket', 'schedule', 'standings', 'announcements'];
 
             $roleTools = match ($role) {
-                'organizer' => ['submissions', 'payments', 'audit', 'createTournament', 'gameStats'],
+                'organizer' => ['submissions', 'payments', 'audit', 'createTournament', 'gameStats', 'gameManage'],
                 'coach' => ['myTeam', 'teamRegister'],
                 default => [],
             };
@@ -89,7 +90,7 @@
             $groupedActive = [
                 'tournaments' => ['tournaments', 'tournamentShow', 'tournament-create', 'tournamentCreate', 'tournament-show'],
                 'teams' => ['teams', 'teamShow', 'team-show', 'teamRegister', 'team-register', 'myTeam', 'my-team'],
-                'schedule' => ['schedule', 'matches', 'gameStats', 'game-stats'],
+                'schedule' => ['schedule', 'matches', 'gameStats', 'game-stats', 'gameManage'],
                 'announcements' => ['announcements', 'announcementCreate', 'announcement-create'],
                 'profile' => ['profile', 'audit'],
             ];
