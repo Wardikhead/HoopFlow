@@ -38,3 +38,17 @@ it('renders the read-only feature lab with a bracket', function () {
         ->assertSee('data-testid="demo-tab-standings"', false)
         ->assertSee('data-testid="demo-panel-bracket"', false);
 });
+
+it('renders the schedule and standings previews', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSeeText('Sat, Nov 14')
+        ->assertSeeText('Sat, Nov 21')
+        ->assertSeeText('Sun, Nov 22')
+        ->assertSeeText('Top 8 advance to the quarterfinals.')
+        ->assertSeeText('Bayanihan Ballers')
+        ->assertSee('data-testid="demo-panel-schedule"', false)
+        ->assertSee('data-testid="demo-panel-standings"', false)
+        ->assertSee('data-schedule-day="day1"', false)
+        ->assertSee('data-count="78"', false);
+});

@@ -1,0 +1,172 @@
+.hf-lp-schedule__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hf-lp-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hf-lp-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid rgba(243, 245, 249, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hf-lp-arena-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hf-lp-chip strong,
+.hf-lp-chip span {
+  font: inherit;
+}
+
+.hf-lp-chip span {
+  opacity: 0.7;
+}
+
+.hf-lp-chip:hover,
+.hf-lp-chip.is-active {
+  border-color: rgba(234, 88, 12, 0.6);
+  background: rgba(234, 88, 12, 0.12);
+  color: #fdba74;
+}
+
+.hf-lp-schedule__group + .hf-lp-schedule__group {
+  margin-top: 18px;
+}
+
+.hf-lp-schedule__day {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--hf-lp-arena-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hf-lp-schedule__day span {
+  color: var(--hf-lp-arena-muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.hf-lp-schedule__match {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(243, 245, 249, 0.1);
+  border-radius: 12px;
+  background: var(--hf-lp-arena-2);
+}
+
+.hf-lp-schedule__match + .hf-lp-schedule__match {
+  margin-top: 8px;
+}
+
+.hf-lp-schedule__time {
+  display: grid;
+  gap: 2px;
+  border-right: 1px solid rgba(243, 245, 249, 0.12);
+}
+
+.hf-lp-schedule__time strong {
+  font-family: var(--hf-lp-display);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.hf-lp-schedule__time span {
+  color: var(--hf-lp-arena-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.hf-lp-schedule__matchup {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hf-lp-schedule__round {
+  color: var(--hf-lp-arena-muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hf-lp-schedule__teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hf-lp-schedule__vs {
+  color: var(--hf-lp-arena-muted);
+  font-weight: 400;
+}
+
+.hf-lp-schedule__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.hf-lp-schedule__score {
+  font-family: var(--hf-lp-display);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.hf-lp-schedule__match[hidden],
+.hf-lp-schedule__group[hidden],
+.hf-lp-schedule__empty[hidden] {
+  display: none !important;
+}
+
+.hf-lp-schedule__empty {
+  margin: 16px 0 0;
+  padding: 24px;
+  border: 1px dashed rgba(243, 245, 249, 0.18);
+  border-radius: 12px;
+  color: var(--hf-lp-arena-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 575.98px) {
+  .hf-lp-schedule__match {
+    grid-template-columns: 1fr auto;
+  }
+
+  .hf-lp-schedule__time {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(243, 245, 249, 0.12);
+  }
+}

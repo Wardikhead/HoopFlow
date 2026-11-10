@@ -43,11 +43,11 @@
                 </div>
 
                 <div id="panel-schedule" class="hf-lp-panel" role="tabpanel" aria-labelledby="tab-schedule" tabindex="0" data-demo-panel="schedule" data-testid="demo-panel-schedule">
-                    {{-- Task 4 replaces this with the schedule include --}}
+                    @include('landing.schedule-panel', ['schedule' => $schedule, 'teams' => $teams])
                 </div>
 
                 <div id="panel-standings" class="hf-lp-panel" role="tabpanel" aria-labelledby="tab-standings" tabindex="0" data-demo-panel="standings" data-testid="demo-panel-standings">
-                    {{-- Task 4 replaces this with the standings include --}}
+                    @include('landing.standings-panel', ['standings' => $standings, 'teams' => $teams])
                 </div>
             </div>
         </div>

@@ -1,0 +1,153 @@
+.hf-lp-standings__caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--hf-lp-arena-muted);
+  font-size: 11px;
+}
+
+.hf-lp-standings__caption strong {
+  color: var(--hf-lp-arena-ink);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hf-lp-table-wrap {
+  max-height: 470px;
+  overflow: auto;
+  border: 1px solid rgba(243, 245, 249, 0.1);
+  border-radius: 12px;
+}
+
+.hf-lp-standings__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hf-lp-standings__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  background: #0d1522;
+  color: var(--hf-lp-arena-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.hf-lp-standings__table td {
+  padding: 9px 12px;
+  border-top: 1px solid rgba(243, 245, 249, 0.07);
+  white-space: nowrap;
+}
+
+.hf-lp-standings__table tbody tr:hover {
+  background: rgba(243, 245, 249, 0.04);
+}
+
+.hf-lp-standings__table tr.is-qualified td:first-child {
+  box-shadow: inset 3px 0 0 var(--hf-lp-gold);
+}
+
+.hf-lp-standings__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hf-lp-standings__team strong {
+  font-weight: 600;
+}
+
+.hf-lp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hf-lp-standings__cut td {
+  padding: 0;
+  border-top: 0;
+  background: rgba(183, 121, 0, 0.08);
+}
+
+.hf-lp-standings__cut span,
+.hf-lp-standings__cut-card span {
+  display: block;
+  padding: 6px 12px;
+  border-top: 1px dashed var(--hf-lp-gold);
+  color: #f5b301;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.hf-lp-standings__cards {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .hf-lp-table-wrap {
+    display: none;
+  }
+
+  .hf-lp-standings__cards {
+    display: grid;
+    gap: 6px;
+  }
+
+  .hf-lp-standings__card {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(243, 245, 249, 0.1);
+    border-radius: 10px;
+    background: var(--hf-lp-arena-2);
+  }
+
+  .hf-lp-standings__card.is-qualified {
+    border-left: 3px solid var(--hf-lp-gold);
+  }
+
+  .hf-lp-standings__card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .hf-lp-standings__rank {
+    color: var(--hf-lp-arena-muted);
+    font-family: var(--hf-lp-display);
+    font-size: 18px;
+  }
+
+  .hf-lp-standings__tick {
+    margin-left: auto;
+    color: #f5b301;
+  }
+
+  .hf-lp-standings__card-stats {
+    display: flex;
+    gap: 14px;
+    color: var(--hf-lp-arena-muted);
+    font-size: 10px;
+  }
+
+  .hf-lp-standings__card-stats strong {
+    color: var(--hf-lp-arena-ink);
+  }
+
+  .hf-lp-standings__cut-card {
+    padding: 2px 0;
+  }
+}
