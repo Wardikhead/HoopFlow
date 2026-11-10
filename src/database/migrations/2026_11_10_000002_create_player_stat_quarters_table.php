@@ -10,7 +10,10 @@ return new class extends Migration
     {
         Schema::create('player_stat_quarters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('match_id')->constrained('matches')->cascadeOnDelete();
+            // matches is hash-partitioned on tournament_id, so PostgreSQL cannot
+            // reference matches.id from a foreign key. Index it through the
+            // composite (match_id, team_id) index below instead.
+            $table->unsignedBigInteger('match_id');
             $table->foreignId('player_id')->constrained('players')->cascadeOnDelete();
             $table->foreignId('team_id')->constrained('teams')->cascadeOnDelete();
             $table->unsignedTinyInteger('quarter_index');

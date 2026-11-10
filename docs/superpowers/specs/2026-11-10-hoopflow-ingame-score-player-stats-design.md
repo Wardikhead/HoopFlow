@@ -86,7 +86,7 @@ One row per player, per match, per quarter.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
-| `match_id` | FK matches | cascade delete |
+| `match_id` | bigint | indexed via `(match_id, team_id)`; no FK because `matches` is hash-partitioned on `tournament_id` |
 | `player_id` | FK players | cascade delete |
 | `team_id` | FK teams | cascade delete |
 | `quarter_index` | unsigned tiny integer | 0-based; 0–3 = Q1–Q4, 4–8 = OT1–OT5 |
