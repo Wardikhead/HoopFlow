@@ -253,11 +253,21 @@
         </div>
         <div class="hf-grid hf-grid--2">
             @forelse ($openTournaments as $item)
+                @php
+                    $joinedTeam = $item->registrations->first()?->team;
+                @endphp
                 <div class="hf-card">
                     <span class="hf-chip hf-chip--success">Registration open</span>
+                    @if ($joinedTeam)
+                        <span class="hf-chip hf-chip--primary">Registered</span>
+                    @endif
                     <h3 class="hf-section-title hf-mt-1">{{ $item->name }}</h3>
                     <p class="hf-small hf-muted">{{ $item->divisions->first()?->name ?? 'Division' }} · {{ $item->venueName() }} · {{ $money($item->entryFee()) }} entry</p>
-                    <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $item->id]) }}" data-testid="coach-register-{{ $item->id }}">Register a team</a>
+                    @if ($joinedTeam)
+                        <a class="hf-btn" href="{{ route('myTeam', ['team' => $joinedTeam->id, 'tournament' => $item->id]) }}" data-testid="coach-my-team-{{ $item->id }}">My team status</a>
+                    @else
+                        <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $item->id]) }}" data-testid="coach-register-{{ $item->id }}">Register a team</a>
+                    @endif
                 </div>
             @empty
                 <div class="hf-empty">

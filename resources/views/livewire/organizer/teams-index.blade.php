@@ -51,7 +51,7 @@
                     <a class="hf-btn" href="{{ route('teams') }}" data-testid="teams-change-tournament"><i class="bi bi-arrow-left"></i> Change tournament</a>
                     <a class="hf-btn hf-btn--primary" href="{{ route('submissions') }}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check"></i> Review queue</a>
                 @elseif ($role === 'coach')
-                    @php $openTournament = $this->tournaments->firstWhere('status', 'registration-open'); @endphp
+                    @php $openTournament = $this->openTournamentForCoach; @endphp
                     @if ($openTournament)
                         <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $openTournament->id]) }}" data-testid="teams-register"><i class="bi bi-plus-lg"></i> Register team</a>
                     @endif
