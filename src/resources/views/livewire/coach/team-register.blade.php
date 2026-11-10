@@ -25,6 +25,7 @@
     @php
         $tournament = $this->tournament;
         $existingTeam = $this->existingTeam;
+        $existingRegistration = $existingTeam?->registrations->firstWhere('tournament_id', $tournament?->id);
         $division = $tournament?->divisions->first();
         $money = fn ($value) => '₱' . number_format((int) ($value ?? 0));
     @endphp
@@ -47,8 +48,8 @@
         <div class="hf-empty" data-testid="register-existing">
             <i class="bi bi-check2-circle" aria-hidden="true"></i>
             <h3>Team already registered</h3>
-            <p>{{ $existingTeam->name }} is already in {{ $tournament->name }} with status “{{ $existingTeam->registrations->first()?->status ?? 'pending' }}”.</p>
-            <a class="hf-btn hf-btn--primary" href="{{ route('myTeam') }}">Open my team</a>
+            <p>{{ $existingTeam->name }} is already in {{ $tournament->name }} with status “{{ $existingRegistration?->status === 'submitted' ? 'pending' : ($existingRegistration?->status ?? 'pending') }}”.</p>
+            <a class="hf-btn hf-btn--primary" href="{{ route('myTeam', array_filter(['team' => $existingTeam->id, 'tournament' => $tournament->id])) }}">Open my team</a>
         </div>
     @else
         <header class="hf-page-head hf-mb-3">

@@ -2,6 +2,7 @@
 
 use App\Livewire\Coach\TeamRegister;
 use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +16,7 @@ beforeEach(function () {
 
 it('persists team identity fields when a coach registers', function () {
     $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
 
     $players = [];
     for ($number = 1; $number <= 8; $number++) {
@@ -28,8 +30,8 @@ it('persists team identity fields when a coach registers', function () {
         ];
     }
 
-    Livewire::actingAs($coach)
-        ->test(TeamRegister::class, ['tournament_id' => 2])
+    $component = Livewire::actingAs($coach)
+        ->test(TeamRegister::class, ['tournament_id' => $tournament->id])
         ->set('name', 'Testville Titans')
         ->set('shortName', 'TVT')
         ->set('city', 'Testville')
@@ -39,10 +41,14 @@ it('persists team identity fields when a coach registers', function () {
         ->set('paymentMethod', 'GCash')
         ->set('paymentRef', 'TESTPAY123')
         ->call('save')
-        ->assertHasNoErrors()
-        ->assertRedirect(route('myTeam'));
+        ->assertHasNoErrors();
 
     $team = Team::where('name', 'Testville Titans')->firstOrFail();
+
+    $component->assertRedirect(route('myTeam', [
+        'team' => $team->id,
+        'tournament' => $tournament->id,
+    ]));
 
     expect($team->short_name)->toBe('TVT');
     expect($team->avatar_color)->toBe('#123456');
