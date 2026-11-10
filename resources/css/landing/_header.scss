@@ -1,0 +1,115 @@
+.hf-lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.hf-lp-header.is-scrolled {
+  border-bottom-color: var(--hf-lp-line);
+  background: color-mix(in srgb, var(--hf-lp-paper) 84%, transparent);
+  box-shadow: 0 12px 30px rgba(11, 18, 32, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+.hf-lp-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 76px;
+}
+
+.hf-lp-header__brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.hf-lp-nav {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  margin-inline: auto;
+}
+
+.hf-lp-nav a {
+  color: var(--hf-lp-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.hf-lp-nav a:hover {
+  color: var(--hf-lp-ink);
+  text-decoration: none;
+}
+
+.hf-lp-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hf-lp-menu-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--hf-lp-line);
+  border-radius: 10px;
+  background: var(--hf-lp-card);
+  color: var(--hf-lp-ink);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.hf-lp-mobile {
+  border-top: 1px solid var(--hf-lp-line);
+  background: var(--hf-lp-paper);
+  padding: 12px 20px 20px;
+}
+
+.hf-lp-mobile__nav {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.hf-lp-mobile__nav a {
+  padding: 12px 8px;
+  border-radius: 8px;
+  color: var(--hf-lp-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hf-lp-mobile__nav a:hover {
+  background: var(--hf-lp-paper-2);
+  text-decoration: none;
+}
+
+.hf-lp-mobile__actions {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 991.98px) {
+  .hf-lp-nav {
+    display: none;
+  }
+
+  .hf-lp-menu-btn {
+    display: inline-grid;
+    place-items: center;
+  }
+}
+
+@media (min-width: 992px) {
+  .hf-lp-mobile {
+    display: none !important;
+  }
+}

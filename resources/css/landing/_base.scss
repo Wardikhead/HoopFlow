@@ -1,0 +1,188 @@
+.hf-lp {
+  --hf-lp-paper: #f4f0e6;
+  --hf-lp-paper-2: #ece5d6;
+  --hf-lp-card: #fffdf8;
+  --hf-lp-ink: #101820;
+  --hf-lp-muted: #5f665f;
+  --hf-lp-line: rgba(16, 24, 32, 0.14);
+  --hf-lp-orange: #ea580c;
+  --hf-lp-orange-ink: #9a3412;
+  --hf-lp-gold: #b77900;
+  --hf-lp-green: #0e7a5f;
+  --hf-lp-red: #c0263d;
+  --hf-lp-arena: #0b1220;
+  --hf-lp-arena-2: #111b2a;
+  --hf-lp-arena-ink: #f3f5f9;
+  --hf-lp-arena-muted: #9aa6b8;
+  --hf-lp-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --hf-lp-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --hf-lp-radius: 18px;
+  --hf-lp-radius-sm: 12px;
+  --hf-lp-shadow: 0 24px 60px rgba(11, 18, 32, 0.14);
+  --hf-lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--hf-lp-paper);
+  color: var(--hf-lp-ink);
+  font-family: var(--hf-lp-body);
+}
+
+[data-theme='dark'] .hf-lp {
+  --hf-lp-paper: #0c1017;
+  --hf-lp-paper-2: #121925;
+  --hf-lp-card: #161e2b;
+  --hf-lp-ink: #f3f5f9;
+  --hf-lp-muted: #a4acb9;
+  --hf-lp-line: rgba(243, 245, 249, 0.14);
+  --hf-lp-orange-ink: #fdba74;
+  --hf-lp-gold: #f5b301;
+  --hf-lp-green: #34d399;
+  --hf-lp-red: #ff5c7a;
+  --hf-lp-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.hf-lp-shell {
+  width: min(1240px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.hf-lp section[id] {
+  scroll-margin-top: 96px;
+}
+
+.hf-lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hf-lp-orange-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hf-lp-section-head {
+  max-width: 760px;
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+
+.hf-lp-section-head h2 {
+  margin: 10px 0 14px;
+  font-family: var(--hf-lp-display);
+  font-size: clamp(42px, 6vw, 76px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.hf-lp-section-head p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--hf-lp-muted);
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.6;
+}
+
+.hf-lp-btn-lg {
+  min-height: 52px;
+  padding-inline: 22px;
+  font-size: 15px;
+}
+
+.hf-lp-reveal {
+  --i: 0;
+}
+
+.hf-js .hf-lp-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s var(--hf-lp-ease),
+    transform 0.7s var(--hf-lp-ease);
+  transition-delay: calc(var(--i) * 70ms);
+}
+
+.hf-js .hf-lp-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.hf-lp-crest {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid color-mix(in srgb, var(--hf-crest) 70%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hf-crest) 18%, transparent);
+  color: var(--hf-crest);
+  font-family: var(--hf-lp-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.hf-lp-crest--md {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.hf-lp-ping {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hf-lp-orange);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--hf-lp-orange) 50%, transparent);
+  animation: hf-lp-ping 2.4s ease-out infinite;
+}
+
+@keyframes hf-lp-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--hf-lp-orange) 45%, transparent); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.hf-lp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hf-lp-orange) 18%, transparent);
+  color: #fdba74;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hf-lp-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hf-lp-orange);
+  animation: hf-lp-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes hf-lp-blink {
+  50% { opacity: 0.35; }
+}
+
+@media (max-width: 767.98px) {
+  .hf-lp-shell {
+    width: min(1240px, calc(100% - 28px));
+  }
+
+  .hf-lp-hide-sm {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hf-lp-ping,
+  .hf-lp-live__dot {
+    animation: none;
+  }
+}
