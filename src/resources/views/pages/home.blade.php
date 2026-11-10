@@ -21,4 +21,7 @@
         'standings' => $showcase->standings(),
         'teams' => $teams,
     ])
+
+    @include('landing.flow', ['steps' => $showcase->flow()])
+    @include('landing.roles', ['roles' => $showcase->roles()])
 @endsection
