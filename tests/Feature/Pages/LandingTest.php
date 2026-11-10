@@ -52,3 +52,18 @@ it('renders the schedule and standings previews', function () {
         ->assertSee('data-schedule-day="day1"', false)
         ->assertSee('data-count="78"', false);
 });
+
+it('explains the matchday flow and each role', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSeeText('Set the stage')
+        ->assertSeeText('Register & vet')
+        ->assertSeeText('Seed the bracket')
+        ->assertSeeText('Schedule the floor')
+        ->assertSeeText('Run the night')
+        ->assertSeeText('See the whole floor.')
+        ->assertSeeText('Know before tip-off.')
+        ->assertSeeText('Follow from the bleachers.')
+        ->assertSee('data-testid="landing-flow"', false)
+        ->assertSee('data-testid="landing-roles"', false);
+});

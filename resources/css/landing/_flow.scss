@@ -1,0 +1,119 @@
+.hf-lp-flow-section {
+  padding: clamp(72px, 9vw, 120px) 0;
+  background: var(--hf-lp-paper);
+}
+
+.hf-lp-flow {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hf-lp-flow::before {
+  position: absolute;
+  top: 27px;
+  right: 7%;
+  left: 7%;
+  border-top: 1px dashed var(--hf-lp-line);
+  content: '';
+}
+
+.hf-lp-flow__step {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.hf-lp-flow__num {
+  color: var(--hf-lp-muted);
+  font-family: var(--hf-lp-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.hf-lp-flow__dot {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 4px;
+  border: 1px solid var(--hf-lp-line);
+  border-radius: 50%;
+  background: var(--hf-lp-card);
+  box-shadow: 0 6px 18px rgba(16, 24, 32, 0.06);
+  color: var(--hf-lp-orange-ink);
+  font-size: 20px;
+}
+
+.hf-lp-flow__step h3 {
+  margin: 0;
+  font-family: var(--hf-lp-display);
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.hf-lp-flow__step p {
+  margin: 0;
+  color: var(--hf-lp-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.hf-lp-flow__tag {
+  width: max-content;
+  margin-top: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--hf-lp-line);
+  border-radius: 999px;
+  color: var(--hf-lp-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 991.98px) {
+  .hf-lp-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 18px;
+  }
+
+  .hf-lp-flow::before {
+    display: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hf-lp-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-lp-flow__step {
+    grid-template-columns: 54px 1fr;
+    column-gap: 14px;
+  }
+
+  .hf-lp-flow__num {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .hf-lp-flow__dot {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+
+  .hf-lp-flow__step h3,
+  .hf-lp-flow__step p,
+  .hf-lp-flow__tag {
+    grid-column: 2;
+  }
+}
