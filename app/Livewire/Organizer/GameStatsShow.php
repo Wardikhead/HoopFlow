@@ -5,8 +5,10 @@ namespace App\Livewire\Organizer;
 use App\Models\AuditLog;
 use App\Models\MatchModel;
 use App\Models\PlayerStat;
+use App\Models\PlayerStatQuarter;
 use App\Models\Team;
 use App\Services\BracketService;
+use App\Services\GameStatsService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +23,7 @@ use Livewire\Component;
  * @property-read string $roleLabel
  * @property-read bool $canScore
  * @property-read bool $canCorrect
- * @property-read array{team1: array<int, int>, team2: array<int, int>}|null $quarters
+ * @property-read array{team1: list<int>, team2: list<int>}|null $quarters
  * @property-read bool $hasStats
  * @property-read array{previous1: int|null, previous2: int|null, reason: string, corrected_at: Carbon|null}|null $correction
  */
@@ -79,6 +81,10 @@ class GameStatsShow extends Component
                 $this->matchId = (int) $query;
             }
         }
+
+        if ($this->matchId !== null && request()->boolean('correct') && $this->isOrganizer) {
+            $this->openCorrection();
+        }
     }
 
     #[Computed]
@@ -111,6 +117,7 @@ class GameStatsShow extends Component
                 'matchSlots.court',
                 'playerStats.player',
                 'playerStats.team',
+                'playerQuarterStats',
             ])
             ->find($this->matchId);
     }
@@ -138,7 +145,7 @@ class GameStatsShow extends Component
     }
 
     /**
-     * @return array{team1: array<int, int>, team2: array<int, int>}|null
+     * @return array{team1: list<int>, team2: list<int>}|null
      */
     #[Computed]
     public function quarters(): ?array
@@ -149,18 +156,24 @@ class GameStatsShow extends Component
             return null;
         }
 
-        $normalize = function (array $values): array {
-            $values = array_values($values);
+        $team1 = array_values($raw['team1']);
+        $team2 = array_values($raw['team2']);
+        $count = min(9, max(4, count($team1), count($team2)));
 
-            return array_map(
-                fn (int $index): int => is_numeric($values[$index] ?? null) ? (int) $values[$index] : 0,
-                range(0, 3),
-            );
+        $normalize = function (array $values) use ($count): array {
+            $values = array_values($values);
+            $out = [];
+
+            for ($index = 0; $index < $count; $index++) {
+                $out[] = is_numeric($values[$index] ?? null) ? (int) $values[$index] : 0;
+            }
+
+            return $out;
         };
 
         return [
-            'team1' => $normalize($raw['team1']),
-            'team2' => $normalize($raw['team2']),
+            'team1' => $normalize($team1),
+            'team2' => $normalize($team2),
         ];
     }
 
@@ -209,7 +222,7 @@ class GameStatsShow extends Component
     }
 
     /**
-     * @return array<int, array{playerId: int, name: string, number: int|string|null, position: string|null, points: int, assists: int, rebounds: int}>
+     * @return array<int, array{playerId: int, name: string, number: int|string|null, position: string|null, points: int, assists: int, rebounds: int, hasQuarters: bool, quarters: array<int, array<string, int>>}>
      */
     public function rowsFor(?Team $team): array
     {
@@ -222,12 +235,22 @@ class GameStatsShow extends Component
         $term = mb_strtolower(trim($this->search));
         $key = in_array($this->sortKey, ['points', 'assists', 'rebounds'], true) ? $this->sortKey : 'points';
         $factor = $this->sortDirection === 'asc' ? 1 : -1;
+        $quarterRows = $match->playerQuarterStats->groupBy('player_id');
+        $quarterData = $this->quarters;
+        $count = is_array($quarterData) ? count($quarterData['team1']) : 4;
 
         return $match->playerStats
             ->where('team_id', $team->id)
-            ->map(function (PlayerStat $stat): array {
+            ->map(function (PlayerStat $stat) use ($quarterRows, $count): array {
                 $player = $stat->player;
                 $name = trim(($player->first_name ?? '').' '.($player->last_name ?? ''));
+                $rows = $quarterRows->get((int) $stat->player_id, collect());
+                $quarters = [];
+
+                for ($index = 0; $index < $count; $index++) {
+                    $row = $rows->firstWhere('quarter_index', $index);
+                    $quarters[$index] = $this->shortQuarter($row instanceof PlayerStatQuarter ? $row : null);
+                }
 
                 return [
                     'playerId' => (int) $stat->player_id,
@@ -237,12 +260,30 @@ class GameStatsShow extends Component
                     'points' => (int) ($stat->points ?? 0),
                     'assists' => (int) ($stat->assists ?? 0),
                     'rebounds' => (int) ($stat->rebounds ?? 0),
+                    'hasQuarters' => $rows->isNotEmpty(),
+                    'quarters' => $quarters,
                 ];
             })
             ->filter(fn (array $row): bool => $term === '' || str_contains(mb_strtolower($row['name']), $term))
             ->sort(fn (array $a, array $b): int => (($a[$key] <=> $b[$key]) * $factor) ?: strcasecmp($a['name'], $b['name']))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    protected function shortQuarter(?PlayerStatQuarter $row): array
+    {
+        $out = [];
+
+        foreach (GameStatsService::FIELDS as $short => $column) {
+            $out[$short] = (int) ($row?->getAttribute($column) ?? 0);
+        }
+
+        $out['pts'] = (int) ($row?->getAttribute('points') ?? 0);
+
+        return $out;
     }
 
     public function sortBy(string $key): void

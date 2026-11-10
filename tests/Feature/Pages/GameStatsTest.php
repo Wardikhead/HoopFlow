@@ -343,3 +343,32 @@ it('rejects tied scores and short correction reasons', function () {
         ->assertHasErrors('reason')
         ->assertSet('showConfirm', false);
 });
+
+it('shows per-player quarter details, the draft label, and the in-game link', function () {
+    $match = gsMatch(8, 3);
+    $loaded = app(\App\Services\GameStatsService::class)->load($match);
+    $playerId = (int) array_key_first($loaded['stats']['team1']);
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['fgm'] = 2;
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['fga'] = 4;
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['ftm'] = 1;
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['fta'] = 2;
+
+    app(\App\Services\GameStatsService::class)->saveDraft($match, $loaded);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertSee('Draft box score')
+        ->assertSeeHtml('data-testid="stats-in-game"')
+        ->assertSeeHtml('data-testid="stats-player-quarters-team1-'.$playerId.'"')
+        ->assertSee('— by quarter');
+});
+
+it('opens the correction dialog from the correct query flag', function () {
+    $match = gsMatch(8, 1);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id.'&correct=1')
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-correction-dialog"');
+});

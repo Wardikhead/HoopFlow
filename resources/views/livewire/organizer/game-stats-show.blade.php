@@ -57,6 +57,9 @@
                 <a class="hf-btn" href="{!! route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) !!}" data-testid="stats-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
                 <a class="hf-btn" href="{{ route('schedule', ['id' => $match->tournament_id]) }}" data-testid="stats-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
                 <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="stats-matches"><i class="bi bi-list-ul"></i> Matchups</a>
+                @if ($canScore)
+                    <a class="hf-btn" href="{{ route('gameManage', ['match' => $match->id]) }}" data-testid="stats-in-game"><i class="bi bi-clipboard-pulse"></i> In-game scoring</a>
+                @endif
             </div>
         </header>
 
@@ -143,10 +146,9 @@
                         <thead>
                             <tr>
                                 <th scope="col">Team</th>
-                                <th scope="col" class="is-num">Q1</th>
-                                <th scope="col" class="is-num">Q2</th>
-                                <th scope="col" class="is-num">Q3</th>
-                                <th scope="col" class="is-num">Q4</th>
+                                @foreach (array_keys($quarters['team1']) as $index)
+                                    <th scope="col" class="is-num">{{ $index < 4 ? 'Q'.($index + 1) : 'OT'.($index - 3) }}</th>
+                                @endforeach
                                 <th scope="col" class="is-num">Total</th>
                             </tr>
                         </thead>
@@ -174,7 +176,7 @@
         <section class="hf-card hf-mb-3" data-testid="stats-box-score">
             <div class="hf-between hf-wrap hf-mb-2">
                 <div>
-                    <span class="hf-eyebrow">Official box score</span>
+                    <span class="hf-eyebrow">{{ $match->status === 'scheduled' && $hasStats ? 'Draft box score' : 'Official box score' }}</span>
                     <h2 class="hf-section-title hf-mb-0">Player stats</h2>
                 </div>
                 <div class="hf-filter-row" data-testid="stats-side-filters">
@@ -287,6 +289,49 @@
                                         </tfoot>
                                     </table>
                                 </div>
+                                @foreach ($rows as $row)
+                                    @if ($row['hasQuarters'])
+                                        <details class="hf-card hf-card--flat hf-mt-2" data-testid="stats-player-quarters-{{ $sideKey }}-{{ $row['playerId'] }}">
+                                            <summary><strong>{{ $row['name'] }}</strong> — by quarter</summary>
+                                            <div class="hf-table-wrap hf-mt-2">
+                                                <table class="hf-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col">Q</th>
+                                                            <th scope="col" class="is-num">PTS</th>
+                                                            <th scope="col" class="is-num">FG</th>
+                                                            <th scope="col" class="is-num">3PT</th>
+                                                            <th scope="col" class="is-num">FT</th>
+                                                            <th scope="col" class="is-num">REB</th>
+                                                            <th scope="col" class="is-num">AST</th>
+                                                            <th scope="col" class="is-num">STL</th>
+                                                            <th scope="col" class="is-num">BLK</th>
+                                                            <th scope="col" class="is-num">TO</th>
+                                                            <th scope="col" class="is-num">PF</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($row['quarters'] as $index => $quarter)
+                                                            <tr data-testid="stats-player-quarter-{{ $sideKey }}-{{ $row['playerId'] }}-{{ $index }}">
+                                                                <td>{{ $index < 4 ? 'Q'.($index + 1) : 'OT'.($index - 3) }}</td>
+                                                                <td class="is-num">{{ $quarter['pts'] }}</td>
+                                                                <td class="is-num">{{ $quarter['fgm'] }}/{{ $quarter['fga'] }}</td>
+                                                                <td class="is-num">{{ $quarter['tpm'] }}/{{ $quarter['tpa'] }}</td>
+                                                                <td class="is-num">{{ $quarter['ftm'] }}/{{ $quarter['fta'] }}</td>
+                                                                <td class="is-num">{{ $quarter['reb'] }}</td>
+                                                                <td class="is-num">{{ $quarter['ast'] }}</td>
+                                                                <td class="is-num">{{ $quarter['stl'] }}</td>
+                                                                <td class="is-num">{{ $quarter['blk'] }}</td>
+                                                                <td class="is-num">{{ $quarter['to'] }}</td>
+                                                                <td class="is-num">{{ $quarter['pf'] }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </details>
+                                    @endif
+                                @endforeach
                             @endif
                         </section>
                     @endforeach
