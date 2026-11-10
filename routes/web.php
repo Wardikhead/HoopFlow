@@ -62,3 +62,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/standings', StandingsShow::class)->name('standings');
 });
+
+foreach (glob(__DIR__.'/features/*.php') ?: [] as $featureRoutes) {
+    require $featureRoutes;
+}
