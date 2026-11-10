@@ -80,5 +80,47 @@
     <main id="main" tabindex="-1">
         @yield('content')
     </main>
+
+    <footer class="hf-lp-footer">
+        <div class="hf-lp-shell hf-lp-footer__inner">
+            <div class="hf-lp-footer__brand">
+                <x-brand size="md" />
+                <p class="hf-lp-footer__tagline">Let the games run themselves.</p>
+                <p class="hf-lp-footer__note">Built for barangay and grassroots youth basketball.</p>
+            </div>
+
+            <div class="hf-lp-footer__columns">
+                <div class="hf-lp-footer__col">
+                    <strong>Product</strong>
+                    <a href="#features">Features</a>
+                    <a href="#features" data-demo-target="bracket">Bracket</a>
+                    <a href="#features" data-demo-target="schedule">Schedule</a>
+                    <a href="#features" data-demo-target="standings">Standings</a>
+                </div>
+                <div class="hf-lp-footer__col">
+                    <strong>Account</strong>
+                    @guest
+                        <a href="{{ route('login') }}">Sign in</a>
+                        <a href="{{ route('register') }}">Create account</a>
+                    @endguest
+                    @auth
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                        <a href="{{ route('profile') }}">Profile</a>
+                    @endauth
+                </div>
+                <div class="hf-lp-footer__col">
+                    <strong>Matchday</strong>
+                    <a href="#flow">How it flows</a>
+                    <a href="#roles">Roles</a>
+                    <a href="#eligibility">Eligibility</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="hf-lp-shell hf-lp-footer__bottom">
+            <span>© 2026 HoopFlow</span>
+            <a href="#main">Back to top <i class="bi bi-arrow-up" aria-hidden="true"></i></a>
+        </div>
+    </footer>
 </body>
 </html>

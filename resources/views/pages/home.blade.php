@@ -24,4 +24,7 @@
 
     @include('landing.flow', ['steps' => $showcase->flow()])
     @include('landing.roles', ['roles' => $showcase->roles()])
+    @include('landing.eligibility', ['eligibility' => $showcase->eligibility()])
+    @include('landing.wire', ['announcements' => $showcase->announcements()])
+    @include('landing.closing')
 @endsection

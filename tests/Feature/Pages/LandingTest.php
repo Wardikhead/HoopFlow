@@ -21,7 +21,8 @@ it('shows a dashboard link instead of auth calls to action when signed in', func
         ->get('/')
         ->assertOk()
         ->assertSee('Dashboard')
-        ->assertDontSee(route('login'), false);
+        ->assertDontSee(route('login'), false)
+        ->assertDontSee(route('register'), false);
 });
 
 it('renders the read-only feature lab with a bracket', function () {
@@ -66,4 +67,20 @@ it('explains the matchday flow and each role', function () {
         ->assertSeeText('Follow from the bleachers.')
         ->assertSee('data-testid="landing-flow"', false)
         ->assertSee('data-testid="landing-roles"', false);
+});
+
+it('renders the eligibility spotlight, wire, closing CTA, and footer', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSeeText('The paperwork is part of the tournament.')
+        ->assertSeeText('Consent pending')
+        ->assertSeeText('Document missing')
+        ->assertSeeText('Entry fee')
+        ->assertSeeText('GCash')
+        ->assertSeeText('QF4 is live on Court B')
+        ->assertSeeText('Your league deserves a better scoreboard.')
+        ->assertSeeText('Let the games run themselves.')
+        ->assertSee('data-testid="landing-wire"', false)
+        ->assertSee('data-testid="landing-cta"', false)
+        ->assertSee('data-demo-target="standings"', false);
 });

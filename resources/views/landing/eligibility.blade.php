@@ -1,0 +1,65 @@
+@php
+    $cleared = collect($eligibility['players'])->where('status', 'verified')->count();
+    $total = count($eligibility['players']);
+@endphp
+
+<section id="eligibility" class="hf-lp-elig-section" data-testid="landing-eligibility" aria-labelledby="landing-elig-title">
+    <div class="hf-lp-shell hf-lp-elig">
+        <div class="hf-lp-elig__copy">
+            <span class="hf-eyebrow hf-lp-eyebrow">The unglamorous part, handled</span>
+            <h2 id="landing-elig-title">The paperwork is part of the tournament.</h2>
+            <p>
+                Age and residency checks, guardian consent, and cash or GCash payments are first-class
+                steps in HoopFlow. Review them in one queue, with a reason for every decision.
+            </p>
+
+            <ul class="hf-lp-elig__checklist">
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Age &amp; residency checks</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Guardian consent</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Cash &amp; GCash references</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> A reason for every decision</li>
+            </ul>
+        </div>
+
+        <div class="hf-lp-elig__scene">
+            <article class="hf-lp-review">
+                <header class="hf-lp-review__head">
+                    <div>
+                        <span class="hf-lp-review__eyebrow">Roster check</span>
+                        <strong>San Isidro Vipers · U16</strong>
+                    </div>
+                    <span class="hf-lp-review__count">{{ $cleared }} of {{ $total }} cleared</span>
+                </header>
+
+                <div class="hf-lp-review__rows">
+                    @foreach ($eligibility['players'] as $player)
+                        <div class="hf-lp-review__row">
+                            <span class="hf-lp-review__player">
+                                <strong>{{ $player['name'] }}</strong>
+                                <small>Age {{ $player['age'] }}</small>
+                            </span>
+                            <x-status-chip :status="$player['status']" :label="$player['label']" />
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="hf-lp-review__progress" aria-hidden="true">
+                    <span style="width: {{ ($cleared / max($total, 1)) * 100 }}%"></span>
+                </div>
+            </article>
+
+            <article class="hf-lp-payment">
+                <span class="hf-lp-payment__eyebrow">Payment record</span>
+                @foreach ($eligibility['payments'] as $payment)
+                    <div class="hf-lp-payment__row">
+                        <div>
+                            <strong>{{ $payment['label'] }} · {{ $payment['amount'] }}</strong>
+                            <span>{{ $payment['method'] }} · {{ $payment['reference'] }}</span>
+                        </div>
+                        <x-status-chip :status="$payment['status']" :label="$payment['status_label']" />
+                    </div>
+                @endforeach
+            </article>
+        </div>
+    </div>
+</section>
