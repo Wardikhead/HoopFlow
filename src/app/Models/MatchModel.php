@@ -143,4 +143,14 @@ class MatchModel extends Model
     {
         return $this->playerStats();
     }
+
+    /**
+     * @return HasMany<PlayerStatQuarter, $this>
+     */
+    public function playerQuarterStats(): HasMany
+    {
+        return $this->hasMany(PlayerStatQuarter::class, 'match_id')
+            ->orderBy('player_id')
+            ->orderBy('quarter_index');
+    }
 }
