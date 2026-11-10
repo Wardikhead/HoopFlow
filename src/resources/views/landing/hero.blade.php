@@ -35,10 +35,17 @@
             </p>
 
             <div class="hf-lp-hero__actions">
-                <a class="hf-btn hf-btn--primary hf-lp-btn-lg" href="{{ route('register') }}">
-                    Create your account
-                    <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
-                </a>
+                @auth
+                    <a class="hf-btn hf-btn--primary hf-lp-btn-lg" href="{{ route('dashboard') }}">
+                        Open your dashboard
+                        <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                    </a>
+                @else
+                    <a class="hf-btn hf-btn--primary hf-lp-btn-lg" href="{{ route('register') }}">
+                        Create your account
+                        <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                    </a>
+                @endauth
                 <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">
                     Explore the demo
                     <i class="bi bi-arrow-down" aria-hidden="true"></i>
