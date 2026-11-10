@@ -194,7 +194,7 @@
                                     @php
                                         $quarterStats = $this->stats[$block['side']][$row['id']]['quarters'][$activeQuarter] ?? [];
                                     @endphp
-                                    <tr data-testid="ingame-stat-row-{{ $block['side'] }}-{{ $loop->index }}" data-player-name="{{ mb_strtolower($row['name']) }}">
+                                    <tr wire:key="ingame-stat-row-{{ $block['side'] }}-{{ $row['id'] }}-{{ $activeQuarter }}" data-testid="ingame-stat-row-{{ $block['side'] }}-{{ $loop->index }}" data-player-name="{{ mb_strtolower($row['name']) }}">
                                         <td>
                                             <strong>#{{ $row['number'] ?? '–' }} {{ $row['name'] }}</strong>
                                             <span class="hf-small hf-muted" style="display: block">{{ $row['position'] ?: 'Player' }}</span>
