@@ -8,7 +8,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['match_id', 'player_id', 'team_id', 'tournament_id', 'points', 'assists', 'rebounds', 'steals', 'blocks', 'fouls'])]
+#[Fillable([
+    'match_id',
+    'player_id',
+    'team_id',
+    'tournament_id',
+    'points',
+    'assists',
+    'rebounds',
+    'steals',
+    'blocks',
+    'fouls',
+    'field_goals_made',
+    'field_goals_attempted',
+    'three_points_made',
+    'three_points_attempted',
+    'free_throws_made',
+    'free_throws_attempted',
+    'turnovers',
+])]
 class PlayerStat extends Model
 {
     public $incrementing = false;
