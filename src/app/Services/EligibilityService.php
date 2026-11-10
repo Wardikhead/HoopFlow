@@ -23,15 +23,16 @@ class EligibilityService
         'C',
     ];
 
+    public const DOCUMENT_TYPE = 'birth_certificate';
+
+    public const COACH_DECLARED_FILE_URL = 'coach-declared';
+
     public function refresh(Team $team): void
     {
         $team->loadMissing('players.eligibilityDocuments');
 
         foreach ($team->players as $player) {
-            $documentsComplete = $player->eligibilityDocuments->isNotEmpty()
-                && $player->eligibilityDocuments->every(
-                    fn (EligibilityDocument $document): bool => $document->status === 'approved'
-                );
+            $documentsComplete = $this->documentsCompleteFor($player);
 
             $consentComplete = $player->consent_at !== null;
 
@@ -50,6 +51,65 @@ class EligibilityService
     }
 
     /**
+     * Keep the coach's document choice and the eligibility document rows in sync.
+     */
+    public function syncDocumentStatus(Player $player, string $documentStatus): void
+    {
+        $status = match ($documentStatus) {
+            'verified' => 'approved',
+            'missing' => 'missing',
+            default => 'pending',
+        };
+
+        $document = $player->eligibilityDocuments()
+            ->where('type', self::DOCUMENT_TYPE)
+            ->first();
+
+        if ($document === null) {
+            $document = new EligibilityDocument;
+            $document->player_id = $player->id;
+            $document->type = self::DOCUMENT_TYPE;
+            $document->file_url = self::COACH_DECLARED_FILE_URL;
+        }
+
+        if ($document->status !== $status) {
+            $document->reviewed_by = null;
+            $document->reviewed_at = null;
+        }
+
+        $document->status = $status;
+        $document->save();
+
+        $player->unsetRelation('eligibilityDocuments');
+    }
+
+    /**
+     * Resolve the chip status shown to coaches and organizers for one player.
+     */
+    public function documentStatusForPlayer(Player $player): string
+    {
+        $documents = $player->eligibilityDocuments;
+
+        if ($documents->isEmpty()) {
+            return match ($player->eligibility_status) {
+                'verified' => 'verified',
+                'pending' => 'pending',
+                default => 'missing',
+            };
+        }
+
+        if ($documents->every(fn (EligibilityDocument $document): bool => $document->status === 'approved')) {
+            return 'verified';
+        }
+
+        if ($documents->contains(fn (EligibilityDocument $document): bool => $document->status === 'pending')) {
+            return 'pending';
+        }
+
+        return 'missing';
+    }
+
+    /**
      * @return array{documentsComplete: bool, consentComplete: bool, verifiedAt: mixed}
      */
     public function status(Team $team): array
@@ -58,12 +118,8 @@ class EligibilityService
 
         $players = $team->players;
 
-        $documentsComplete = $players->every(
-            fn (Player $player): bool => $player->eligibilityDocuments->isNotEmpty()
-                && $player->eligibilityDocuments->every(
-                    fn (EligibilityDocument $document): bool => $document->status === 'approved'
-                )
-        );
+        $documentsComplete = $players->isNotEmpty()
+            && $players->every(fn (Player $player): bool => $this->documentsCompleteFor($player));
 
         $consentComplete = $players->every(
             fn (Player $player): bool => $player->consent_at !== null
@@ -84,6 +140,19 @@ class EligibilityService
             'consentComplete' => $consentComplete,
             'verifiedAt' => $verifiedAt,
         ];
+    }
+
+    private function documentsCompleteFor(Player $player): bool
+    {
+        $documents = $player->eligibilityDocuments;
+
+        if ($documents->isEmpty()) {
+            return $player->eligibility_status === 'verified';
+        }
+
+        return $documents->every(
+            fn (EligibilityDocument $document): bool => $document->status === 'approved'
+        );
     }
 
     /**

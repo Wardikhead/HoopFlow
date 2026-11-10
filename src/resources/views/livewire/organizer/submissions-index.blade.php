@@ -147,7 +147,8 @@
             @php
                 $reviewTeam = $review->team;
                 $reviewPlayers = $reviewTeam?->players ?? collect();
-                $reviewEligibility = app(\App\Services\EligibilityService::class)->status($reviewTeam ?? new \App\Models\Team());
+                $reviewEligibilityService = app(\App\Services\EligibilityService::class);
+                $reviewEligibility = $reviewEligibilityService->status($reviewTeam ?? new \App\Models\Team());
                 $reviewPayment = $review->payment;
                 $reviewPaymentChipStatus = $reviewPayment?->status === 'verified' ? 'paid' : ($reviewPayment?->status ?? 'pending');
             @endphp
@@ -195,21 +196,13 @@
                             </thead>
                             <tbody>
                                 @foreach ($reviewPlayers as $player)
-                                    @php
-                                        $pdoc = $player->eligibilityDocuments->where('type', 'birth_certificate')->first();
-                                        $pdocChipStatus = match ($pdoc?->status) {
-                                            'approved' => 'verified',
-                                            'pending' => 'pending',
-                                            default => 'missing',
-                                        };
-                                    @endphp
                                     <tr>
                                         <td>{{ $player->jersey_number }}</td>
                                         <td>{{ $player->first_name }} {{ $player->last_name }}</td>
                                         <td>{{ $player->position }}</td>
                                         <td>{{ $player->birthdate?->age ?? '—' }}</td>
                                         <td><span class="hf-chip hf-chip--{{ $player->consent_at ? 'success' : 'danger' }}">{{ $player->consent_at ? 'On file' : 'Missing' }}</span></td>
-                                        <td>@include('components.status-chip', ['status' => $pdocChipStatus])</td>
+                                        <td>@include('components.status-chip', ['status' => $reviewEligibilityService->documentStatusForPlayer($player)])</td>
                                     </tr>
                                 @endforeach
                             </tbody>
