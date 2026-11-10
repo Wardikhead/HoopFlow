@@ -61,8 +61,13 @@
   align-items: start;
 }
 
+.hf-lp-lab__rail {
+  min-width: 0;
+}
+
 .hf-lp-tabs {
   display: grid;
+  min-width: 0;
   gap: 8px;
 }
 

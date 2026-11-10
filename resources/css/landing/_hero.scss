@@ -1,6 +1,6 @@
 .hf-lp-hero {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   padding: clamp(64px, 8vw, 104px) 0 clamp(72px, 9vw, 120px);
   background:
     radial-gradient(circle at 78% 22%, color-mix(in srgb, var(--hf-lp-orange) 16%, transparent), transparent 34%),

@@ -24,7 +24,7 @@
     <div class="hf-lp-schedule__list">
         @foreach ($schedule as $day)
             <div class="hf-lp-schedule__group" data-schedule-group="{{ $day['key'] }}">
-                <h4 class="hf-lp-schedule__day">{{ $day['label'] }} <span>{{ $day['subtitle'] }}</span></h4>
+                <h3 class="hf-lp-schedule__day">{{ $day['label'] }} <span>{{ $day['subtitle'] }}</span></h3>
 
                 @foreach ($day['matches'] as $match)
                     @php

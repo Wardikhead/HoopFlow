@@ -48,10 +48,10 @@
                     <i class="bi bi-moon-stars" aria-hidden="true"></i>
                 </button>
                 @auth
-                    <a class="hf-btn hf-btn--primary hf-btn--sm" href="{{ route('dashboard') }}">Dashboard</a>
+                    <a class="hf-btn hf-btn--primary hf-btn--sm hf-lp-hide-xs" href="{{ route('dashboard') }}">Dashboard</a>
                 @else
                     <a class="hf-btn hf-btn--ghost hf-btn--sm hf-lp-hide-sm" href="{{ route('login') }}">Sign in</a>
-                    <a class="hf-btn hf-btn--primary hf-btn--sm" href="{{ route('register') }}">Create account</a>
+                    <a class="hf-btn hf-btn--primary hf-btn--sm hf-lp-hide-xs" href="{{ route('register') }}">Create account</a>
                 @endauth
                 <button type="button" class="hf-lp-menu-btn" data-landing-menu aria-expanded="false" aria-controls="landing-menu" aria-label="Open menu">
                     <i class="bi bi-list" aria-hidden="true"></i>

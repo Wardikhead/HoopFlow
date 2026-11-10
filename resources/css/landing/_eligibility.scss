@@ -1,4 +1,5 @@
 .hf-lp-elig-section {
+  overflow: clip;
   padding: clamp(72px, 9vw, 120px) 0;
   background: var(--hf-lp-paper);
 }
