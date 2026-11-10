@@ -1,4 +1,4 @@
-@props(['match', 'href', 'testid' => null])
+@props(['match', 'href', 'compact' => false, 'testid' => null])
 
 @php
     $home = $match->homeTeam;
@@ -35,8 +35,10 @@
         <span class="hf-match-name">{{ $away?->name ?? 'TBD' }}</span>
         <span class="hf-score {{ $match->away_score === null ? 'hf-score--muted' : '' }}">{{ $score2 }}</span>
     </div>
-    <div class="hf-match-head">
-        <span>{{ $when }}</span>
-        <span>{{ $isBye ? 'Bye' : $match->roundLabel() }}</span>
-    </div>
+    @unless ($compact)
+        <div class="hf-match-head">
+            <span>{{ $when }}</span>
+            <span>{{ $isBye ? 'Bye' : $match->roundLabel() }}</span>
+        </div>
+    @endunless
 </a>

@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Coach\MyTeam;
+use App\Livewire\Organizer\TeamsIndex;
+use App\Models\Division;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
@@ -34,6 +36,90 @@ it('team show loads', function () {
     $team = Team::first();
     $user = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
     $this->actingAs($user)->get('/teams/'.$team->id)->assertStatus(200);
+});
+
+it('fans only see approved team profiles', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+    $approved = Team::where('name', 'San Antonio Vipers')->firstOrFail();
+
+    $this->actingAs($fan)
+        ->get('/teams/'.$approved->id)
+        ->assertOk()
+        ->assertSee('San Antonio Vipers')
+        ->assertSee('Public profile')
+        ->assertDontSee('team-private', false)
+        ->assertDontSee('GCASH-9823412');
+});
+
+it('fans get a friendly unavailable page for pending teams', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+    $pending = Team::where('name', 'Bagong Ilog Bears')->firstOrFail();
+
+    $this->actingAs($fan)
+        ->get('/teams/'.$pending->id)
+        ->assertStatus(403)
+        ->assertSee('Team not available')
+        ->assertSee('Pending and rejected registrations are visible only to the organizer and the team coach.')
+        ->assertSee('Back to public teams')
+        ->assertDontSee('Bagong Ilog Bears');
+});
+
+it('coach teams index auto-selects the only tournament they have teams in', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $this->actingAs($coach);
+
+    Livewire::test(TeamsIndex::class)
+        ->assertSet('tournament', $summerCup->id)
+        ->assertSee($summerCup->name);
+});
+
+it('team divisions only include divisions represented by visible teams', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+    $hoopfest = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+
+    Division::create([
+        'tournament_id' => $hoopfest->id,
+        'name' => 'Under 19 (U19)',
+        'age_min' => null,
+        'age_max' => 19,
+        'gender' => null,
+        'max_teams' => 8,
+        'entry_fee' => 1500,
+        'currency' => 'PHP',
+    ]);
+
+    $this->actingAs($fan);
+
+    Livewire::withQueryParams(['tournament' => $hoopfest->id])
+        ->test(TeamsIndex::class)
+        ->assertSee('Under 17 (U17)')
+        ->assertDontSee('Under 19 (U19)');
+});
+
+it('labels verified payments as paid and submitted registrations as pending', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $hoopfest = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $pending = Team::where('name', 'Bagong Ilog Bears')->firstOrFail();
+    $vipers = Team::where('name', 'San Antonio Vipers')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $this->actingAs($organizer);
+
+    Livewire::withQueryParams(['tournament' => $hoopfest->id])
+        ->test(TeamsIndex::class)
+        ->assertSee('Paid');
+
+    $this->actingAs($organizer)
+        ->get('/teams/'.$pending->id.'?tournament='.$hoopfest->id)
+        ->assertOk()
+        ->assertSee('<h3 class="hf-section-title hf-mt-1">Pending</h3>', false);
+
+    $this->actingAs($organizer)
+        ->get('/teams/'.$vipers->id.'?tournament='.$summerCup->id)
+        ->assertOk()
+        ->assertSee('Paid');
 });
 
 it('my-team loads for coach', function () {

@@ -329,7 +329,9 @@ class TeamRegister extends Component
             return;
         }
 
-        DB::transaction(function () use ($tournament, $division, $user, $organization): void {
+        $createdTeam = null;
+
+        DB::transaction(function () use ($tournament, $division, $user, $organization, &$createdTeam): void {
             $team = Team::create([
                 'organization_id' => $organization->id,
                 'name' => trim($this->name),
@@ -389,6 +391,8 @@ class TeamRegister extends Component
                 $organization->id,
                 $user?->id,
             );
+
+            $createdTeam = $team;
         });
 
         $this->dispatch(
@@ -398,7 +402,10 @@ class TeamRegister extends Component
             tone: 'success',
         );
 
-        $this->redirectRoute('myTeam');
+        $this->redirectRoute('myTeam', array_filter([
+            'team' => $createdTeam?->id,
+            'tournament' => $tournament->id,
+        ]));
     }
 
     /**
