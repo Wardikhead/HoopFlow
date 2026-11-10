@@ -7,6 +7,8 @@
 
     <title>@yield('title', $title ?? config('app.name'))</title>
 
+    <link rel="icon" type="image/png" href="{{ asset('img/hoopflow icon without background.png') }}">
+
     <script>
         (function () {
             try {
@@ -30,8 +32,7 @@
     @guest
         <header class="hf-auth-topbar">
             <a class="hf-auth-brand" href="{{ route('home') }}">
-                <img src="{{ asset('img/logo.png') }}" alt="">
-                HoopFlow
+                <x-brand size="sm" />
             </a>
             <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
         </header>
@@ -112,11 +113,7 @@
         <div class="hf-app">
             <aside class="hf-rail" aria-label="Primary navigation">
                 <a class="hf-rail-brand" href="{{ route('dashboard') }}">
-                    <img src="{{ asset('img/logo.png') }}" alt="">
-                    <span>
-                        <strong>HoopFlow</strong>
-                        <small>Tournament ops</small>
-                    </span>
+                    <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
 
                 <span class="hf-rail-label">Matchday</span>
