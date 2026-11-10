@@ -17,6 +17,8 @@
     @include('landing.lab', [
         'tournament' => $showcase->tournament(),
         'bracket' => $showcase->bracket(),
+        'schedule' => $showcase->schedule(),
+        'standings' => $showcase->standings(),
         'teams' => $teams,
     ])
 @endsection
