@@ -66,6 +66,86 @@ it('status returns documentsComplete/consentComplete/verifiedAt', function () {
     expect($result['verifiedAt'])->not->toBeNull();
 });
 
+it('status trusts a coach-verified player when no document rows exist', function () {
+    $team = Team::factory()->create();
+    Player::factory()->create([
+        'team_id' => $team->id,
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+
+    $service = new EligibilityService;
+    $result = $service->status($team);
+
+    expect($result['documentsComplete'])->toBeTrue();
+});
+
+it('status trusts a coach-verified player when existing document rows are approved', function () {
+    $team = Team::factory()->create();
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'status' => 'approved',
+    ]);
+
+    $service = new EligibilityService;
+    $result = $service->status($team);
+
+    expect($result['documentsComplete'])->toBeTrue();
+});
+
+it('status does not trust a verified player when an existing document row is not approved', function () {
+    $team = Team::factory()->create();
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'status' => 'pending',
+    ]);
+
+    $service = new EligibilityService;
+    $result = $service->status($team);
+
+    expect($result['documentsComplete'])->toBeFalse();
+});
+
+it('resolves a player document chip from the document rows', function () {
+    $team = Team::factory()->create();
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'eligibility_status' => 'verified',
+    ]);
+
+    $service = new EligibilityService;
+
+    expect($service->documentStatusForPlayer($player))->toBe('verified');
+
+    $document = EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'status' => 'pending',
+    ]);
+    $player->unsetRelation('eligibilityDocuments');
+    expect($service->documentStatusForPlayer($player))->toBe('pending');
+
+    $document->update(['status' => 'missing']);
+    $player->unsetRelation('eligibilityDocuments');
+    expect($service->documentStatusForPlayer($player))->toBe('missing');
+
+    $document->update(['status' => 'approved']);
+    $player->unsetRelation('eligibilityDocuments');
+    expect($service->documentStatusForPlayer($player))->toBe('verified');
+});
+
 it('validatePlayer returns errors for invalid input', function () {
     $division = Division::factory()->create(['age_min' => 8, 'age_max' => 15, 'name' => 'U15']);
     $team = Team::factory()->create();

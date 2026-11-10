@@ -3,7 +3,10 @@
 use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\Payment;
+use App\Models\Player;
 use App\Models\Registration;
+use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -216,4 +219,32 @@ it('submissions accepts an approved query filter', function () {
         ->withQueryParams(['status' => 'approved'])
         ->test(SubmissionsIndex::class)
         ->assertSet('status', 'approved');
+});
+
+it('labels coach-declared verified documents as verified in submission detail', function () {
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $division = $tournament->divisions()->firstOrFail();
+    $team = Team::factory()->create(['name' => 'No Docs Ballers']);
+    Player::factory()->create([
+        'team_id' => $team->id,
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+    $registration = Registration::factory()->create([
+        'tournament_id' => $tournament->id,
+        'division_id' => $division->id,
+        'team_id' => $team->id,
+        'status' => 'submitted',
+        'submitted_at' => now(),
+    ]);
+
+    $component = Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->withQueryParams(['q' => 'No Docs Ballers'])
+        ->test(SubmissionsIndex::class)
+        ->call('openReview', $registration->id);
+
+    expect($component->html())
+        ->toMatch('/hf-chip--success">\s*<i class="bi bi-patch-check-fill"[^>]*><\/i>Documents/')
+        ->not->toMatch('/hf-chip--danger">\s*<i class="bi bi-file-earmark-x"[^>]*><\/i>(Documents|Missing)/');
 });

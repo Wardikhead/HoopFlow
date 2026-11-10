@@ -10,6 +10,7 @@ use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\DashboardService;
+use App\Services\EligibilityService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -402,6 +403,8 @@ class MyTeam extends Component
         $age = (int) $this->playerAge;
 
         DB::transaction(function () use ($team, $player, $firstName, $lastName, $name, $number, $age, $consent, $documentStatus): void {
+            $eligibility = app(EligibilityService::class);
+
             $attributes = [
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -423,6 +426,7 @@ class MyTeam extends Component
                 ];
 
                 $player->update($attributes);
+                $eligibility->syncDocumentStatus($player, $documentStatus);
 
                 $this->writeAudit($team, 'team.roster.update', $before, [
                     'name' => $name,
@@ -433,7 +437,8 @@ class MyTeam extends Component
                 return;
             }
 
-            $team->players()->create($attributes);
+            $createdPlayer = $team->players()->create($attributes);
+            $eligibility->syncDocumentStatus($createdPlayer, $documentStatus);
 
             $this->writeAudit($team, 'team.roster.add', null, [
                 'name' => $name,

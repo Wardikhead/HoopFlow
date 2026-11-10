@@ -10,6 +10,7 @@ use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\AuditLogger;
+use App\Services\EligibilityService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -332,6 +333,8 @@ class TeamRegister extends Component
         $createdTeam = null;
 
         DB::transaction(function () use ($tournament, $division, $user, $organization, &$createdTeam): void {
+            $eligibility = app(EligibilityService::class);
+
             $team = Team::create([
                 'organization_id' => $organization->id,
                 'name' => trim($this->name),
@@ -349,7 +352,10 @@ class TeamRegister extends Component
                 $firstName = $parts[0] ?? $name;
                 $lastName = $parts[1] ?? '';
 
-                Player::create([
+                $documentStatus = (string) $player['documentStatus'];
+                $verified = $documentStatus === 'verified';
+
+                $createdPlayer = Player::create([
                     'team_id' => $team->id,
                     'first_name' => $firstName,
                     'last_name' => $lastName,
@@ -357,8 +363,11 @@ class TeamRegister extends Component
                     'jersey_number' => (int) $player['number'],
                     'position' => (string) $player['position'],
                     'consent_at' => (bool) $player['guardianConsent'] ? now() : null,
-                    'eligibility_status' => $player['documentStatus'] === 'verified' ? 'verified' : 'pending',
+                    'eligibility_status' => $verified ? 'verified' : 'pending',
+                    'verified_at' => $verified ? now() : null,
                 ]);
+
+                $eligibility->syncDocumentStatus($createdPlayer, $documentStatus);
             }
 
             $registration = Registration::create([
