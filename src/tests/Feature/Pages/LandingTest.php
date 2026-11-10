@@ -84,3 +84,17 @@ it('renders the eligibility spotlight, wire, closing CTA, and footer', function 
         ->assertSee('data-testid="landing-cta"', false)
         ->assertSee('data-demo-target="standings"', false);
 });
+
+it('exposes the landing anchors, theme toggle, and read-only tab semantics', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('id="features"', false)
+        ->assertSee('id="flow"', false)
+        ->assertSee('id="roles"', false)
+        ->assertSee('id="eligibility"', false)
+        ->assertSee('role="tablist"', false)
+        ->assertSee('aria-selected="true"', false)
+        ->assertSee('aria-controls="panel-bracket"', false)
+        ->assertSee('data-theme-toggle', false)
+        ->assertSee('aria-label="Toggle color theme"', false);
+});

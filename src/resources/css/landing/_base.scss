@@ -48,6 +48,83 @@
   scroll-margin-top: 96px;
 }
 
+.hf-lp-tab:focus-visible,
+.hf-lp-chip:focus-visible,
+.hf-lp-menu-btn:focus-visible,
+.hf-lp-footer a:focus-visible,
+.hf-lp-nav a:focus-visible,
+.hf-lp-header__brand:focus-visible {
+  outline: 3px solid var(--hf-lp-orange);
+  outline-offset: 2px;
+}
+
+.hf-lp .hf-btn--sm {
+  min-height: 44px;
+}
+
+.hf-lp .hf-brand__flow {
+  color: #c2410c;
+}
+
+.hf-lp .hf-btn--primary {
+  border-color: #c2410c;
+  background: #c2410c;
+  box-shadow: 0 2px 0 #9a3412;
+}
+
+.hf-lp .hf-btn--primary:hover {
+  background: #9a3412;
+}
+
+.hf-lp-review .hf-chip--success {
+  color: #0b6b53;
+}
+
+.hf-lp-review .hf-chip--warning {
+  color: #92400e;
+}
+
+.hf-lp-review .hf-chip--danger {
+  color: #b91c2c;
+}
+
+[data-theme='dark'] .hf-lp-review .hf-chip--success {
+  color: #6ee7b7;
+}
+
+[data-theme='dark'] .hf-lp-review .hf-chip--warning {
+  color: #fcd34d;
+}
+
+[data-theme='dark'] .hf-lp-review .hf-chip--danger {
+  color: #fca5a5;
+}
+
+.hf-lp-lab .hf-chip--success,
+.hf-lp-payment .hf-chip--success {
+  color: #6ee7b7;
+}
+
+.hf-lp-lab .hf-chip--warning,
+.hf-lp-payment .hf-chip--warning {
+  color: #fcd34d;
+}
+
+.hf-lp-lab .hf-chip--danger,
+.hf-lp-payment .hf-chip--danger {
+  color: #fca5a5;
+}
+
+.hf-lp-lab .hf-chip--primary,
+.hf-lp-payment .hf-chip--primary {
+  color: #fdba74;
+}
+
+.hf-lp-lab .hf-chip--slate,
+.hf-lp-payment .hf-chip--slate {
+  color: #cbd5e1;
+}
+
 .hf-lp-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -106,6 +183,13 @@
   transform: none;
 }
 
+[data-theme='dark'] .hf-lp-review,
+[data-theme='dark'] .hf-lp-nextup,
+[data-theme='dark'] .hf-lp-role {
+  border-color: var(--hf-lp-line);
+  background: var(--hf-lp-card);
+}
+
 .hf-lp-crest {
   display: inline-grid;
   place-items: center;
@@ -127,6 +211,14 @@
   height: 34px;
   border-radius: 10px;
   font-size: 12px;
+}
+
+.hf-lp-hero .hf-lp-crest,
+.hf-lp-lab .hf-lp-crest,
+.hf-lp-payment .hf-lp-crest {
+  border-color: color-mix(in srgb, var(--hf-crest) 45%, rgba(255, 255, 255, 0.4));
+  background: color-mix(in srgb, var(--hf-crest) 22%, transparent);
+  color: color-mix(in srgb, var(--hf-crest) 45%, white);
 }
 
 .hf-lp-ping {
@@ -180,7 +272,19 @@
   }
 }
 
+@media (max-width: 575.98px) {
+  .hf-lp-hide-xs {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hf-js .hf-lp-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
   .hf-lp-ping,
   .hf-lp-live__dot {
     animation: none;
