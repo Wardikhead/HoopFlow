@@ -214,3 +214,14 @@ it('links to in-game scoring from the nav, bracket detail, and game stats header
         ->assertOk()
         ->assertSeeHtml('data-testid="stats-in-game"');
 });
+
+it('keys stat rows by the active quarter so bindings cannot leak across quarters', function () {
+    $match = gmMatch(8, 3);
+    $playerId = gmPlayerId($match, 'team1');
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertSeeHtml('wire:key="ingame-stat-row-team1-'.$playerId.'-0"')
+        ->call('setActiveQuarter', 1)
+        ->assertSeeHtml('wire:key="ingame-stat-row-team1-'.$playerId.'-1"');
+});
