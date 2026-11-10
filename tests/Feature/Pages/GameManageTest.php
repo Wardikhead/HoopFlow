@@ -196,3 +196,21 @@ it('locks final matches and refuses mutations', function () {
 
     expect($match->refresh()->status)->toBe('final');
 });
+
+it('links to in-game scoring from the nav, bracket detail, and game stats header', function () {
+    $organizer = gmUser('organizer@hoopflow.ph');
+    $match = gmMatch(8, 3);
+
+    $this->actingAs($organizer)
+        ->get('/game-manage')
+        ->assertOk()
+        ->assertSeeHtml('data-testid="nav-gameManage"');
+
+    $this->get('/bracket?id='.$match->tournament_id.'&match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="bracket-in-game"');
+
+    $this->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-in-game"');
+});

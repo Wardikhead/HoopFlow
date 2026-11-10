@@ -312,6 +312,9 @@
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="closeMatchDetail" data-testid="bracket-match-close">Close</button>
                     <a class="hf-btn" href="{{ route('gameStats', ['match' => $detailMatch->id]) }}" data-testid="bracket-match-stats">Game stats</a>
+                    @if ($isOrganizer)
+                        <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailMatch->id]) }}" data-testid="bracket-in-game"><i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats</a>
+                    @endif
                     @if ($isOrganizer && $this->selectedCanScore)
                         <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole({{ $detailMatch->id }})" data-testid="bracket-enter-score">Enter final score</button>
                     @endif
