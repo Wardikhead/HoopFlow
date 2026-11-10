@@ -16,20 +16,19 @@ class DashboardService
     public function __construct(protected StandingsService $standings) {}
 
     /**
+     * Team and payment figures cover every tournament; match figures follow the
+     * active tournament shown on the dashboard.
+     *
      * @return array<string, mixed>
      */
     public function organizerKpis(Tournament $tournament): array
     {
         $registrations = Registration::query()
-            ->where('tournament_id', $tournament->id)
-            ->with(['division', 'payment'])
+            ->with(['division', 'payment', 'tournament.divisions'])
             ->get();
         $pendingCount = $registrations->where('status', 'submitted')->count();
         $approved = $registrations->where('status', 'approved')->count();
         $registered = $registrations->count();
-
-        $tournament->loadMissing('divisions');
-        $fallbackFee = $tournament->entryFee();
 
         $billable = $registrations->where('status', '!=', 'rejected');
         $paid = $billable->filter(
@@ -38,9 +37,13 @@ class DashboardService
         $collected = (int) $paid->sum(
             fn (Registration $registration): float => (float) $registration->payment->amount
         );
-        $expected = (int) $billable->sum(
-            fn (Registration $registration): float => (float) ($registration->division->entry_fee ?? $fallbackFee)
-        );
+        $expected = (int) $billable->sum(function (Registration $registration): float {
+            $fee = $registration->division?->entry_fee;
+
+            return $fee !== null
+                ? (float) $fee
+                : (float) ($registration->tournament?->entryFee() ?? 0);
+        });
         $outstanding = max(0, $expected - $collected);
         $unpaidCount = $billable->filter(
             fn (Registration $registration): bool => $registration->payment?->status !== 'verified'

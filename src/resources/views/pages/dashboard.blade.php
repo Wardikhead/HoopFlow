@@ -42,6 +42,7 @@
         $collected = (int) ($paymentSummary['collected'] ?? ($kpis['collected'] ?? 0));
         $expected = (int) ($paymentSummary['expected'] ?? ($kpis['expected'] ?? 0));
         $unpaidCount = (int) ($paymentSummary['pendingCount'] ?? ($kpis['pendingCount'] ?? 0));
+        $unpaidTeams = (int) ($kpis['pendingCount'] ?? ($paymentSummary['pendingCount'] ?? 0));
         $approved = (int) ($kpis['approved'] ?? 0);
         $registered = (int) ($kpis['registered'] ?? 0);
         $matchesPlayed = (int) ($kpis['matchesPlayed'] ?? 0);
@@ -77,7 +78,7 @@
     <div class="hf-grid hf-grid--4 hf-mb-3">
         <x-kpi-tile label="Tournaments" :value="$tournamentsCount" :hint="$tournamentsCount.' seeded venues'" tone="primary" :href="route('tournaments')" testid="kpi-tournaments" />
         <x-kpi-tile label="Pending teams" :value="$pending" hint="Waiting for review" tone="gold" :href="route('submissions', ['status' => 'pending'])" testid="kpi-pending" />
-        <x-kpi-tile label="Uncollected" :value="$money($uncollected)" :hint="$unpaidCount.' teams unpaid'" tone="alert" :href="route('payments', ['status' => 'pending'])" testid="kpi-uncollected" />
+        <x-kpi-tile label="Uncollected" :value="$money($uncollected)" :hint="$unpaidTeams.' teams unpaid'" tone="alert" :href="route('payments', ['status' => 'pending'])" testid="kpi-uncollected" />
         <x-kpi-tile label="Approved teams" :value="$approved" :hint="$registered.' registered'" tone="success" :href="route('teams')" testid="kpi-approved" />
     </div>
 
