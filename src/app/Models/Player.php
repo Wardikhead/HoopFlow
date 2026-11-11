@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['team_id', 'first_name', 'last_name', 'birthdate', 'jersey_number', 'position', 'photo_url', 'guardian_name', 'guardian_phone', 'consent_at', 'consent_version', 'eligibility_status', 'verified_by', 'verified_at'])]
+#[Fillable(['team_id', 'first_name', 'last_name', 'birthdate', 'jersey_number', 'position', 'photo_url', 'guardian_name', 'guardian_phone', 'consent_at', 'consent_status', 'consent_recorded_by', 'consent_recorded_at', 'consent_version', 'eligibility_status', 'verified_by', 'verified_at'])]
 class Player extends Model
 {
     /** @use HasFactory<Factory> */
@@ -20,6 +20,7 @@ class Player extends Model
         return [
             'birthdate' => 'date',
             'consent_at' => 'datetime',
+            'consent_recorded_at' => 'datetime',
             'verified_at' => 'datetime',
         ];
     }
@@ -38,6 +39,14 @@ class Player extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function consentRecordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'consent_recorded_by');
     }
 
     /**

@@ -301,6 +301,9 @@ class PrototypeSeeder extends Seeder
                         'position' => $p['position'],
                         'eligibility_status' => $p['missing'] ? 'pending' : 'verified',
                         'consent_at' => $p['missing'] ? null : now(),
+                        'consent_status' => $p['missing'] ? 'missing' : 'verified',
+                        'consent_recorded_by' => $p['missing'] ? null : $this->organizer->id,
+                        'consent_recorded_at' => $p['missing'] ? null : now(),
                         'guardian_name' => null,
                         'guardian_phone' => null,
                     ]
@@ -358,6 +361,9 @@ class PrototypeSeeder extends Seeder
                     'position' => $p['position'],
                     'eligibility_status' => 'pending',
                     'consent_at' => null,
+                    'consent_status' => 'pending',
+                    'consent_recorded_by' => null,
+                    'consent_recorded_at' => null,
                     'guardian_name' => null,
                     'guardian_phone' => null,
                 ]
@@ -424,15 +430,18 @@ class PrototypeSeeder extends Seeder
                         'birthdate' => now()->subYears($p['age'])->format('Y-m-d'),
                         'jersey_number' => $p['jersey_number'],
                         'position' => $p['position'],
-                        'eligibility_status' => $p['missing'] ? 'pending' : 'verified',
-                        'consent_at' => $p['missing'] ? null : now(),
+                        'eligibility_status' => $pending || $p['missing'] ? 'pending' : 'verified',
+                        'consent_at' => $pending || $p['missing'] ? null : now(),
+                        'consent_status' => $pending ? 'pending' : ($p['missing'] ? 'missing' : 'verified'),
+                        'consent_recorded_by' => $pending ? null : $this->organizer->id,
+                        'consent_recorded_at' => $pending ? null : now(),
                         'guardian_name' => null,
                         'guardian_phone' => null,
                     ]
                 );
                 EligibilityDocument::firstOrCreate(
                     ['player_id' => $player->id, 'type' => 'birth_certificate'],
-                    ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => $p['missing'] ? 'pending' : 'approved', 'reviewed_by' => $p['missing'] || $pending ? null : $this->organizer->id, 'reviewed_at' => $p['missing'] || $pending ? null : now(), 'notes' => null]
+                    ['file_url' => 'https://example.com/doc/'.$player->id, 'status' => $pending ? 'pending' : ($p['missing'] ? 'missing' : 'approved'), 'reviewed_by' => $pending || $p['missing'] ? null : $this->organizer->id, 'reviewed_at' => $pending || $p['missing'] ? null : now(), 'notes' => null]
                 );
             }
 
@@ -499,6 +508,9 @@ class PrototypeSeeder extends Seeder
                         'position' => $p['position'],
                         'eligibility_status' => 'verified',
                         'consent_at' => now(),
+                        'consent_status' => 'verified',
+                        'consent_recorded_by' => $this->organizer->id,
+                        'consent_recorded_at' => now(),
                         'guardian_name' => null,
                         'guardian_phone' => null,
                     ]
