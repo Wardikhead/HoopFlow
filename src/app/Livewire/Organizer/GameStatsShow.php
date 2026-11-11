@@ -26,6 +26,9 @@ use Livewire\Component;
  * @property-read bool $canCorrect
  * @property-read array{team1: list<int>, team2: list<int>}|null $quarters
  * @property-read bool $hasStats
+ * @property-read list<array{key: string, label: string, index: int|null}> $periods
+ * @property-read string $periodLabel
+ * @property-read bool $hasQuarterData
  * @property-read array{previous1: int|null, previous2: int|null, reason: string, corrected_at: Carbon|null}|null $correction
  */
 #[Layout('layouts.public')]
