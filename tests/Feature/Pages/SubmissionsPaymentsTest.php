@@ -282,3 +282,39 @@ it('renders inline status controls in the submission detail', function () {
         ->assertSeeHtml('data-testid="submission-consent-'.$player->id.'"')
         ->assertSeeHtml('data-testid="submission-document-'.$player->id.'"');
 });
+
+it('requires an override before approving incomplete eligibility', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $registration->team->players()->update([
+        'consent_status' => 'pending',
+        'consent_at' => null,
+    ]);
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->call('confirmApprove')
+        ->assertHasErrors(['approveAnyway']);
+
+    expect($registration->fresh()->status)->toBe('submitted');
+});
+
+it('approves incomplete eligibility after the override and locks the roster', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $registration->team->players()->update([
+        'consent_status' => 'pending',
+        'consent_at' => null,
+    ]);
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->set('approveAnyway', true)
+        ->call('confirmApprove')
+        ->assertHasNoErrors();
+
+    expect($registration->fresh()->status)->toBe('approved')
+        ->and($registration->fresh()->roster_locked_at)->not->toBeNull();
+});

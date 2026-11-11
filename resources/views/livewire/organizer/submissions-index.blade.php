@@ -250,6 +250,7 @@
     @if ($approvingId !== null)
         @php $approveReg = $this->findRegistration($approvingId); @endphp
         @if ($approveReg)
+            @php $approveIssues = $this->approvalIssues($approveReg->id); @endphp
             <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelApprove()" x-on:click="if ($event.target === $el) $wire.cancelApprove()" wire:key="submission-approve-confirm-dialog" data-testid="submission-approve-confirm-dialog">
                 <div class="hf-dialog__head">
                     <h2 class="hf-dialog__title">Approve {{ $approveReg->team?->name ?? 'team' }}?</h2>
@@ -257,10 +258,25 @@
                 </div>
                 <div class="hf-dialog__body">
                     <p class="hf-small hf-muted">The team becomes eligible for seeding and its roster locks for the coach.</p>
+                    @if ($approveIssues !== [])
+                        <div class="hf-card hf-card--flat hf-mt-2" style="border-color: var(--hf-alert)">
+                            <strong class="hf-small">Incomplete eligibility</strong>
+                            <ul class="hf-small hf-muted hf-mt-1">
+                                @foreach ($approveIssues as $issue)
+                                    <li>{{ $issue['name'] }} — consent {{ $issue['consent'] }}, documents {{ $issue['document'] }}</li>
+                                @endforeach
+                            </ul>
+                            <label class="hf-check">
+                                <input type="checkbox" wire:model="approveAnyway" data-testid="submission-approve-anyway">
+                                Approve anyway
+                            </label>
+                            @error('approveAnyway') <p class="hf-field-error">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="cancelApprove()" data-testid="submission-approve-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" data-testid="submission-approve-confirm">Approve team</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" data-testid="submission-approve-confirm" @disabled($approveIssues !== [] && ! $approveAnyway)>Approve team</button>
                 </div>
             </dialog>
         @endif
