@@ -4,6 +4,7 @@ use App\Livewire\Organizer\GameStatsShow;
 use App\Models\AuditLog;
 use App\Models\MatchModel;
 use App\Models\PlayerStat;
+use App\Models\PlayerStatQuarter;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\GameStatsService;
@@ -30,6 +31,32 @@ function gsMatch(int $round, int $number): MatchModel
 function gsPlayerName(PlayerStat $stat): string
 {
     return trim(($stat->player?->first_name ?? '').' '.($stat->player?->last_name ?? ''));
+}
+
+/**
+ * @param  array<string, int>  $values
+ */
+function gsQuarterStat(MatchModel $match, PlayerStat $stat, int $quarter, array $values = []): PlayerStatQuarter
+{
+    return PlayerStatQuarter::query()->create([
+        'match_id' => $match->id,
+        'player_id' => $stat->player_id,
+        'team_id' => $stat->team_id,
+        'quarter_index' => $quarter,
+        'field_goals_made' => $values['fgm'] ?? 0,
+        'field_goals_attempted' => $values['fga'] ?? 0,
+        'three_points_made' => $values['tpm'] ?? 0,
+        'three_points_attempted' => $values['tpa'] ?? 0,
+        'free_throws_made' => $values['ftm'] ?? 0,
+        'free_throws_attempted' => $values['fta'] ?? 0,
+        'rebounds' => $values['reb'] ?? 0,
+        'assists' => $values['ast'] ?? 0,
+        'steals' => $values['stl'] ?? 0,
+        'blocks' => $values['blk'] ?? 0,
+        'turnovers' => $values['to'] ?? 0,
+        'fouls' => $values['pf'] ?? 0,
+        'points' => $values['points'] ?? (($values['fgm'] ?? 0) * 2 + ($values['tpm'] ?? 0) * 3 + ($values['ftm'] ?? 0)),
+    ]);
 }
 
 it('matches page loads for organizer', function () {
@@ -372,4 +399,44 @@ it('opens the correction dialog from the correct query flag', function () {
         ->get('/game-stats?match='.$match->id.'&correct=1')
         ->assertOk()
         ->assertSeeHtml('data-testid="stats-correction-dialog"');
+});
+
+it('lists only periods that have per-player quarter rows', function () {
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+
+    gsQuarterStat($match, $stat, 0);
+    gsQuarterStat($match, $stat, 1);
+
+    $component = Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id]);
+
+    expect(array_column($component->instance()->periods(), 'key'))->toBe(['all', '0', '1'])
+        ->and(array_column($component->instance()->periods(), 'label'))->toBe(['All', 'Q1', 'Q2'])
+        ->and($component->instance()->hasQuarterData())->toBeTrue();
+});
+
+it('falls back to all for an unknown or unavailable period', function () {
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+
+    Livewire::withQueryParams(['period' => '0'])
+        ->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->assertSet('period', 'all');
+
+    $component = Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id]);
+    $component->call('setPeriod', '99')->assertSet('period', 'all');
+
+    gsQuarterStat($match, $stat, 0);
+
+    Livewire::withQueryParams(['period' => '0'])
+        ->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->assertSet('period', '0');
 });

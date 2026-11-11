@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
@@ -62,6 +63,9 @@ class GameStatsShow extends Component
 
     public string $side = 'all';
 
+    #[Url(as: 'period', history: true, except: 'all')]
+    public string $period = 'all';
+
     public string $search = '';
 
     public string $sortKey = 'points';
@@ -85,6 +89,8 @@ class GameStatsShow extends Component
         if ($this->matchId !== null && request()->boolean('correct') && $this->isOrganizer) {
             $this->openCorrection();
         }
+
+        $this->period = $this->resolvePeriod($this->period);
     }
 
     #[Computed]
@@ -186,6 +192,57 @@ class GameStatsShow extends Component
     }
 
     /**
+     * @return list<array{key: string, label: string, index: int|null}>
+     */
+    #[Computed]
+    public function periods(): array
+    {
+        $periods = [['key' => 'all', 'label' => 'All', 'index' => null]];
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel) {
+            return $periods;
+        }
+
+        $indexes = $match->playerQuarterStats
+            ->pluck('quarter_index')
+            ->filter(fn (mixed $index): bool => is_numeric($index))
+            ->map(fn (mixed $index): int => (int) $index)
+            ->unique()
+            ->filter(fn (int $index): bool => $index >= 0 && $index < GameStatsService::MAX_QUARTERS)
+            ->sort()
+            ->values();
+
+        foreach ($indexes as $index) {
+            $periods[] = [
+                'key' => (string) $index,
+                'label' => $index < 4 ? 'Q'.($index + 1) : 'OT'.($index - 3),
+                'index' => $index,
+            ];
+        }
+
+        return $periods;
+    }
+
+    #[Computed]
+    public function periodLabel(): string
+    {
+        foreach ($this->periods as $period) {
+            if ($period['key'] === $this->period) {
+                return $period['label'];
+            }
+        }
+
+        return 'All';
+    }
+
+    #[Computed]
+    public function hasQuarterData(): bool
+    {
+        return count($this->periods) > 1;
+    }
+
+    /**
      * @return array{previous1: int|null, previous2: int|null, reason: string, corrected_at: Carbon|null}|null
      */
     #[Computed]
@@ -284,6 +341,16 @@ class GameStatsShow extends Component
         $out['pts'] = (int) ($row?->getAttribute('points') ?? 0);
 
         return $out;
+    }
+
+    public function setPeriod(string $period): void
+    {
+        $this->period = $this->resolvePeriod($period);
+    }
+
+    protected function resolvePeriod(string $period): string
+    {
+        return in_array($period, array_column($this->periods, 'key'), true) ? $period : 'all';
     }
 
     public function sortBy(string $key): void
