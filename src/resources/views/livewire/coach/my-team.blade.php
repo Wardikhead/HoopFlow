@@ -30,8 +30,10 @@
         $locked = $this->rosterLocked;
         $players = $team?->players ?? collect();
         $playerCount = $players->count();
-        $consentCount = $players->filter(fn ($player) => $player->consent_at !== null)->count();
-        $docsCount = $players->filter(fn ($player) => $player->eligibility_status === 'verified')->count();
+        $consentCount = $players->filter(fn ($player) => $player->consent_status === 'verified')->count();
+        $docsCount = $players->filter(fn ($player) => $player->eligibilityDocuments
+            ->contains(fn ($document) => $document->type === \App\Services\EligibilityService::DOCUMENT_TYPE
+                && $document->status === 'approved'))->count();
         $status = $registration?->status ?? 'submitted';
         $paymentStatus = $this->paymentStatusText();
         $reviewPending = in_array($status, ['submitted', 'pending'], true);
@@ -145,7 +147,7 @@
             <x-kpi-tile
                 label="Roster"
                 :value="$playerCount"
-                :hint="$consentCount.' consents · '.$docsCount.' verified'"
+                :hint="$consentCount.' consents · '.$docsCount.' documents'"
                 tone="success"
                 testid="my-team-roster-kpi"
             />
@@ -215,14 +217,8 @@
                                             <td><strong>{{ $playerName }}</strong></td>
                                             <td>{{ $player->position }}</td>
                                             <td>{{ $player->birthdate?->age ?? '—' }}</td>
-                                            <td>
-                                                @if ($player->consent_at)
-                                                    <span class="hf-chip hf-chip--success">On file</span>
-                                                @else
-                                                    <span class="hf-chip hf-chip--danger">Missing</span>
-                                                @endif
-                                            </td>
-                                            <td><x-status-chip :status="$player->eligibility_status" /></td>
+                                            <td><x-status-chip :status="$player->consent_status" /></td>
+                                            <td><x-status-chip :status="app(\App\Services\EligibilityService::class)->documentStatusForPlayer($player)" /></td>
                                             @unless ($locked)
                                                 <td>
                                                     <div class="hf-flex hf-gap-1">
@@ -295,7 +291,7 @@
                         @endif
                     </div>
                     <p class="hf-small hf-muted hf-mt-2 hf-mb-0">
-                        {{ $locked ? 'The organizer verified this roster. Contact the committee to make a change.' : 'Add missing consent and documents before the organizer review.' }}
+                        {{ $locked ? 'The organizer verified this roster. Contact the committee to make a change.' : 'The organizer records consent and verifies documents in Submissions. Keep player details accurate.' }}
                     </p>
                 </div>
 
@@ -402,33 +398,17 @@
                                 @error('playerPosition') <p class="hf-field-error">{{ $message }}</p> @enderror
                             </div>
                             <div class="hf-field">
-                                <label class="hf-label" for="myPlayerAge">Age</label>
+                                <label class="hf-label" for="myPlayerBirthdate">Birthdate</label>
                                 <input
                                     class="hf-input"
-                                    id="myPlayerAge"
-                                    type="number"
-                                    min="8"
-                                    max="99"
-                                    wire:model="playerAge"
-                                    @error('playerAge') aria-invalid="true" @enderror
-                                    data-testid="my-player-age"
+                                    id="myPlayerBirthdate"
+                                    type="date"
+                                    max="{{ now()->format('Y-m-d') }}"
+                                    wire:model="playerBirthdate"
+                                    @error('playerBirthdate') aria-invalid="true" @enderror
+                                    data-testid="my-player-birthdate"
                                 >
-                                @error('playerAge') <p class="hf-field-error">{{ $message }}</p> @enderror
-                            </div>
-                            <div class="hf-field">
-                                <label class="hf-label" for="myPlayerDocument">Documents</label>
-                                <select class="hf-select" id="myPlayerDocument" wire:model="playerDocumentStatus" data-testid="my-player-document">
-                                    <option value="verified">Verified</option>
-                                    <option value="pending">Pending review</option>
-                                    <option value="missing">Missing</option>
-                                </select>
-                                @error('playerDocumentStatus') <p class="hf-field-error">{{ $message }}</p> @enderror
-                            </div>
-                            <div class="hf-field hf-field--full">
-                                <label class="hf-check">
-                                    <input type="checkbox" wire:model="playerConsent" data-testid="my-player-consent">
-                                    Guardian consent on file
-                                </label>
+                                @error('playerBirthdate') <p class="hf-field-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>

@@ -10,15 +10,16 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('syncs a coach document status change to the eligibility document', function () {
+it('updates player fields without touching consent or document status', function () {
     $coach = User::factory()->create();
     $team = Team::factory()->create(['coach_user_id' => $coach->id]);
     $player = Player::factory()->create([
         'team_id' => $team->id,
+        'birthdate' => '2012-01-01',
+        'consent_status' => 'verified',
+        'consent_at' => now(),
         'eligibility_status' => 'verified',
         'verified_at' => now(),
-        'consent_at' => now(),
-        'birthdate' => now()->subYears(14),
     ]);
     $document = EligibilityDocument::factory()->create([
         'player_id' => $player->id,
@@ -29,10 +30,77 @@ it('syncs a coach document status change to the eligibility document', function 
     Livewire::actingAs($coach)
         ->test(MyTeam::class)
         ->call('openPlayerDialog', $player->id)
-        ->set('playerDocumentStatus', 'missing')
+        ->set('playerName', 'Updated Player')
+        ->set('playerNumber', '9')
+        ->set('playerPosition', MyTeam::POSITIONS[0])
+        ->set('playerBirthdate', '2012-01-01')
         ->call('savePlayer')
         ->assertHasNoErrors();
 
-    expect($document->fresh()->status)->toBe('missing')
-        ->and($player->fresh()->eligibility_status)->toBe('missing');
+    expect($player->fresh()->consent_status)->toBe('verified')
+        ->and($document->fresh()->status)->toBe('approved');
+});
+
+it('resets document review when the coach changes the birthdate', function () {
+    $coach = User::factory()->create();
+    $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'birthdate' => '2012-01-01',
+        'consent_status' => 'verified',
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+    $document = EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'type' => 'birth_certificate',
+        'status' => 'approved',
+        'reviewed_by' => $coach->id,
+        'reviewed_at' => now(),
+    ]);
+
+    Livewire::actingAs($coach)
+        ->test(MyTeam::class)
+        ->call('openPlayerDialog', $player->id)
+        ->set('playerBirthdate', '2013-01-01')
+        ->call('savePlayer')
+        ->assertHasNoErrors();
+
+    expect($document->fresh()->status)->toBe('pending')
+        ->and($document->fresh()->reviewed_by)->toBeNull()
+        ->and($player->fresh()->eligibility_status)->toBe('pending')
+        ->and($player->fresh()->consent_status)->toBe('verified');
+});
+
+it('rejects a birthdate outside the allowed range', function () {
+    $coach = User::factory()->create();
+    $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'birthdate' => '2012-01-01',
+    ]);
+
+    Livewire::actingAs($coach)
+        ->test(MyTeam::class)
+        ->call('openPlayerDialog', $player->id)
+        ->set('playerBirthdate', '2020-01-01')
+        ->call('savePlayer')
+        ->assertHasErrors(['playerBirthdate']);
+});
+
+it('does not expose consent or document editing in the player dialog', function () {
+    $coach = User::factory()->create();
+    $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'birthdate' => '2012-01-01',
+    ]);
+
+    Livewire::actingAs($coach)
+        ->test(MyTeam::class)
+        ->call('openPlayerDialog', $player->id)
+        ->assertSeeHtml('data-testid="my-player-birthdate"')
+        ->assertDontSeeHtml('data-testid="my-player-consent"')
+        ->assertDontSeeHtml('data-testid="my-player-document"');
 });
