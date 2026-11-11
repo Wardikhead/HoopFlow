@@ -15,19 +15,6 @@ use InvalidArgumentException;
 class SchedulingService
 {
     /**
-     * Prototype round start hours, keyed by the round's size (number of teams).
-     *
-     * @var array<int, int>
-     */
-    private const ROUND_START_HOUR = [
-        32 => 8,
-        16 => 9,
-        8 => 13,
-        4 => 15,
-        2 => 16,
-    ];
-
-    /**
      * Build a schedule plan without writing it to the database.
      *
      * @param  array<string, mixed>  $options
@@ -43,6 +30,7 @@ class SchedulingService
     {
         $matches = MatchModel::query()
             ->where('tournament_id', $tournament->id)
+            ->where('status', 'scheduled')
             ->get()
             ->reject(fn (MatchModel $match): bool => $match->isByeGame())
             ->values();
@@ -53,7 +41,7 @@ class SchedulingService
 
         $hasResults = MatchModel::query()
             ->where('tournament_id', $tournament->id)
-            ->whereIn('status', ['final', 'forfeit'])
+            ->whereIn('status', ['final', 'forfeit', 'in_progress'])
             ->get()
             ->contains(fn (MatchModel $match): bool => ! $match->isByeGame());
 
@@ -84,25 +72,38 @@ class SchedulingService
             : $this->restMinutes($tournament);
 
         $rounds = $matches
-            ->pluck('round_number')
-            ->map(fn ($round): int => (int) $round)
-            ->unique()
-            ->sortDesc()
+            ->groupBy(fn (MatchModel $match): string => $match->stage.'|'.$match->round_number)
+            ->map(function ($group, string $key): array {
+                [$stage, $round] = explode('|', $key);
+
+                return [
+                    'stage' => $stage,
+                    'round' => (int) $round,
+                    'sequence' => $this->roundSequence($stage, (int) $round),
+                    'stage_rank' => $stage === 'winners' ? 0 : 1,
+                    'matches' => $group->sortBy('match_number')->values(),
+                ];
+            })
+            ->sort(function (array $a, array $b): int {
+                return [$a['sequence'], $a['stage_rank'], $a['round']]
+                    <=> [$b['sequence'], $b['stage_rank'], $b['round']];
+            })
             ->values();
+
+        $sequences = $rounds->pluck('sequence')->unique()->sort()->values();
 
         $courtSlots = [];
         $teamTimes = [];
         $assignments = [];
         $baseDate = Carbon::parse($startDate)->startOfDay();
+        $dateRoundCounts = [];
 
-        foreach ($rounds as $roundIndex => $round) {
-            $roundMatches = $matches
-                ->where('round_number', $round)
-                ->sortBy('match_number')
-                ->values();
-
-            $date = $baseDate->copy()->addDays((int) $roundIndex);
-            $baseHour = self::ROUND_START_HOUR[(int) $round] ?? 9;
+        foreach ($rounds as $round) {
+            $roundMatches = $round['matches'];
+            $dateIndex = (int) $sequences->search($round['sequence']);
+            $dateRoundCounts[$dateIndex] = ($dateRoundCounts[$dateIndex] ?? 0) + 1;
+            $date = $baseDate->copy()->addDays($dateIndex);
+            $baseHour = $this->roundStartHour($roundMatches->count()) + (($dateRoundCounts[$dateIndex] - 1) * 3);
 
             foreach ($roundMatches as $index => $match) {
                 $wave = intdiv($index, $courts->count());
@@ -149,6 +150,29 @@ class SchedulingService
             'restMinutes' => $restMinutes,
             'startDate' => $startDate,
         ];
+    }
+
+    protected function roundSequence(string $stage, int $round): int
+    {
+        return match ($stage) {
+            'round_robin' => $round,
+            'winners' => max(1, 2 * $round - 1),
+            'losers' => $round + 1,
+            'grand_final' => 10_000,
+            'reset' => 10_001,
+            default => 10_002 + $round,
+        };
+    }
+
+    protected function roundStartHour(int $matchCount): int
+    {
+        return match (true) {
+            $matchCount >= 16 => 8,
+            $matchCount >= 8 => 9,
+            $matchCount >= 4 => 13,
+            $matchCount >= 2 => 15,
+            default => 16,
+        };
     }
 
     /**
