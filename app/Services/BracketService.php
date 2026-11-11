@@ -120,6 +120,112 @@ class BracketService
         });
     }
 
+    /**
+     * @return array{matches: int, games: int, byes: int}
+     */
+    public function generatePlayoffs(Tournament $tournament): array
+    {
+        if ($tournament->format() !== 'round-robin') {
+            throw new \InvalidArgumentException('Playoffs are only available for round-robin tournaments.');
+        }
+
+        $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+        $playoffTeams = isset($rules['playoff_teams']) && is_numeric($rules['playoff_teams'])
+            ? (int) $rules['playoff_teams']
+            : 0;
+
+        if (! in_array($playoffTeams, [2, 4, 8, 16], true)) {
+            throw new \InvalidArgumentException('Choose 2, 4, 8, or 16 playoff teams.');
+        }
+
+        $divisionIds = $tournament->divisions()->pluck('id');
+        $group = Bracket::whereIn('division_id', $divisionIds)
+            ->where('phase', 'group')
+            ->first();
+
+        if (! $group instanceof Bracket) {
+            throw new \InvalidArgumentException('Generate the round-robin group stage first.');
+        }
+
+        $pending = MatchModel::where('bracket_id', $group->id)
+            ->whereNotIn('status', ['final', 'forfeit', 'cancelled'])
+            ->exists();
+
+        if ($pending) {
+            throw new \InvalidArgumentException('All group games must be final before generating playoffs.');
+        }
+
+        $standings = app(StandingsService::class)->compute($tournament)->take($playoffTeams)->values();
+
+        if ($standings->count() < $playoffTeams) {
+            throw new \InvalidArgumentException('Not enough ranked teams to fill the playoff bracket.');
+        }
+
+        $orderedTeamIds = $standings
+            ->pluck('team_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $division = $tournament->divisions()->first();
+
+        if (! $division instanceof Division) {
+            throw new \InvalidArgumentException('The tournament has no division.');
+        }
+
+        return DB::transaction(function () use ($tournament, $divisionIds, $division, $orderedTeamIds, $playoffTeams, $rules): array {
+            $existing = Bracket::whereIn('division_id', $divisionIds)
+                ->where('phase', 'playoffs')
+                ->get();
+
+            foreach ($existing as $bracket) {
+                $hasResults = MatchModel::where('bracket_id', $bracket->id)
+                    ->whereIn('status', ['final', 'forfeit', 'in_progress'])
+                    ->exists();
+
+                if ($hasResults) {
+                    throw new \InvalidArgumentException('Playoffs already have results; regenerate is not allowed.');
+                }
+
+                $this->deleteMatchesAndSlots(collect([$bracket->id]));
+                $bracket->delete();
+            }
+
+            $bracket = Bracket::create([
+                'division_id' => $division->id,
+                'name' => $tournament->name.' Playoffs',
+                'format' => 'single_elim',
+                'phase' => 'playoffs',
+                'seeding_method' => 'standings',
+                'status' => 'generated',
+                'generated_at' => now(),
+            ]);
+
+            $bestOf = [
+                0 => $this->bestOfRule($rules, 'best_of_final'),
+                1 => $this->bestOfRule($rules, 'best_of_semifinal'),
+                2 => $this->bestOfRule($rules, 'best_of_quarterfinal'),
+            ];
+
+            $plan = (new SingleEliminationBuilder)->build($playoffTeams, $orderedTeamIds, $bestOf);
+            $result = $this->persistPlan($tournament, $bracket, $plan);
+
+            app(AuditLogger::class)->log(
+                'bracket.playoffs',
+                'tournament',
+                $tournament->id,
+                null,
+                [
+                    'teams' => $playoffTeams,
+                    'matches' => $result['matches'],
+                    'games' => $result['games'],
+                ],
+                $tournament->organization_id,
+            );
+
+            return $result;
+        });
+    }
+
     protected function nextMatchId(): int
     {
         if (DB::getDriverName() === 'pgsql') {
