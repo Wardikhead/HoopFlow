@@ -1043,10 +1043,6 @@ class BracketService
                 $game->series_away_wins = $winnerId === $awayTeamId ? 1 : 0;
                 $game->save();
                 $this->propagateMatchResult($game, $winnerId);
-
-                if ($game->bracket instanceof Bracket) {
-                    $this->resolveStructuralByes($game->bracket);
-                }
             }
         } else {
             $anchor = MatchModel::find($game->series_id);
@@ -1054,6 +1050,10 @@ class BracketService
             if ($anchor instanceof MatchModel) {
                 $this->syncSeries($anchor);
             }
+        }
+
+        if ($game->bracket instanceof Bracket) {
+            $this->resolveStructuralByes($game->bracket);
         }
 
         if ($game->series_id === null && $game->stage === 'grand_final') {
