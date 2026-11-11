@@ -102,9 +102,7 @@ it('records an audit entry when a coach registers a team', function () {
             'name' => 'Audit Player '.$number,
             'number' => (string) $number,
             'position' => 'Point Guard (PG)',
-            'age' => '14',
-            'guardianConsent' => true,
-            'documentStatus' => 'pending',
+            'birthdate' => '2012-01-01',
         ];
     }
 
