@@ -92,6 +92,7 @@ it('approve moves a submission to approved', function () {
     Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
         ->test(SubmissionsIndex::class)
         ->call('approve', $registration->id)
+        ->set('approveAnyway', true)
         ->call('confirmApprove')
         ->assertSet('approvingId', null);
 
@@ -221,30 +222,63 @@ it('submissions accepts an approved query filter', function () {
         ->assertSet('status', 'approved');
 });
 
-it('labels coach-declared verified documents as verified in submission detail', function () {
-    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
-    $division = $tournament->divisions()->firstOrFail();
-    $team = Team::factory()->create(['name' => 'No Docs Ballers']);
-    Player::factory()->create([
-        'team_id' => $team->id,
-        'consent_at' => now(),
-        'eligibility_status' => 'verified',
-        'verified_at' => now(),
-    ]);
-    $registration = Registration::factory()->create([
-        'tournament_id' => $tournament->id,
-        'division_id' => $division->id,
-        'team_id' => $team->id,
-        'status' => 'submitted',
-        'submitted_at' => now(),
-    ]);
+it('updates player consent from submissions and audits it', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $player = $registration->team->players()->firstOrFail();
+    $player->update(['consent_status' => 'pending', 'consent_at' => null]);
 
-    $component = Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
-        ->withQueryParams(['q' => 'No Docs Ballers'])
+    Livewire::actingAs($organizer)
         ->test(SubmissionsIndex::class)
-        ->call('openReview', $registration->id);
+        ->call('openReview', $registration->id)
+        ->call('updateConsent', $player->id, 'verified')
+        ->assertHasNoErrors();
 
-    expect($component->html())
-        ->toMatch('/hf-chip--success">\s*<i class="bi bi-patch-check-fill"[^>]*><\/i>Documents/')
-        ->not->toMatch('/hf-chip--danger">\s*<i class="bi bi-file-earmark-x"[^>]*><\/i>(Documents|Missing)/');
+    expect($player->fresh()->consent_status)->toBe('verified')
+        ->and($player->fresh()->consent_at)->not->toBeNull();
+
+    $this->assertDatabaseHas('audit_logs', [
+        'action' => 'player.consent.update',
+        'entity_type' => 'player',
+        'entity_id' => $player->id,
+    ]);
+});
+
+it('updates player document status from submissions and audits it', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $player = $registration->team->players()->firstOrFail();
+    $player->update(['consent_status' => 'verified', 'consent_at' => now()]);
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('openReview', $registration->id)
+        ->call('updateDocument', $player->id, 'approved')
+        ->assertHasNoErrors();
+
+    $document = $player->eligibilityDocuments()
+        ->where('type', 'birth_certificate')
+        ->firstOrFail();
+
+    expect($document->status)->toBe('approved')
+        ->and((int) $document->reviewed_by)->toBe((int) $organizer->id)
+        ->and($player->fresh()->eligibility_status)->toBe('verified');
+
+    $this->assertDatabaseHas('audit_logs', [
+        'action' => 'player.document.review',
+        'entity_type' => 'player',
+        'entity_id' => $player->id,
+    ]);
+});
+
+it('renders inline status controls in the submission detail', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $player = $registration->team->players()->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('openReview', $registration->id)
+        ->assertSeeHtml('data-testid="submission-consent-'.$player->id.'"')
+        ->assertSeeHtml('data-testid="submission-document-'.$player->id.'"');
 });

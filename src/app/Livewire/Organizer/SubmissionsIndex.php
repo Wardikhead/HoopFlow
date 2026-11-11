@@ -2,9 +2,14 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Models\EligibilityDocument;
+use App\Models\Player;
 use App\Models\Registration;
+use App\Models\Team;
 use App\Models\Tournament;
+use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\EligibilityService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -30,6 +35,8 @@ class SubmissionsIndex extends Component
     public ?int $reviewingId = null;
 
     public ?int $approvingId = null;
+
+    public bool $approveAnyway = false;
 
     public ?int $rejectingId = null;
 
@@ -65,8 +72,10 @@ class SubmissionsIndex extends Component
     public function approve(int $registrationId): void
     {
         $this->approvingId = $registrationId;
+        $this->approveAnyway = false;
         $this->reviewingId = null;
         $this->rejectingId = null;
+        $this->resetValidation();
     }
 
     public function confirmApprove(): void
@@ -75,13 +84,23 @@ class SubmissionsIndex extends Component
             return;
         }
 
+        if ($this->approvalIssues($this->approvingId) !== [] && ! $this->approveAnyway) {
+            $this->addError('approveAnyway', 'Confirm the override before approving an incomplete team.');
+
+            return;
+        }
+
         $this->doApprove($this->approvingId);
         $this->approvingId = null;
+        $this->approveAnyway = false;
+        $this->resetValidation();
     }
 
     public function cancelApprove(): void
     {
         $this->approvingId = null;
+        $this->approveAnyway = false;
+        $this->resetValidation();
     }
 
     public function reject(int $registrationId): void
@@ -126,6 +145,133 @@ class SubmissionsIndex extends Component
         $this->tournament = 'all';
     }
 
+    public function updateConsent(int $playerId, string $status): void
+    {
+        if (! in_array($status, ['pending', 'verified', 'missing'], true)) {
+            return;
+        }
+
+        $registration = $this->reviewingRegistration();
+
+        if (! $registration instanceof Registration
+            || ! in_array($registration->status, ['submitted', 'approved'], true)) {
+            return;
+        }
+
+        $player = $registration->team?->players->firstWhere('id', $playerId);
+
+        if (! $player instanceof Player) {
+            return;
+        }
+
+        $actor = auth()->user();
+        $actor = $actor instanceof User ? $actor : null;
+        $before = ['consent_status' => $player->consent_status];
+
+        app(EligibilityService::class)->recordConsent($player, $status, $actor);
+        app(AuditLogger::class)->log(
+            'player.consent.update',
+            'player',
+            $player->id,
+            $before,
+            ['consent_status' => $status],
+            $registration->team?->organization_id,
+            $actor?->id,
+        );
+
+        unset($this->registrations);
+        $this->dispatch('hf-toast', title: 'Consent updated', message: 'The player consent status is now '.$status.'.', tone: 'success');
+    }
+
+    public function updateDocument(int $playerId, string $status): void
+    {
+        if (! in_array($status, ['pending', 'approved', 'missing'], true)) {
+            return;
+        }
+
+        $registration = $this->reviewingRegistration();
+
+        if (! $registration instanceof Registration
+            || ! in_array($registration->status, ['submitted', 'approved'], true)) {
+            return;
+        }
+
+        $player = $registration->team?->players->firstWhere('id', $playerId);
+
+        if (! $player instanceof Player) {
+            return;
+        }
+
+        $actor = auth()->user();
+        $actor = $actor instanceof User ? $actor : null;
+        $document = $player->eligibilityDocuments
+            ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
+        $before = ['status' => $document?->status ?? 'pending'];
+
+        app(EligibilityService::class)->reviewDocument($player, $status, $actor);
+        app(AuditLogger::class)->log(
+            'player.document.review',
+            'player',
+            $player->id,
+            $before,
+            ['status' => $status],
+            $registration->team?->organization_id,
+            $actor?->id,
+        );
+
+        unset($this->registrations);
+        $this->dispatch('hf-toast', title: 'Document updated', message: 'The document status is now '.$status.'.', tone: 'success');
+    }
+
+    /**
+     * @return array<int, array{name: string, consent: string, document: string}>
+     */
+    public function approvalIssues(int $registrationId): array
+    {
+        $registration = Registration::query()
+            ->with(['team.players.eligibilityDocuments'])
+            ->find($registrationId);
+
+        $team = $registration?->team;
+
+        if (! $team instanceof Team) {
+            return [];
+        }
+
+        return $team->players
+            ->filter(function (Player $player): bool {
+                $document = $player->eligibilityDocuments
+                    ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
+
+                return $player->consent_status !== 'verified'
+                    || ! $document instanceof EligibilityDocument
+                    || $document->status !== 'approved';
+            })
+            ->map(function (Player $player): array {
+                $document = $player->eligibilityDocuments
+                    ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
+
+                return [
+                    'name' => trim($player->first_name.' '.$player->last_name),
+                    'consent' => $player->consent_status,
+                    'document' => $document?->status ?? 'pending',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    protected function reviewingRegistration(): ?Registration
+    {
+        if ($this->reviewingId === null) {
+            return null;
+        }
+
+        return Registration::query()
+            ->with(['team.players.eligibilityDocuments'])
+            ->find($this->reviewingId);
+    }
+
     protected function doApprove(int $registrationId): void
     {
         $registration = Registration::query()->find($registrationId);
@@ -136,6 +282,7 @@ class SubmissionsIndex extends Component
 
         $registration->update([
             'status' => 'approved',
+            'roster_locked_at' => now(),
             'decided_by' => auth()->id(),
             'decided_at' => now(),
         ]);
@@ -149,6 +296,7 @@ class SubmissionsIndex extends Component
             $registration->team?->organization_id,
         );
 
+        unset($this->registrations, $this->kpis);
         $this->dispatch('hf-toast', title: 'Team approved', message: 'The team is eligible for seeding and its roster locks for the coach.', tone: 'success');
     }
 
@@ -176,6 +324,7 @@ class SubmissionsIndex extends Component
             $registration->team?->organization_id,
         );
 
+        unset($this->registrations, $this->kpis);
         $this->dispatch('hf-toast', title: 'Team rejected', message: 'The reason is shown to the coach and written to the audit log.', tone: 'success');
     }
 
@@ -241,7 +390,9 @@ class SubmissionsIndex extends Component
             return null;
         }
 
-        return Registration::query()->find((int) $id);
+        return Registration::query()
+            ->with(['team.players.eligibilityDocuments', 'tournament', 'division', 'payment'])
+            ->find((int) $id);
     }
 
     public function render(): View

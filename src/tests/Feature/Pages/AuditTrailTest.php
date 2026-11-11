@@ -136,6 +136,7 @@ it('records an audit entry when a submission is approved', function () {
     Livewire::actingAs($organizer)
         ->test(SubmissionsIndex::class)
         ->call('approve', $registration->id)
+        ->set('approveAnyway', true)
         ->call('confirmApprove');
 
     $log = AuditLog::where('action', 'team.approve')->latest('id')->firstOrFail();
