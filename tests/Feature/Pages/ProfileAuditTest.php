@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Organizer\AuditLogIndex;
+use App\Models\AuditLog;
+use App\Models\MatchModel;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,4 +120,35 @@ it('audit initializes filters from the query string', function () {
         ->get('/audit?entity=tournament')
         ->assertOk()
         ->assertSee('3 of 8 entries');
+});
+
+it('labels box score corrections in the audit timeline', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $match = MatchModel::where('status', 'final')->firstOrFail();
+
+    AuditLog::create([
+        'id' => (int) (AuditLog::max('id') ?? 0) + 1,
+        'organization_id' => $match->tournament?->organization_id,
+        'actor_user_id' => $organizer->id,
+        'action' => 'stats.correct',
+        'entity_type' => 'match',
+        'entity_id' => $match->id,
+        'before_json' => ['quarters' => ['team1' => [20, 20, 19, 19], 'team2' => [18, 18, 17, 17]]],
+        'after_json' => [
+            'quarters' => ['team1' => [20, 20, 20, 20], 'team2' => [18, 18, 17, 17]],
+            'finals' => ['team1' => 80, 'team2' => 70],
+            'players' => 20,
+            'reason' => 'Referee review changed the home total.',
+        ],
+        'ip' => null,
+        'user_agent' => null,
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($organizer)
+        ->get('/audit')
+        ->assertOk()
+        ->assertSee('Box score corrected')
+        ->assertSee('Corrected the')
+        ->assertSee('box score');
 });
