@@ -38,6 +38,9 @@
         $paymentStatus = $this->paymentStatusText();
         $reviewPending = in_array($status, ['submitted', 'pending'], true);
         $fee = $this->entryFee;
+        $ageService = app(\App\Services\EligibilityService::class);
+        $division = $this->division;
+        $ageRange = $ageService->ageRange($division);
         $paymentDetail = $paymentStatus.' · '.($payment?->method ?: 'No method').($payment?->reference_no ? ' · '.$payment->reference_no : '');
         $timeline = [
             [
@@ -201,7 +204,7 @@
                                         <th scope="col">#</th>
                                         <th scope="col">Player</th>
                                         <th scope="col">Position</th>
-                                        <th scope="col">Age</th>
+                                        <th scope="col">Age at start</th>
                                         <th scope="col">Consent</th>
                                         <th scope="col">Documents</th>
                                         @unless ($locked)
@@ -216,7 +219,7 @@
                                             <td>{{ $player->jersey_number }}</td>
                                             <td><strong>{{ $playerName }}</strong></td>
                                             <td>{{ $player->position }}</td>
-                                            <td>{{ $player->birthdate?->age ?? '—' }}</td>
+                                            <td>{{ $ageService->ageAtTournamentStart($player->birthdate, $tournament) ?? '—' }}</td>
                                             <td><x-status-chip :status="$player->consent_status" /></td>
                                             <td><x-status-chip :status="app(\App\Services\EligibilityService::class)->documentStatusForPlayer($player)" /></td>
                                             @unless ($locked)
@@ -409,6 +412,17 @@
                                     data-testid="my-player-birthdate"
                                 >
                                 @error('playerBirthdate') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                <p class="hf-help" data-testid="my-player-age-range">
+                                    @if ($division)
+                                        Eligible age {{ $ageRange['min'] }}–{{ $ageRange['max'] }} at tournament start
+                                        @if ($tournament?->start_date)
+                                            ({{ $tournament->start_date->format('M j, Y') }})
+                                        @endif
+                                        .
+                                    @else
+                                        No division is assigned yet. Contact the organizer before adding players.
+                                    @endif
+                                </p>
                             </div>
                         </div>
                     </div>

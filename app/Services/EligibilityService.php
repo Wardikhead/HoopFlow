@@ -6,8 +6,11 @@ use App\Models\Division;
 use App\Models\EligibilityDocument;
 use App\Models\Player;
 use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use InvalidArgumentException;
 
 class EligibilityService
@@ -28,6 +31,62 @@ class EligibilityService
     public const DOCUMENT_TYPE = 'birth_certificate';
 
     public const COACH_DECLARED_FILE_URL = 'coach-declared';
+
+    /**
+     * @return array{min: int, max: int}
+     */
+    public function ageRange(?Division $division): array
+    {
+        if (! $division instanceof Division) {
+            return ['min' => 8, 'max' => 99];
+        }
+
+        return [
+            'min' => $division->age_min ?? 8,
+            'max' => $division->age_max ?? 99,
+        ];
+    }
+
+    public function ageAtTournamentStart(DateTimeInterface|string|null $birthdate, ?Tournament $tournament): ?int
+    {
+        if ($birthdate === null || $birthdate === '') {
+            return null;
+        }
+
+        $date = $birthdate instanceof DateTimeInterface
+            ? CarbonImmutable::instance($birthdate)
+            : CarbonImmutable::parse($birthdate);
+
+        $reference = $tournament?->start_date !== null
+            ? CarbonImmutable::instance($tournament->start_date)
+            : CarbonImmutable::today();
+
+        return (int) $date->diff($reference)->y;
+    }
+
+    public function ageIssue(
+        DateTimeInterface|string|null $birthdate,
+        ?Division $division,
+        ?Tournament $tournament,
+    ): ?string {
+        $age = $this->ageAtTournamentStart($birthdate, $tournament);
+
+        if ($age === null) {
+            return 'Birthdate is missing.';
+        }
+
+        $range = $this->ageRange($division);
+
+        if ($age < $range['min'] || $age > $range['max']) {
+            $divisionName = $division?->name;
+
+            return $divisionName !== null
+                ? "Age {$age} at tournament start is outside the {$range['min']}–{$range['max']} range for {$divisionName}."
+                : "Age {$age} at tournament start is outside the {$range['min']}–{$range['max']} range.";
+        }
+
+        return null;
+    }
 
     public function initializePlayer(Player $player): void
     {

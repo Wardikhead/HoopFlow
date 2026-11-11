@@ -222,3 +222,22 @@ it('validatePlayer returns empty for valid input', function () {
 
     expect($errors)->toBeEmpty();
 });
+
+it('treats a division without age limits as open', function () {
+    $division = Division::factory()->create([
+        'name' => 'Open',
+        'age_min' => null,
+        'age_max' => null,
+    ]);
+    $tournament = $division->tournament;
+    $birthdate = $tournament->start_date->copy()->subYears(30)->format('Y-m-d');
+
+    $service = new EligibilityService;
+
+    expect($service->ageRange($division))->toBe(['min' => 8, 'max' => 99])
+        ->and($service->ageIssue($birthdate, $division, $tournament))->toBeNull();
+});
+
+it('treats a missing division as open age-wise', function () {
+    expect((new EligibilityService)->ageRange(null))->toBe(['min' => 8, 'max' => 99]);
+});
