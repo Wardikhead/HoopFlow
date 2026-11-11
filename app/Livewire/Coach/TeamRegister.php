@@ -158,13 +158,13 @@ class TeamRegister extends Component
     #[Computed]
     public function divisionAgeMin(): int
     {
-        return $this->division?->age_min ?? 8;
+        return $this->division->age_min ?? 8;
     }
 
     #[Computed]
     public function divisionAgeMax(): int
     {
-        return $this->division?->age_max ?? 99;
+        return $this->division->age_max ?? 99;
     }
 
     #[Computed]
@@ -204,7 +204,7 @@ class TeamRegister extends Component
 
     protected function demoBirthdate(int $age): string
     {
-        $reference = $this->tournament?->start_date ?? now();
+        $reference = $this->tournament->start_date ?? now();
 
         return $reference->copy()->subYears($age)->format('Y-m-d');
     }
@@ -215,7 +215,7 @@ class TeamRegister extends Component
             return '—';
         }
 
-        $reference = $this->tournament?->start_date ?? now();
+        $reference = $this->tournament->start_date ?? now();
 
         return (int) Carbon::parse($birthdate)->diffInYears($reference);
     }

@@ -175,7 +175,7 @@ class SubmissionsIndex extends Component
             $player->id,
             $before,
             ['consent_status' => $status],
-            $registration->team?->organization_id,
+            $registration->team->organization_id,
             $actor?->id,
         );
 
@@ -206,7 +206,7 @@ class SubmissionsIndex extends Component
         $actor = $actor instanceof User ? $actor : null;
         $document = $player->eligibilityDocuments
             ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
-        $before = ['status' => $document?->status ?? 'pending'];
+        $before = ['status' => $document->status ?? 'pending'];
 
         app(EligibilityService::class)->reviewDocument($player, $status, $actor);
         app(AuditLogger::class)->log(
@@ -215,7 +215,7 @@ class SubmissionsIndex extends Component
             $player->id,
             $before,
             ['status' => $status],
-            $registration->team?->organization_id,
+            $registration->team->organization_id,
             $actor?->id,
         );
 
@@ -254,7 +254,7 @@ class SubmissionsIndex extends Component
                 return [
                     'name' => trim($player->first_name.' '.$player->last_name),
                     'consent' => $player->consent_status,
-                    'document' => $document?->status ?? 'pending',
+                    'document' => $document->status ?? 'pending',
                 ];
             })
             ->values()
@@ -293,7 +293,7 @@ class SubmissionsIndex extends Component
             $registration->team_id,
             ['status' => 'submitted'],
             ['status' => 'approved'],
-            $registration->team?->organization_id,
+            $registration->team->organization_id,
         );
 
         unset($this->registrations, $this->kpis);
@@ -321,7 +321,7 @@ class SubmissionsIndex extends Component
             $registration->team_id,
             ['status' => 'submitted'],
             ['status' => 'rejected', 'reason' => $reason],
-            $registration->team?->organization_id,
+            $registration->team->organization_id,
         );
 
         unset($this->registrations, $this->kpis);

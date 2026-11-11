@@ -3,10 +3,7 @@
 use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\Payment;
-use App\Models\Player;
 use App\Models\Registration;
-use App\Models\Team;
-use App\Models\Tournament;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
