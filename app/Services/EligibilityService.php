@@ -6,7 +6,9 @@ use App\Models\Division;
 use App\Models\EligibilityDocument;
 use App\Models\Player;
 use App\Models\Team;
+use App\Models\User;
 use Carbon\Carbon;
+use InvalidArgumentException;
 
 class EligibilityService
 {
@@ -27,60 +29,107 @@ class EligibilityService
 
     public const COACH_DECLARED_FILE_URL = 'coach-declared';
 
-    public function refresh(Team $team): void
+    public function initializePlayer(Player $player): void
     {
-        $team->loadMissing('players.eligibilityDocuments');
+        $player->update([
+            'consent_status' => 'pending',
+            'consent_at' => null,
+            'consent_recorded_by' => null,
+            'consent_recorded_at' => null,
+        ]);
 
-        foreach ($team->players as $player) {
-            $documentsComplete = $this->documentsCompleteFor($player);
-
-            $consentComplete = $player->consent_at !== null;
-
-            if ($documentsComplete && $consentComplete) {
-                $player->eligibility_status = 'verified';
-                if ($player->verified_at === null) {
-                    $player->verified_at = now();
-                }
-            } else {
-                $player->eligibility_status = 'pending';
-                $player->verified_at = null;
-            }
-
-            $player->save();
-        }
-    }
-
-    /**
-     * Keep the coach's document choice and the eligibility document rows in sync.
-     */
-    public function syncDocumentStatus(Player $player, string $documentStatus): void
-    {
-        $status = match ($documentStatus) {
-            'verified' => 'approved',
-            'missing' => 'missing',
-            default => 'pending',
-        };
-
-        $document = $player->eligibilityDocuments()
-            ->where('type', self::DOCUMENT_TYPE)
-            ->first();
+        $document = $this->documentFor($player);
 
         if ($document === null) {
             $document = new EligibilityDocument;
             $document->player_id = $player->id;
             $document->type = self::DOCUMENT_TYPE;
-            $document->file_url = self::COACH_DECLARED_FILE_URL;
         }
 
-        if ($document->status !== $status) {
-            $document->reviewed_by = null;
-            $document->reviewed_at = null;
+        $document->file_url = null;
+        $document->status = 'pending';
+        $document->reviewed_by = null;
+        $document->reviewed_at = null;
+        $document->save();
+
+        $this->recalculate($player);
+    }
+
+    public function recordConsent(Player $player, string $status, ?User $actor = null): void
+    {
+        $this->assertStatus($status, ['pending', 'verified', 'missing']);
+
+        $player->update([
+            'consent_status' => $status,
+            'consent_at' => $status === 'verified' ? now() : null,
+            'consent_recorded_by' => $actor?->id,
+            'consent_recorded_at' => now(),
+        ]);
+
+        $this->recalculate($player, $actor);
+    }
+
+    public function reviewDocument(Player $player, string $status, ?User $actor = null): void
+    {
+        $this->assertStatus($status, ['pending', 'approved', 'missing']);
+
+        $document = $this->documentFor($player);
+
+        if ($document === null) {
+            $document = new EligibilityDocument;
+            $document->player_id = $player->id;
+            $document->type = self::DOCUMENT_TYPE;
+            $document->file_url = null;
         }
 
         $document->status = $status;
+        $document->reviewed_by = $status === 'approved' ? $actor?->id : null;
+        $document->reviewed_at = $status === 'approved' ? now() : null;
         $document->save();
 
-        $player->unsetRelation('eligibilityDocuments');
+        $this->recalculate($player, $actor);
+    }
+
+    public function resetDocumentReview(Player $player): void
+    {
+        $this->reviewDocument($player, 'pending');
+    }
+
+    public function recalculate(Player $player, ?User $actor = null): void
+    {
+        $document = $this->documentFor($player);
+
+        $status = match (true) {
+            $player->consent_status === 'verified' && $document?->status === 'approved' => 'verified',
+            $player->consent_status === 'missing' || $document?->status === 'missing' => 'missing',
+            default => 'pending',
+        };
+
+        $player->eligibility_status = $status;
+
+        if ($status === 'verified') {
+            if ($player->verified_at === null) {
+                $player->verified_at = $document?->reviewed_at ?? now();
+            }
+
+            if ($player->verified_by === null) {
+                $player->verified_by = $document?->reviewed_by ?? $actor?->id;
+            }
+        } else {
+            $player->verified_by = null;
+            $player->verified_at = null;
+        }
+
+        $player->save();
+    }
+
+    public function refresh(Team $team): void
+    {
+        $team->load('players.eligibilityDocuments');
+
+        foreach ($team->players as $player) {
+            $this->recalculate($player);
+        }
     }
 
     /**
@@ -88,25 +137,13 @@ class EligibilityService
      */
     public function documentStatusForPlayer(Player $player): string
     {
-        $documents = $player->eligibilityDocuments;
+        $document = $this->documentFor($player);
 
-        if ($documents->isEmpty()) {
-            return match ($player->eligibility_status) {
-                'verified' => 'verified',
-                'pending' => 'pending',
-                default => 'missing',
-            };
-        }
-
-        if ($documents->every(fn (EligibilityDocument $document): bool => $document->status === 'approved')) {
-            return 'verified';
-        }
-
-        if ($documents->contains(fn (EligibilityDocument $document): bool => $document->status === 'pending')) {
-            return 'pending';
-        }
-
-        return 'missing';
+        return match ($document?->status) {
+            'approved' => 'verified',
+            'missing' => 'missing',
+            default => 'pending',
+        };
     }
 
     /**
@@ -114,7 +151,7 @@ class EligibilityService
      */
     public function status(Team $team): array
     {
-        $team->loadMissing('players.eligibilityDocuments');
+        $team->load('players.eligibilityDocuments');
 
         $players = $team->players;
 
@@ -122,17 +159,13 @@ class EligibilityService
             && $players->every(fn (Player $player): bool => $this->documentsCompleteFor($player));
 
         $consentComplete = $players->every(
-            fn (Player $player): bool => $player->consent_at !== null
+            fn (Player $player): bool => $player->consent_status === 'verified'
         );
 
         $verifiedAt = null;
 
         if ($players->isNotEmpty() && $documentsComplete && $consentComplete) {
-            $verifiedAt = $players->max('verified_at');
-
-            if ($verifiedAt === null) {
-                $verifiedAt = now();
-            }
+            $verifiedAt = $players->max('verified_at') ?? now();
         }
 
         return [
@@ -142,17 +175,29 @@ class EligibilityService
         ];
     }
 
+    private function documentFor(Player $player): ?EligibilityDocument
+    {
+        return $player->eligibilityDocuments()
+            ->where('type', self::DOCUMENT_TYPE)
+            ->first();
+    }
+
     private function documentsCompleteFor(Player $player): bool
     {
-        $documents = $player->eligibilityDocuments;
+        $document = $player->eligibilityDocuments
+            ->firstWhere('type', self::DOCUMENT_TYPE);
 
-        if ($documents->isEmpty()) {
-            return $player->eligibility_status === 'verified';
+        return $document instanceof EligibilityDocument && $document->status === 'approved';
+    }
+
+    /**
+     * @param  array<int, string>  $allowed
+     */
+    private function assertStatus(string $status, array $allowed): void
+    {
+        if (! in_array($status, $allowed, true)) {
+            throw new InvalidArgumentException("Unsupported eligibility status [{$status}].");
         }
-
-        return $documents->every(
-            fn (EligibilityDocument $document): bool => $document->status === 'approved'
-        );
     }
 
     /**
