@@ -4,146 +4,187 @@ use App\Models\Division;
 use App\Models\EligibilityDocument;
 use App\Models\Player;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\EligibilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('refresh marks players verified when docs approved and consent present', function () {
+it('initializes a player with pending consent and a pending birth certificate', function () {
     $team = Team::factory()->create();
     $player = Player::factory()->create([
         'team_id' => $team->id,
+        'consent_status' => 'verified',
         'consent_at' => now(),
-        'eligibility_status' => 'pending',
-    ]);
-    EligibilityDocument::factory()->create([
-        'player_id' => $player->id,
-        'status' => 'approved',
     ]);
 
-    $service = new EligibilityService;
-    $service->refresh($team);
+    (new EligibilityService)->initializePlayer($player);
 
-    expect($player->fresh()->eligibility_status)->toBe('verified');
+    $player->refresh();
+
+    expect($player->consent_status)->toBe('pending')
+        ->and($player->consent_at)->toBeNull()
+        ->and($player->eligibility_status)->toBe('pending')
+        ->and($player->eligibilityDocuments()
+            ->where('type', 'birth_certificate')
+            ->where('status', 'pending')
+            ->count())->toBe(1);
 });
 
-it('refresh marks players pending when consent missing', function () {
-    $team = Team::factory()->create();
+it('records verified consent with actor metadata', function () {
+    $organizer = User::factory()->create();
     $player = Player::factory()->create([
-        'team_id' => $team->id,
+        'consent_status' => 'pending',
         'consent_at' => null,
-        'eligibility_status' => 'verified',
-    ]);
-    EligibilityDocument::factory()->create([
-        'player_id' => $player->id,
-        'status' => 'approved',
     ]);
 
-    $service = new EligibilityService;
-    $service->refresh($team);
+    (new EligibilityService)->recordConsent($player, 'verified', $organizer);
 
-    expect($player->fresh()->eligibility_status)->toBe('pending');
+    $player->refresh();
+
+    expect($player->consent_status)->toBe('verified')
+        ->and($player->consent_at)->not->toBeNull()
+        ->and((int) $player->consent_recorded_by)->toBe((int) $organizer->id)
+        ->and($player->consent_recorded_at)->not->toBeNull();
 });
 
-it('status returns documentsComplete/consentComplete/verifiedAt', function () {
-    $team = Team::factory()->create();
+it('records missing consent and clears the consent timestamp', function () {
+    $organizer = User::factory()->create();
     $player = Player::factory()->create([
-        'team_id' => $team->id,
+        'consent_status' => 'verified',
         'consent_at' => now(),
-        'eligibility_status' => 'verified',
-        'verified_at' => now(),
-    ]);
-    EligibilityDocument::factory()->create([
-        'player_id' => $player->id,
-        'status' => 'approved',
     ]);
 
-    $service = new EligibilityService;
-    $result = $service->status($team);
+    (new EligibilityService)->recordConsent($player, 'missing', $organizer);
 
-    expect($result['documentsComplete'])->toBeTrue();
-    expect($result['consentComplete'])->toBeTrue();
-    expect($result['verifiedAt'])->not->toBeNull();
+    expect($player->fresh()->consent_status)->toBe('missing')
+        ->and($player->fresh()->consent_at)->toBeNull()
+        ->and($player->fresh()->eligibility_status)->toBe('missing');
 });
 
-it('status trusts a coach-verified player when no document rows exist', function () {
-    $team = Team::factory()->create();
-    Player::factory()->create([
-        'team_id' => $team->id,
-        'consent_at' => now(),
-        'eligibility_status' => 'verified',
-        'verified_at' => now(),
-    ]);
-
-    $service = new EligibilityService;
-    $result = $service->status($team);
-
-    expect($result['documentsComplete'])->toBeTrue();
-});
-
-it('status trusts a coach-verified player when existing document rows are approved', function () {
-    $team = Team::factory()->create();
+it('reviews a document as approved and records the reviewer', function () {
+    $organizer = User::factory()->create();
     $player = Player::factory()->create([
-        'team_id' => $team->id,
+        'consent_status' => 'verified',
         'consent_at' => now(),
-        'eligibility_status' => 'verified',
-        'verified_at' => now(),
-    ]);
-    EligibilityDocument::factory()->create([
-        'player_id' => $player->id,
-        'status' => 'approved',
     ]);
 
-    $service = new EligibilityService;
-    $result = $service->status($team);
+    (new EligibilityService)->reviewDocument($player, 'approved', $organizer);
 
-    expect($result['documentsComplete'])->toBeTrue();
+    $document = $player->eligibilityDocuments()
+        ->where('type', 'birth_certificate')
+        ->firstOrFail();
+
+    expect($document->status)->toBe('approved')
+        ->and((int) $document->reviewed_by)->toBe((int) $organizer->id)
+        ->and($document->reviewed_at)->not->toBeNull()
+        ->and($player->fresh()->eligibility_status)->toBe('verified');
 });
 
-it('status does not trust a verified player when an existing document row is not approved', function () {
-    $team = Team::factory()->create();
+it('resets document review to pending and clears reviewer metadata', function () {
+    $organizer = User::factory()->create();
     $player = Player::factory()->create([
-        'team_id' => $team->id,
+        'consent_status' => 'verified',
         'consent_at' => now(),
-        'eligibility_status' => 'verified',
-        'verified_at' => now(),
     ]);
-    EligibilityDocument::factory()->create([
-        'player_id' => $player->id,
-        'status' => 'pending',
-    ]);
-
-    $service = new EligibilityService;
-    $result = $service->status($team);
-
-    expect($result['documentsComplete'])->toBeFalse();
-});
-
-it('resolves a player document chip from the document rows', function () {
-    $team = Team::factory()->create();
-    $player = Player::factory()->create([
-        'team_id' => $team->id,
-        'eligibility_status' => 'verified',
-    ]);
-
-    $service = new EligibilityService;
-
-    expect($service->documentStatusForPlayer($player))->toBe('verified');
-
     $document = EligibilityDocument::factory()->create([
         'player_id' => $player->id,
-        'status' => 'pending',
+        'type' => 'birth_certificate',
+        'status' => 'approved',
+        'reviewed_by' => $organizer->id,
+        'reviewed_at' => now(),
     ]);
-    $player->unsetRelation('eligibilityDocuments');
-    expect($service->documentStatusForPlayer($player))->toBe('pending');
 
-    $document->update(['status' => 'missing']);
-    $player->unsetRelation('eligibilityDocuments');
-    expect($service->documentStatusForPlayer($player))->toBe('missing');
+    (new EligibilityService)->resetDocumentReview($player);
 
-    $document->update(['status' => 'approved']);
-    $player->unsetRelation('eligibilityDocuments');
-    expect($service->documentStatusForPlayer($player))->toBe('verified');
+    $document->refresh();
+
+    expect($document->status)->toBe('pending')
+        ->and($document->reviewed_by)->toBeNull()
+        ->and($document->reviewed_at)->toBeNull()
+        ->and($player->fresh()->eligibility_status)->toBe('pending');
+});
+
+it('recalculates verified only when consent and the document are both approved', function () {
+    $player = Player::factory()->create([
+        'consent_status' => 'verified',
+        'consent_at' => now(),
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'type' => 'birth_certificate',
+        'status' => 'approved',
+    ]);
+
+    (new EligibilityService)->recalculate($player);
+
+    expect($player->fresh()->eligibility_status)->toBe('verified')
+        ->and($player->fresh()->verified_at)->not->toBeNull();
+});
+
+it('recalculates pending when consent is still pending', function () {
+    $player = Player::factory()->create([
+        'consent_status' => 'pending',
+        'consent_at' => null,
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'type' => 'birth_certificate',
+        'status' => 'approved',
+    ]);
+
+    (new EligibilityService)->recalculate($player);
+
+    expect($player->fresh()->eligibility_status)->toBe('pending')
+        ->and($player->fresh()->verified_at)->toBeNull();
+});
+
+it('recalculates missing when the document is missing', function () {
+    $player = Player::factory()->create([
+        'consent_status' => 'verified',
+        'consent_at' => now(),
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'type' => 'birth_certificate',
+        'status' => 'missing',
+    ]);
+
+    (new EligibilityService)->recalculate($player);
+
+    expect($player->fresh()->eligibility_status)->toBe('missing');
+});
+
+it('status reads consent and document state from the new columns', function () {
+    $team = Team::factory()->create();
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'consent_status' => 'verified',
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+        'verified_at' => now(),
+    ]);
+    EligibilityDocument::factory()->create([
+        'player_id' => $player->id,
+        'type' => 'birth_certificate',
+        'status' => 'approved',
+    ]);
+
+    $result = (new EligibilityService)->status($team);
+
+    expect($result['documentsComplete'])->toBeTrue()
+        ->and($result['consentComplete'])->toBeTrue()
+        ->and($result['verifiedAt'])->not->toBeNull();
+});
+
+it('treats a player without a document row as pending', function () {
+    $player = Player::factory()->create([
+        'consent_status' => 'verified',
+        'consent_at' => now(),
+        'eligibility_status' => 'verified',
+    ]);
+
+    expect((new EligibilityService)->documentStatusForPlayer($player))->toBe('pending');
 });
 
 it('validatePlayer returns errors for invalid input', function () {
