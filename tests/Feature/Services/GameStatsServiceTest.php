@@ -198,3 +198,122 @@ it('rejects mutations on a final match', function () {
 
     app(GameStatsService::class)->saveDraft($match, gssPayload($match));
 })->throws(InvalidArgumentException::class, 'This result is already final. Use correction to change it.');
+
+function gssEditableFinal(): MatchModel
+{
+    $match = gssMatch(8, 3);
+    app(GameStatsService::class)->publish($match, gssPayload($match));
+
+    return $match->refresh();
+}
+
+it('corrects a final result and box score together', function () {
+    $match = gssEditableFinal();
+    $service = app(GameStatsService::class);
+    $next = MatchModel::where('round_number', 4)->where('match_number', 2)->firstOrFail();
+
+    $service->correct($match, gssPayload($match, [
+        'quarters' => ['team1' => [7, 8, 8, 7], 'team2' => [9, 9, 9, 8]],
+        'finals' => ['team1' => 30, 'team2' => 35],
+    ]), 'Official review changed the winner.');
+
+    $match->refresh();
+    $next->refresh();
+
+    expect($match->status)->toBe('final')
+        ->and((int) $match->home_score)->toBe(30)
+        ->and((int) $match->away_score)->toBe(35)
+        ->and((int) $match->winner_team_id)->toBe((int) $match->away_team_id)
+        ->and($match->quarters_json)->toBe(['team1' => [7, 8, 8, 7], 'team2' => [9, 9, 9, 8]])
+        ->and($next->home_team_id)->toBe((int) $match->away_team_id);
+
+    expect(AuditLog::where('action', 'score.correct')->where('entity_id', $match->id)->exists())->toBeTrue()
+        ->and(AuditLog::where('action', 'stats.correct')->where('entity_id', $match->id)->exists())->toBeTrue();
+
+    $log = AuditLog::where('action', 'stats.correct')
+        ->where('entity_id', $match->id)
+        ->latest('id')
+        ->firstOrFail();
+
+    expect($log->after_json['reason'] ?? null)->toBe('Official review changed the winner.')
+        ->and($log->after_json['finals'] ?? null)->toBe(['team1' => 30, 'team2' => 35]);
+});
+
+it('loads overtime rows that are missing from the quarters json', function () {
+    $match = gssEditableFinal();
+    $playerId = gssPlayerId($match, 'team1');
+
+    PlayerStatQuarter::query()->create([
+        'match_id' => $match->id,
+        'player_id' => $playerId,
+        'team_id' => $match->home_team_id,
+        'quarter_index' => 4,
+        'field_goals_made' => 1,
+        'field_goals_attempted' => 1,
+        'free_throws_made' => 0,
+        'points' => 2,
+    ]);
+
+    $service = app(GameStatsService::class);
+    $loaded = $service->load($match->refresh());
+
+    expect($loaded['quarters']['team1'])->toHaveCount(5)
+        ->and($loaded['stats']['team1'][$playerId]['quarters'])->toHaveCount(5)
+        ->and($loaded['stats']['team1'][$playerId]['quarters'][4]['fgm'])->toBe(1);
+
+    $service->correct($match, $loaded, 'Overtime row retained.');
+
+    expect(PlayerStatQuarter::where('match_id', $match->id)
+        ->where('player_id', $playerId)
+        ->where('quarter_index', 4)
+        ->exists())->toBeTrue();
+});
+
+it('rejects a correction when the match is not final', function () {
+    $match = gssMatch(8, 3);
+
+    app(GameStatsService::class)->correct($match, gssPayload($match), 'A valid correction reason.');
+})->throws(InvalidArgumentException::class, 'Only a final result can be corrected.');
+
+it('rejects a correction with a short reason', function () {
+    $match = gssEditableFinal();
+
+    app(GameStatsService::class)->correct($match, gssPayload($match), 'oops');
+})->throws(InvalidArgumentException::class, 'Enter at least 5 characters for the correction reason.');
+
+it('rejects a correction when finals do not equal the quarter sums', function () {
+    $match = gssEditableFinal();
+
+    app(GameStatsService::class)->correct($match, gssPayload($match, [
+        'finals' => ['team1' => 41, 'team2' => 32],
+    ]), 'A valid correction reason.');
+})->throws(InvalidArgumentException::class, 'Final score must equal the sum of the quarters.');
+
+it('rejects a tied correction', function () {
+    $match = gssEditableFinal();
+
+    app(GameStatsService::class)->correct($match, gssPayload($match, [
+        'quarters' => ['team1' => [10, 10, 10, 10], 'team2' => [10, 10, 10, 10]],
+        'finals' => ['team1' => 40, 'team2' => 40],
+    ]), 'A valid correction reason.');
+})->throws(InvalidArgumentException::class, 'Elimination games cannot end in a tie.');
+
+it('does not write a failed correction', function () {
+    $match = gssEditableFinal();
+    $beforeScore = (int) $match->home_score;
+    $beforeQuarters = $match->quarters_json;
+
+    try {
+        app(GameStatsService::class)->correct($match, gssPayload($match, [
+            'finals' => ['team1' => 41, 'team2' => 32],
+        ]), 'A valid correction reason.');
+    } catch (InvalidArgumentException) {
+        // Expected.
+    }
+
+    $match->refresh();
+
+    expect((int) $match->home_score)->toBe($beforeScore)
+        ->and($match->quarters_json)->toBe($beforeQuarters)
+        ->and(AuditLog::where('action', 'stats.correct')->where('entity_id', $match->id)->exists())->toBeFalse();
+});
