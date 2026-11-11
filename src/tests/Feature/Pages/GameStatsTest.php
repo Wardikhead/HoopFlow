@@ -372,7 +372,7 @@ it('rejects tied scores and short correction reasons', function () {
         ->assertSet('showConfirm', false);
 });
 
-it('shows per-player quarter details, the draft label, and the in-game link', function () {
+it('shows the period nav for a draft box score and not the old quarter accordions', function () {
     $match = gsMatch(8, 3);
     $loaded = app(GameStatsService::class)->load($match);
     $playerId = (int) array_key_first($loaded['stats']['team1']);
@@ -388,8 +388,21 @@ it('shows per-player quarter details, the draft label, and the in-game link', fu
         ->assertOk()
         ->assertSee('Draft box score')
         ->assertSeeHtml('data-testid="stats-in-game"')
-        ->assertSeeHtml('data-testid="stats-player-quarters-team1-'.$playerId.'"')
-        ->assertSee('— by quarter');
+        ->assertSeeHtml('data-testid="stats-period-nav"')
+        ->assertSeeHtml('data-testid="stats-period-0"')
+        ->assertSeeHtml('data-testid="stats-period-3"')
+        ->assertDontSeeHtml('data-testid="stats-player-quarters-team1-'.$playerId.'"');
+});
+
+it('shows only the all period when player quarter stats were not recorded', function () {
+    $match = gsMatch(8, 1);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-period-all"')
+        ->assertDontSeeHtml('data-testid="stats-period-0"')
+        ->assertSee('Per-quarter player stats were not recorded for this game.');
 });
 
 it('opens the correction dialog from the correct query flag', function () {
