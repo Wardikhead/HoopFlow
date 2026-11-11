@@ -78,6 +78,15 @@
             </div>
         </header>
 
+        @if ($correctionMode)
+            <div class="hf-card hf-card--flat hf-mb-3" data-testid="ingame-correction-banner">
+                <div class="hf-between hf-wrap">
+                    <span class="hf-chip hf-chip--gold"><i class="bi bi-arrow-repeat"></i> Correction mode</span>
+                </div>
+                <p class="hf-small hf-mt-1 hf-mb-0">You are editing a recorded result. A reason is required, and changes are written to the audit trail.</p>
+            </div>
+        @endif
+
         @if (! $teamsReady)
             <div class="hf-empty" data-testid="ingame-teams-pending">
                 <i class="bi bi-hourglass-split" aria-hidden="true"></i>
@@ -97,7 +106,11 @@
                 </div>
                 <div class="hf-btn-row hf-mt-2">
                     <a class="hf-btn hf-btn--primary" href="{{ route('gameStats', ['match' => $match->id]) }}" data-testid="ingame-view-stats">View box score</a>
-                    <a class="hf-btn hf-btn--danger" href="{{ route('gameStats', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                    @if ($this->hasEditableBoxScore)
+                        <a class="hf-btn hf-btn--danger" href="{{ route('gameManage', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                    @else
+                        <a class="hf-btn hf-btn--danger" href="{{ route('gameStats', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                    @endif
                     <a class="hf-btn" href="{{ route('gameManage') }}">Change match</a>
                 </div>
             </section>
@@ -138,6 +151,21 @@
                         <p class="hf-small hf-mt-1 hf-mb-1">Running total: <strong>{{ array_sum($this->quarters[$panel['side']]) }}</strong></p>
                         <label class="hf-label" for="ingameFinal{{ $panel['side'] }}">Final score</label>
                         <input class="hf-input" id="ingameFinal{{ $panel['side'] }}" type="number" min="0" max="199" wire:model.live="finals.{{ $panel['side'] }}" data-testid="ingame-final-{{ $panel['side'] }}">
+                        @if ($correctionMode)
+                            @php
+                                $playerPoints = $this->statPointsForSide($panel['side']);
+                                $finalPoints = (int) $this->finals[$panel['side']];
+                            @endphp
+                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-mismatch-{{ $panel['side'] }}">
+                                @if ($playerPoints === $finalPoints)
+                                    Player points match the final score
+                                @elseif ($playerPoints < $finalPoints)
+                                    Player points {{ $playerPoints }} · Final {{ $finalPoints }} · {{ $finalPoints - $playerPoints }} unassigned
+                                @else
+                                    Player points {{ $playerPoints }} · Final {{ $finalPoints }} · {{ $playerPoints - $finalPoints }} above the final score
+                                @endif
+                            </p>
+                        @endif
                     </section>
                 @endforeach
             </div>
@@ -228,10 +256,24 @@
                 @if ($errorMessage !== '')
                     <p class="hf-field-error hf-mb-2" data-testid="ingame-error">{{ $errorMessage }}</p>
                 @endif
+                @if ($correctionMode)
+                    <div class="hf-field hf-mb-2">
+                        <label class="hf-label" for="ingameCorrectionReason">Correction reason</label>
+                        <textarea class="hf-textarea" id="ingameCorrectionReason" rows="3" placeholder="Why is this result being corrected?" wire:model.blur="correctionReason" data-testid="ingame-correction-reason"></textarea>
+                        @error('correctionReason')
+                            <p class="hf-field-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endif
                 <div class="hf-btn-row">
-                    <button type="button" class="hf-btn" wire:click="saveDraft" wire:loading.attr="disabled" data-testid="ingame-save"><i class="bi bi-save"></i> Save</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestPublish" wire:loading.attr="disabled" data-testid="ingame-publish"><i class="bi bi-check2-circle"></i> Publish result</button>
-                    <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id]) }}" data-testid="ingame-cancel">Cancel</a>
+                    @if ($correctionMode)
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestSaveCorrection" wire:loading.attr="disabled" data-testid="ingame-save-correction"><i class="bi bi-check2-circle"></i> Save correction</button>
+                        <button type="button" class="hf-btn" wire:click="cancelCorrection" data-testid="ingame-cancel-correction">Cancel correction</button>
+                    @else
+                        <button type="button" class="hf-btn" wire:click="saveDraft" wire:loading.attr="disabled" data-testid="ingame-save"><i class="bi bi-save"></i> Save</button>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestPublish" wire:loading.attr="disabled" data-testid="ingame-publish"><i class="bi bi-check2-circle"></i> Publish result</button>
+                        <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id]) }}" data-testid="ingame-cancel">Cancel</a>
+                    @endif
                 </div>
             </section>
         @endif
