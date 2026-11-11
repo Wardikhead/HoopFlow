@@ -7,15 +7,20 @@ use App\Models\Bracket;
 use App\Models\BracketSlot;
 use App\Models\Division;
 use App\Models\MatchModel;
+use App\Models\MatchSlot;
 use App\Models\Registration;
 use App\Models\Tournament;
+use App\Services\Bracket\BracketPlan;
+use App\Services\Bracket\DoubleEliminationBuilder;
+use App\Services\Bracket\RoundRobinBuilder;
+use App\Services\Bracket\SingleEliminationBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BracketService
 {
     /**
-     * @return array{matches: int, byes: int}
+     * @return array{matches: int, games: int, byes: int}
      */
     public function generate(Tournament $tournament, string $format = 'single-elimination'): array
     {
@@ -31,7 +36,15 @@ class BracketService
             throw new \InvalidArgumentException('At least two approved teams are required.');
         }
 
+        $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+        $slots = isset($rules['slots']) && is_numeric($rules['slots']) ? (int) $rules['slots'] : null;
+
+        if ($slots !== null && $registrations->count() > $slots) {
+            throw new \InvalidArgumentException('Approved teams exceed the configured slots.');
+        }
+
         $division = $tournament->divisions()->first();
+
         if (! $division instanceof Division) {
             $division = Division::create([
                 'tournament_id' => $tournament->id,
@@ -39,10 +52,15 @@ class BracketService
             ]);
         }
 
-        return DB::transaction(function () use ($tournament, $format, $registrations, $division): array {
-            MatchModel::where('tournament_id', $tournament->id)->delete();
+        return DB::transaction(function () use ($tournament, $format, $registrations, $division, $rules, $slots): array {
+            $this->deleteBracketData($tournament, $format);
 
-            $approved = $registrations->sortBy(fn (Registration $registration): int => $registration->seed ?? 999)->values();
+            $ordered = $registrations
+                ->sortBy(fn (Registration $registration): int => $registration->seed ?? 999)
+                ->values()
+                ->pluck('team_id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
 
             $bracket = Bracket::create([
                 'division_id' => $division->id,
@@ -52,18 +70,36 @@ class BracketService
                     'double-elimination' => 'double_elim',
                     default => 'round_robin',
                 },
+                'phase' => $format === 'round-robin' ? 'group' : 'main',
                 'seeding_method' => 'manual',
                 'status' => 'generated',
                 'generated_at' => now(),
             ]);
 
-            if ($format === 'single-elimination') {
-                $result = $this->generateSingleElimination($tournament, $bracket, $approved);
-            } elseif ($format === 'double-elimination') {
-                $result = $this->generateDoubleElimination($tournament, $bracket, $approved);
-            } else {
-                $result = $this->generateRoundRobin($tournament, $bracket, $approved);
-            }
+            $bestOf = [
+                0 => $this->bestOfRule($rules, 'best_of_final'),
+                1 => $this->bestOfRule($rules, 'best_of_semifinal'),
+                2 => $this->bestOfRule($rules, 'best_of_quarterfinal'),
+            ];
+
+            $plan = match ($format) {
+                'single-elimination' => (new SingleEliminationBuilder)->build(
+                    $this->bracketSize($slots, count($ordered), [2, 4, 8, 16, 32]),
+                    $ordered,
+                    $bestOf,
+                ),
+                'double-elimination' => (new DoubleEliminationBuilder)->build(
+                    $this->bracketSize($slots, count($ordered), [4, 8, 16, 32]),
+                    $ordered,
+                    $bestOf,
+                ),
+                default => (new RoundRobinBuilder)->build(
+                    $ordered,
+                    $this->roundRobinLegs($rules),
+                ),
+            };
+
+            $result = $this->persistPlan($tournament, $bracket, $plan);
 
             app(AuditLogger::class)->log(
                 'bracket.generate',
@@ -74,6 +110,7 @@ class BracketService
                     'teams' => $registrations->count(),
                     'byes' => $result['byes'],
                     'matches' => $result['matches'],
+                    'games' => $result['games'],
                 ],
                 $tournament->organization_id,
             );
@@ -82,718 +119,480 @@ class BracketService
         });
     }
 
-    /**
-     * @param  Collection<int, Registration>  $approved
-     * @return array{matches: int, byes: int}
-     */
-    protected function generateSingleElimination(Tournament $tournament, Bracket $bracket, $approved): array
+    protected function nextMatchId(): int
     {
-        /** @var mixed $rawRules */
-        $rawRules = $tournament->rules_json;
-        /** @var array<string, mixed> $rules */
-        $rules = is_array($rawRules) ? $rawRules : [];
-        $size = $rules['slots'] ?? null;
-
-        if ($size === null) {
-            $count = $approved->count();
-            $size = 1;
-            while ($size < $count) {
-                $size *= 2;
-            }
-            if ($size < 2) {
-                $size = 2;
-            }
+        if (DB::getDriverName() === 'pgsql') {
+            return (int) DB::selectOne("select nextval('matches_id_seq') as v")->v;
         }
 
-        $size = (int) $size;
+        return (int) (MatchModel::max('id') ?? 0) + 1;
+    }
 
-        if (! in_array($size, [2, 4, 8, 16, 32], true)) {
-            throw new \InvalidArgumentException('Bracket size must be 2, 4, 8, 16, or 32.');
-        }
-
-        $ordered = $approved->values()->all();
-        usort($ordered, fn (Registration $a, Registration $b): int => ($a->seed ?? 999) <=> ($b->seed ?? 999));
-
-        $orderedSlots = [];
-        foreach ($this->seedOrder($size) as $seedNumber) {
-            $orderedSlots[] = $ordered[$seedNumber - 1] ?? null;
-        }
-
-        $roundSizes = [];
-        for ($roundSize = $size; $roundSize >= 2; $roundSize = (int) ($roundSize / 2)) {
-            $roundSizes[] = $roundSize;
-        }
-
-        $labels = [
-            2 => 'Championship Final',
-            4 => 'Semifinals',
-            8 => 'Quarterfinals',
-            16 => 'Round of 16',
-            32 => 'Round of 32',
-        ];
-
-        /** @var array<int, array<int, MatchModel>> $byRound */
-        $byRound = [];
-        $nextId = (int) (MatchModel::max('id') ?? 0);
-
-        foreach ($roundSizes as $roundIndex => $roundSize) {
-            $nextRoundSize = $roundSizes[$roundIndex + 1] ?? null;
-            $count = (int) ($roundSize / 2);
-            $roundMatches = [];
-
-            for ($slot = 1; $slot <= $count; $slot++) {
-                $match = new MatchModel([
-                    'bracket_id' => $bracket->id,
-                    'tournament_id' => $tournament->id,
-                    'round_number' => $roundSize,
-                    'match_number' => $slot,
-                    'home_team_id' => null,
-                    'away_team_id' => null,
-                    'home_score' => null,
-                    'away_score' => null,
-                    'winner_team_id' => null,
-                    'status' => 'scheduled',
-                    'completed_at' => null,
-                    'forfeit_reason' => null,
-                ]);
-                $match->id = ++$nextId;
-                $match->save();
-                $roundMatches[] = $match;
+    /**
+     * @param  list<int>  $allowed
+     */
+    protected function bracketSize(?int $slots, int $teamCount, array $allowed): int
+    {
+        if ($slots !== null) {
+            if (! in_array($slots, $allowed, true)) {
+                throw new \InvalidArgumentException('Bracket size must be '.implode(', ', $allowed).'.');
             }
 
-            $byRound[$roundSize] = $roundMatches;
+            return $slots;
         }
 
-        $firstRoundSize = $size;
-        $firstRound = $byRound[$firstRoundSize];
+        $size = 2;
 
-        foreach ($orderedSlots as $index => $registration) {
-            $match = $firstRound[(int) floor($index / 2)];
-            $teamId = $registration instanceof Registration ? $registration->team_id : null;
-            if ($index % 2 === 0) {
-                $match->home_team_id = $teamId;
-            } else {
-                $match->away_team_id = $teamId;
-            }
+        while ($size < $teamCount) {
+            $size *= 2;
+        }
+
+        if (! in_array($size, $allowed, true)) {
+            throw new \InvalidArgumentException('Bracket size must be '.implode(', ', $allowed).'.');
+        }
+
+        return $size;
+    }
+
+    /**
+     * Infer the bracket size from the rows that are already persisted.
+     *
+     * Single elimination numbers rounds by bracket size (16, 8, 4, 2), while
+     * double elimination numbers winners rounds 1..k. Counting the first winners
+     * round works for both, and the max round number is the legacy fallback.
+     */
+    protected function existingBracketSize(Bracket $bracket): int
+    {
+        $firstRoundCount = MatchModel::where('bracket_id', $bracket->id)
+            ->where('stage', 'winners')
+            ->whereNull('series_id')
+            ->where('round_number', 1)
+            ->count();
+
+        if ($firstRoundCount > 0) {
+            return $firstRoundCount * 2;
+        }
+
+        return (int) MatchModel::where('bracket_id', $bracket->id)
+            ->where('stage', 'winners')
+            ->whereNull('series_id')
+            ->max('round_number');
+    }
+
+    /**
+     * Keep the existing bracket size when editing slots so a 16-slot bracket does
+     * not shrink to 8 slots just because only five teams are approved.
+     *
+     * Call this before deleting the old matches; it reads the persisted rows.
+     *
+     * @param  list<int>  $allowed
+     */
+    protected function updateBracketSize(Bracket $bracket, int $teamCount, array $allowed): int
+    {
+        $existing = $this->existingBracketSize($bracket);
+
+        $size = in_array($existing, $allowed, true)
+            ? $existing
+            : $this->bracketSize(null, $teamCount, $allowed);
+
+        if ($teamCount > $size) {
+            throw new \InvalidArgumentException('Approved teams exceed the configured slots.');
+        }
+
+        return $size;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rules
+     */
+    protected function bestOfRule(array $rules, string $key): int
+    {
+        $value = $rules[$key] ?? 1;
+
+        return is_numeric($value) && in_array((int) $value, [1, 3, 5, 7, 9], true)
+            ? (int) $value
+            : 1;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rules
+     */
+    protected function roundRobinLegs(array $rules): int
+    {
+        $value = $rules['round_robin_legs'] ?? 1;
+
+        return is_numeric($value) && (int) $value >= 1 && (int) $value <= 10
+            ? (int) $value
+            : 1;
+    }
+
+    /**
+     * @return array{matches: int, games: int, byes: int}
+     */
+    protected function persistPlan(Tournament $tournament, Bracket $bracket, BracketPlan $plan): array
+    {
+        $anchors = [];
+        $games = 0;
+
+        $makeMatch = function (array $attributes): MatchModel {
+            $match = new MatchModel($attributes);
+            $match->id = $this->nextMatchId();
             $match->save();
-        }
 
-        $byes = 0;
+            return $match;
+        };
 
-        foreach ($firstRound as $slotIndex => $match) {
-            $isBye = false;
-            if ($match->home_team_id && ! $match->away_team_id) {
-                $isBye = true;
-                $match->status = 'final';
-                $match->winner_team_id = $match->home_team_id;
-            }
-            if (! $match->home_team_id && $match->away_team_id) {
-                $isBye = true;
-                $match->status = 'final';
-                $match->winner_team_id = $match->away_team_id;
-            }
-            if ($isBye) {
-                $byes++;
-                $match->save();
-            }
-
-            if (! $match->winner_team_id) {
-                continue;
-            }
-
-            $nextRoundSize = (int) ($firstRoundSize / 2);
-            if ($nextRoundSize < 2 || ! isset($byRound[$nextRoundSize])) {
-                continue;
-            }
-
-            $nextMatch = $byRound[$nextRoundSize][(int) floor($slotIndex / 2)];
-            $nextSlot = ($slotIndex % 2 === 0) ? 1 : 2;
-            if ($nextSlot === 1) {
-                $nextMatch->home_team_id = $match->winner_team_id;
-            } else {
-                $nextMatch->away_team_id = $match->winner_team_id;
-            }
-            $nextMatch->save();
-        }
-
-        // Resolve structural byes in later rounds where the missing-side feeder
-        // has no real team (so no future opponent can appear).
-        $changed = true;
-        while ($changed) {
-            $changed = false;
-            foreach ($roundSizes as $roundSize) {
-                if ($roundSize === $firstRoundSize) {
-                    continue;
-                }
-                $prevRoundSize = $roundSize * 2;
-                if (! isset($byRound[$prevRoundSize])) {
-                    continue;
-                }
-                foreach ($byRound[$roundSize] as $match) {
-                    if (in_array($match->status, ['final', 'forfeit'], true)) {
-                        continue;
-                    }
-
-                    $missingHome = $match->home_team_id === null && $match->away_team_id !== null;
-                    $missingAway = $match->away_team_id === null && $match->home_team_id !== null;
-                    if (! $missingHome && ! $missingAway) {
-                        continue;
-                    }
-
-                    $feederIndex = $missingHome
-                        ? ($match->match_number * 2 - 2)
-                        : ($match->match_number * 2 - 1);
-                    $feeder = $byRound[$prevRoundSize][$feederIndex] ?? null;
-                    if (! $feeder instanceof MatchModel) {
-                        continue;
-                    }
-                    if ($feeder->home_team_id !== null || $feeder->away_team_id !== null) {
-                        continue;
-                    }
-
-                    $winnerId = $missingHome ? $match->away_team_id : $match->home_team_id;
-
-                    $match->status = 'final';
-                    $match->winner_team_id = $winnerId;
-                    $match->save();
-                    $byes++;
-                    $changed = true;
-
-                    $nextRoundSize = (int) ($roundSize / 2);
-                    if ($nextRoundSize >= 2 && isset($byRound[$nextRoundSize])) {
-                        $nextMatchNumber = (int) ceil($match->match_number / 2);
-                        $nextMatch = $byRound[$nextRoundSize][$nextMatchNumber - 1] ?? null;
-                        if ($nextMatch instanceof MatchModel) {
-                            if ($match->match_number % 2 !== 0) {
-                                $nextMatch->home_team_id = $winnerId;
-                            } else {
-                                $nextMatch->away_team_id = $winnerId;
-                            }
-                            $nextMatch->save();
-                        }
-                    }
-                }
-            }
-        }
-
-        // Create bracket slots.
-        foreach ($roundSizes as $roundIndex => $roundSize) {
-            $roundMatches = $byRound[$roundSize];
-            $previousRoundSize = $roundSize * 2;
-            $previousRound = $byRound[$previousRoundSize] ?? null;
-
-            foreach ($roundMatches as $matchIndex => $match) {
-                $homeSourceMatch = null;
-                $awaySourceMatch = null;
-                if (is_array($previousRound)) {
-                    $homeSourceMatch = $previousRound[$matchIndex * 2] ?? null;
-                    $awaySourceMatch = $previousRound[$matchIndex * 2 + 1] ?? null;
-                }
-
-                $isFirstRound = $roundSize === $firstRoundSize;
-
-                BracketSlot::create([
-                    'bracket_id' => $bracket->id,
-                    'round_number' => $roundSize,
-                    'match_number' => $match->match_number,
-                    'slot' => 'home',
-                    'source_type' => $isFirstRound ? 'seed' : 'winner',
-                    'source_match_id' => $homeSourceMatch instanceof MatchModel ? $homeSourceMatch->id : null,
-                    'source_outcome' => $isFirstRound ? null : 'winner',
-                    'team_id' => $match->home_team_id,
-                ]);
-
-                BracketSlot::create([
-                    'bracket_id' => $bracket->id,
-                    'round_number' => $roundSize,
-                    'match_number' => $match->match_number,
-                    'slot' => 'away',
-                    'source_type' => $isFirstRound ? 'seed' : 'winner',
-                    'source_match_id' => $awaySourceMatch instanceof MatchModel ? $awaySourceMatch->id : null,
-                    'source_outcome' => $isFirstRound ? null : 'winner',
-                    'team_id' => $match->away_team_id,
-                ]);
-            }
-        }
-
-        $matchCount = MatchModel::where('bracket_id', $bracket->id)->count();
-
-        return ['matches' => $matchCount, 'byes' => $byes];
-    }
-
-    /**
-     * @param  Collection<int, Registration>  $approved
-     * @return array{matches: int, byes: int}
-     */
-    protected function generateRoundRobin(Tournament $tournament, Bracket $bracket, $approved): array
-    {
-        /** @var mixed $rawRules */
-        $rawRules = $tournament->rules_json;
-        /** @var array<string, mixed> $rules */
-        $rules = is_array($rawRules) ? $rawRules : [];
-        $size = $rules['slots'] ?? null;
-
-        $ordered = $approved->values()->all();
-        usort($ordered, fn (Registration $a, Registration $b): int => ($a->seed ?? 999) <=> ($b->seed ?? 999));
-
-        $teams = $ordered;
-        $arr = $teams;
-        if (count($arr) % 2 !== 0) {
-            $arr[] = null;
-        }
-        $n = count($arr);
-
-        if ($size === null) {
-            $size = $approved->count();
-        }
-        $size = (int) $size;
-        if ($size < 2 || $size > 16) {
-            throw new \InvalidArgumentException('Round robin requires 2 to 16 teams.');
-        }
-
-        $rounds = [];
-        for ($r = 0; $r < $n - 1; $r++) {
-            $round = [];
-            for ($i = 0; $i < (int) ($n / 2); $i++) {
-                $round[] = [$arr[$i], $arr[$n - 1 - $i]];
-            }
-            $rounds[] = $round;
-            $last = array_pop($arr);
-            array_splice($arr, 1, 0, [$last]);
-        }
-
-        $nextId = (int) (MatchModel::max('id') ?? 0);
-        $byes = 0;
-
-        foreach ($rounds as $ri => $round) {
-            $roundNum = $ri + 1;
-            foreach ($round as $slot => $pair) {
-                [$a, $b] = $pair;
-                $teamA = $a instanceof Registration ? $a->team_id : null;
-                $teamB = $b instanceof Registration ? $b->team_id : null;
-
-                $match = new MatchModel([
-                    'bracket_id' => $bracket->id,
-                    'tournament_id' => $tournament->id,
-                    'round_number' => $roundNum,
-                    'match_number' => $slot + 1,
-                    'home_team_id' => $teamA,
-                    'away_team_id' => $teamB,
-                    'home_score' => null,
-                    'away_score' => null,
-                    'winner_team_id' => null,
-                    'status' => 'scheduled',
-                    'completed_at' => null,
-                    'forfeit_reason' => null,
-                ]);
-
-                if ($teamA && ! $teamB) {
-                    $match->status = 'final';
-                    $match->winner_team_id = $teamA;
-                }
-                if (! $teamA && $teamB) {
-                    $match->status = 'final';
-                    $match->winner_team_id = $teamB;
-                }
-
-                $match->id = ++$nextId;
-                $match->save();
-
-                BracketSlot::create([
-                    'bracket_id' => $bracket->id,
-                    'round_number' => $roundNum,
-                    'match_number' => $match->match_number,
-                    'slot' => 'home',
-                    'source_type' => 'seed',
-                    'source_match_id' => null,
-                    'source_outcome' => null,
-                    'team_id' => $teamA,
-                ]);
-
-                BracketSlot::create([
-                    'bracket_id' => $bracket->id,
-                    'round_number' => $roundNum,
-                    'match_number' => $match->match_number,
-                    'slot' => 'away',
-                    'source_type' => 'seed',
-                    'source_match_id' => null,
-                    'source_outcome' => null,
-                    'team_id' => $teamB,
-                ]);
-            }
-        }
-
-        $matchCount = MatchModel::where('bracket_id', $bracket->id)->count();
-
-        return ['matches' => $matchCount, 'byes' => 0];
-    }
-
-    /**
-     * @param  Collection<int, Registration>  $approved
-     * @return array{matches: int, byes: int}
-     */
-    protected function generateDoubleElimination(Tournament $tournament, Bracket $bracket, $approved): array
-    {
-        /** @var mixed $rawRules */
-        $rawRules = $tournament->rules_json;
-        /** @var array<string, mixed> $rules */
-        $rules = is_array($rawRules) ? $rawRules : [];
-        $size = $rules['slots'] ?? null;
-
-        if ($size === null) {
-            $count = $approved->count();
-            $size = 1;
-            while ($size < $count) {
-                $size *= 2;
-            }
-            if ($size < 2) {
-                $size = 2;
-            }
-        }
-
-        $size = (int) $size;
-
-        if (! in_array($size, [2, 4, 8, 16, 32], true)) {
-            throw new \InvalidArgumentException('Bracket size must be 2, 4, 8, 16, or 32.');
-        }
-        if ($size < 4) {
-            throw new \InvalidArgumentException('Double elimination requires at least 4 slots.');
-        }
-
-        $ordered = $approved->values()->all();
-        usort($ordered, fn (Registration $a, Registration $b): int => ($a->seed ?? 999) <=> ($b->seed ?? 999));
-
-        $orderedSlots = [];
-        foreach ($this->seedOrder($size) as $seedNumber) {
-            $orderedSlots[] = $ordered[$seedNumber - 1] ?? null;
-        }
-
-        $nextId = (int) (MatchModel::max('id') ?? 0);
-        $allMatches = [];
-
-        $makeMatch = function (int $roundNumber, int $slot, string $roundCode, string $bracketType) use (&$nextId, $tournament, $bracket, &$allMatches): MatchModel {
-            $match = new MatchModel([
+        foreach ($plan->matchups as $matchup) {
+            $anchor = $makeMatch([
                 'bracket_id' => $bracket->id,
                 'tournament_id' => $tournament->id,
-                'round_number' => $roundNumber,
-                'match_number' => $slot,
+                'stage' => $matchup->stage,
+                'round_number' => $matchup->roundNumber,
+                'match_number' => $matchup->matchNumber,
+                'series_id' => null,
+                'game_number' => 1,
+                'best_of' => $matchup->bestOf,
+                'series_home_wins' => 0,
+                'series_away_wins' => 0,
+                'series_winner_team_id' => null,
+                'game_winner_team_id' => null,
                 'home_team_id' => null,
                 'away_team_id' => null,
                 'home_score' => null,
                 'away_score' => null,
                 'winner_team_id' => null,
-                'status' => 'scheduled',
+                'status' => $matchup->stage === 'reset' ? 'conditional' : 'scheduled',
                 'completed_at' => null,
                 'forfeit_reason' => null,
             ]);
-            $match->id = ++$nextId;
-            $match->isBye = false;
-            $match->nextMatchId = null;
-            $match->nextSlot = null;
-            $match->loserMatchId = null;
-            $match->loserSlot = null;
-            $allMatches[] = $match;
 
-            return $match;
-        };
+            $anchors[$matchup->key()] = $anchor;
+            $games++;
 
-        // WB R1
-        $wbR1 = [];
-        for ($slot = 1; $slot <= (int) ($size / 2); $slot++) {
-            $wbR1[] = $makeMatch($size, $slot, 'W1', 'winners');
-        }
-        foreach ($orderedSlots as $index => $registration) {
-            $match = $wbR1[(int) floor($index / 2)];
-            $teamId = $registration instanceof Registration ? $registration->team_id : null;
-            if ($index % 2 === 0) {
-                $match->home_team_id = $teamId;
-            } else {
-                $match->away_team_id = $teamId;
-            }
-        }
-        foreach ($wbR1 as $match) {
-            if ($match->home_team_id && ! $match->away_team_id) {
-                $match->isBye = true;
-                $match->status = 'final';
-                $match->winner_team_id = $match->home_team_id;
-            }
-            if (! $match->home_team_id && $match->away_team_id) {
-                $match->isBye = true;
-                $match->status = 'final';
-                $match->winner_team_id = $match->away_team_id;
+            for ($gameNumber = 2; $gameNumber <= $matchup->bestOf; $gameNumber++) {
+                $makeMatch([
+                    'bracket_id' => $bracket->id,
+                    'tournament_id' => $tournament->id,
+                    'stage' => $matchup->stage,
+                    'round_number' => $matchup->roundNumber,
+                    'match_number' => $matchup->matchNumber,
+                    'series_id' => $anchor->id,
+                    'game_number' => $gameNumber,
+                    'best_of' => $matchup->bestOf,
+                    'series_home_wins' => 0,
+                    'series_away_wins' => 0,
+                    'series_winner_team_id' => null,
+                    'game_winner_team_id' => null,
+                    'home_team_id' => null,
+                    'away_team_id' => null,
+                    'home_score' => null,
+                    'away_score' => null,
+                    'winner_team_id' => null,
+                    'status' => 'conditional',
+                    'completed_at' => null,
+                    'forfeit_reason' => null,
+                ]);
+                $games++;
             }
         }
-        $wbRounds = [$wbR1];
 
-        // Additional WB rounds
-        $wbRoundSize = (int) ($size / 2);
-        $wbRoundNum = 2;
-        while ($wbRoundSize >= 2) {
-            $count = (int) ($wbRoundSize / 2);
-            $round = [];
-            for ($slot = 1; $slot <= $count; $slot++) {
-                $round[] = $makeMatch($wbRoundSize, $slot, 'W'.$wbRoundNum, 'winners');
-            }
-            $prevRound = $wbRounds[count($wbRounds) - 1];
-            foreach ($prevRound as $idx => $m) {
-                $nextSlot = (int) floor($idx / 2) + 1;
-                $nextMatch = $round[$nextSlot - 1] ?? null;
-                if ($nextMatch) {
-                    $m->nextMatchId = $nextMatch->id;
-                    $m->nextSlot = ($idx % 2 === 0) ? 1 : 2;
+        foreach ($plan->matchups as $matchup) {
+            $anchor = $anchors[$matchup->key()];
+
+            foreach (['home' => $matchup->home, 'away' => $matchup->away] as $slot => $source) {
+                $sourceMatchId = null;
+                $outcome = null;
+
+                if ($source->type !== 'seed') {
+                    $sourceMatchId = $anchors[(string) $source->key()]->id;
+                    $outcome = $source->type;
                 }
-            }
-            $wbRounds[] = $round;
-            $wbRoundSize = (int) ($wbRoundSize / 2);
-            $wbRoundNum++;
-        }
 
-        $wbFinal = $wbRounds[count($wbRounds) - 1][0];
-        $wbSemi = count($wbRounds) >= 2 ? $wbRounds[count($wbRounds) - 2] : null;
-
-        // Losers bracket
-        $lbRounds = [];
-        $lbSeq = 1;
-        $lbRoundNumber = function () use (&$lbSeq): int {
-            return 1000 + $lbSeq++;
-        };
-
-        // LB R1
-        $lbR1Count = max(1, (int) floor(count($wbRounds[0]) / 2));
-        $lbR1 = [];
-        for ($slot = 1; $slot <= $lbR1Count; $slot++) {
-            $lbR1[] = $makeMatch($lbRoundNumber(), $slot, 'L1', 'losers');
-        }
-        foreach ($wbRounds[0] as $idx => $m) {
-            $lbMatch = $lbR1[(int) floor($idx / 2)] ?? null;
-            if ($lbMatch) {
-                $m->loserMatchId = $lbMatch->id;
-                $m->loserSlot = ($idx % 2 === 0) ? 1 : 2;
-            }
-        }
-        $lbRounds[] = $lbR1;
-
-        if (count($wbRounds) >= 2) {
-            $lbR2Count = count($lbR1);
-            $lbR2 = [];
-            for ($slot = 1; $slot <= $lbR2Count; $slot++) {
-                $lbR2[] = $makeMatch($lbRoundNumber(), $slot, 'L2', 'losers');
-            }
-            foreach ($lbR1 as $idx => $m) {
-                $lbMatch = $lbR2[(int) floor($idx / 2)] ?? ($lbR2[$idx] ?? null);
-                if ($lbMatch) {
-                    $m->nextMatchId = $lbMatch->id;
-                    $m->nextSlot = ($idx % 2 === 0) ? 1 : 2;
-                }
-            }
-            if ($wbSemi) {
-                foreach ($wbSemi as $idx => $m) {
-                    $lbMatch = $lbR2[$idx % count($lbR2)] ?? null;
-                    if ($lbMatch && ! $m->loserMatchId) {
-                        $m->loserMatchId = $lbMatch->id;
-                        $m->loserSlot = $lbMatch->home_team_id ? 2 : 1;
-                    }
-                }
-            }
-            $lbRounds[] = $lbR2;
-
-            if (count($lbR2) > 1) {
-                $lbR3Count = max(1, (int) floor(count($lbR2) / 2));
-                $lbR3 = [];
-                for ($slot = 1; $slot <= $lbR3Count; $slot++) {
-                    $lbR3[] = $makeMatch($lbRoundNumber(), $slot, 'L3', 'losers');
-                }
-                foreach ($lbR2 as $idx => $m) {
-                    $lbMatch = $lbR3[(int) floor($idx / 2)] ?? null;
-                    if ($lbMatch) {
-                        $m->nextMatchId = $lbMatch->id;
-                        $m->nextSlot = ($idx % 2 === 0) ? 1 : 2;
-                    }
-                }
-                $lbRounds[] = $lbR3;
-
-                if (count($wbRounds) >= 3) {
-                    $lbR4Count = count($lbR3);
-                    $lbR4 = [];
-                    for ($slot = 1; $slot <= $lbR4Count; $slot++) {
-                        $lbR4[] = $makeMatch($lbRoundNumber(), $slot, 'L4', 'losers');
-                    }
-                    foreach ($lbR3 as $idx => $m) {
-                        $lbMatch = $lbR4[$idx % count($lbR4)] ?? null;
-                        if ($lbMatch) {
-                            $m->nextMatchId = $lbMatch->id;
-                            $m->nextSlot = ($idx % 2 === 0) ? 1 : 2;
-                        }
-                    }
-                    $wbFinal->loserMatchId = $lbR4[0]->id;
-                    $wbFinal->loserSlot = 1;
-                    $lbRounds[] = $lbR4;
-
-                    if (count($lbR4) > 1) {
-                        $lbFinalCount = max(1, (int) floor(count($lbR4) / 2));
-                        $lbFinal = [];
-                        for ($slot = 1; $slot <= $lbFinalCount; $slot++) {
-                            $lbFinal[] = $makeMatch($lbRoundNumber(), $slot, 'LF', 'losers');
-                        }
-                        foreach ($lbR4 as $idx => $m) {
-                            $lbMatch = $lbFinal[(int) floor($idx / 2)] ?? null;
-                            if ($lbMatch) {
-                                $m->nextMatchId = $lbMatch->id;
-                                $m->nextSlot = ($idx % 2 === 0) ? 1 : 2;
-                            }
-                        }
-                        $lbRounds[] = $lbFinal;
-                    }
-                }
-            }
-        }
-
-        $lbChampionMatch = $lbRounds[count($lbRounds) - 1][0];
-
-        // Grand final
-        $gf = $makeMatch(2, 1, 'GF', 'grand-final');
-        $wbFinal->nextMatchId = $gf->id;
-        $wbFinal->nextSlot = 1;
-        $lbChampionMatch->nextMatchId = $gf->id;
-        $lbChampionMatch->nextSlot = 2;
-        if (! $wbFinal->loserMatchId) {
-            $lastLb = $lbRounds[count($lbRounds) - 1];
-            $wbFinal->loserMatchId = $lastLb[0]->id;
-            $wbFinal->loserSlot = 2;
-        }
-        $gf->loserMatchId = null;
-
-        // Handle byes in WB R1
-        foreach ($wbR1 as $match) {
-            if (! $match->winner_team_id) {
-                continue;
-            }
-            $nextMatch = null;
-            foreach ($allMatches as $candidate) {
-                if ($candidate->id === $match->nextMatchId) {
-                    $nextMatch = $candidate;
-                    break;
-                }
-            }
-            if (! $nextMatch) {
-                continue;
-            }
-            if ($match->nextSlot === 1) {
-                $nextMatch->home_team_id = $match->winner_team_id;
-            } else {
-                $nextMatch->away_team_id = $match->winner_team_id;
-            }
-        }
-
-        // Persist matches
-        foreach ($allMatches as $match) {
-            $match->save();
-        }
-
-        // Build slot sources via routing inversion
-        $slotInfo = [];
-        foreach ($allMatches as $m) {
-            $slotInfo[$m->id] = [
-                'home' => [
-                    'source_type' => 'seed',
-                    'source_match_id' => null,
-                    'source_outcome' => null,
-                    'team_id' => $m->home_team_id,
-                ],
-                'away' => [
-                    'source_type' => 'seed',
-                    'source_match_id' => null,
-                    'source_outcome' => null,
-                    'team_id' => $m->away_team_id,
-                ],
-            ];
-        }
-
-        foreach ($allMatches as $src) {
-            if ($src->nextMatchId) {
-                $target = null;
-                foreach ($allMatches as $c) {
-                    if ($c->id === $src->nextMatchId) {
-                        $target = $c;
-                        break;
-                    }
-                }
-                if ($target) {
-                    $slot = $src->nextSlot === 1 ? 'home' : 'away';
-                    $slotInfo[$target->id][$slot] = [
-                        'source_type' => 'winner',
-                        'source_match_id' => $src->id,
-                        'source_outcome' => 'winner',
-                        'team_id' => $slot === 'home' ? $target->home_team_id : $target->away_team_id,
-                    ];
-                }
-            }
-            if ($src->loserMatchId) {
-                $target = null;
-                foreach ($allMatches as $c) {
-                    if ($c->id === $src->loserMatchId) {
-                        $target = $c;
-                        break;
-                    }
-                }
-                if ($target) {
-                    $slot = $src->loserSlot === 1 ? 'home' : 'away';
-                    $slotInfo[$target->id][$slot] = [
-                        'source_type' => 'loser',
-                        'source_match_id' => $src->id,
-                        'source_outcome' => 'loser',
-                        'team_id' => $slot === 'home' ? $target->home_team_id : $target->away_team_id,
-                    ];
-                }
-            }
-        }
-
-        // Create bracket slots
-        foreach ($allMatches as $m) {
-            foreach (['home', 'away'] as $slot) {
-                $info = $slotInfo[$m->id][$slot];
                 BracketSlot::create([
                     'bracket_id' => $bracket->id,
-                    'round_number' => $m->round_number,
-                    'match_number' => $m->match_number,
+                    'stage' => $matchup->stage,
+                    'round_number' => $matchup->roundNumber,
+                    'match_number' => $matchup->matchNumber,
                     'slot' => $slot,
-                    'source_type' => $info['source_type'],
-                    'source_match_id' => $info['source_match_id'],
-                    'source_outcome' => $info['source_outcome'],
-                    'team_id' => $info['team_id'],
+                    'source_type' => $source->type,
+                    'source_match_id' => $sourceMatchId,
+                    'source_outcome' => $outcome,
+                    'team_id' => $source->type === 'seed' ? $source->teamId : null,
                 ]);
             }
+
+            if ($matchup->home->type === 'seed' && $matchup->home->teamId !== null) {
+                $anchor->home_team_id = $matchup->home->teamId;
+            }
+
+            if ($matchup->away->type === 'seed' && $matchup->away->teamId !== null) {
+                $anchor->away_team_id = $matchup->away->teamId;
+            }
+
+            if ($anchor->isDirty()) {
+                $anchor->save();
+            }
+
+            $this->syncSeriesTeams($anchor);
         }
 
-        $byes = 0;
-        foreach ($wbR1 as $match) {
-            if ($match->isBye) {
-                $byes++;
+        $this->resolveStructuralByes($bracket);
+
+        $anchorCount = MatchModel::where('bracket_id', $bracket->id)->whereNull('series_id')->count();
+        $byeCount = MatchModel::where('bracket_id', $bracket->id)
+            ->whereNull('series_id')
+            ->where('status', 'final')
+            ->whereNull('home_score')
+            ->whereNull('away_score')
+            ->count();
+
+        return [
+            'matches' => $anchorCount,
+            'games' => MatchModel::where('bracket_id', $bracket->id)->count(),
+            'byes' => $byeCount,
+        ];
+    }
+
+    public function syncSeriesTeams(MatchModel $anchor): void
+    {
+        if ($anchor->best_of <= 1 || $anchor->series_id !== null) {
+            return;
+        }
+
+        MatchModel::where('series_id', $anchor->id)
+            ->whereIn('status', ['conditional', 'scheduled'])
+            ->update([
+                'home_team_id' => $anchor->home_team_id,
+                'away_team_id' => $anchor->away_team_id,
+            ]);
+    }
+
+    public function resolveStructuralByes(Bracket $bracket): void
+    {
+        $anchorCount = MatchModel::where('bracket_id', $bracket->id)->whereNull('series_id')->count();
+        $limit = max(20, $anchorCount * 3);
+
+        for ($iteration = 0; $iteration < $limit; $iteration++) {
+            $changed = false;
+
+            $matches = MatchModel::where('bracket_id', $bracket->id)
+                ->whereNull('series_id')
+                ->whereNotIn('status', ['final', 'forfeit', 'in_progress', 'cancelled', 'conditional'])
+                ->get();
+
+            foreach ($matches as $match) {
+                $slots = BracketSlot::where('bracket_id', $match->bracket_id)
+                    ->where('stage', $match->stage)
+                    ->where('round_number', $match->round_number)
+                    ->where('match_number', $match->match_number)
+                    ->with('sourceMatch')
+                    ->get()
+                    ->keyBy('slot');
+                $home = $slots->get('home');
+                $away = $slots->get('away');
+
+                if (! $home instanceof BracketSlot || ! $away instanceof BracketSlot) {
+                    continue;
+                }
+
+                $homeState = $this->slotState($home);
+                $awayState = $this->slotState($away);
+
+                if ($homeState === 'impossible' && $awayState === 'impossible') {
+                    $this->cancelMatch($match);
+                    $changed = true;
+                    continue;
+                }
+
+                if ($match->home_team_id !== null && $awayState === 'impossible') {
+                    $this->applyBye($match, (int) $match->home_team_id);
+                    $changed = true;
+                    continue;
+                }
+
+                if ($match->away_team_id !== null && $homeState === 'impossible') {
+                    $this->applyBye($match, (int) $match->away_team_id);
+                    $changed = true;
+                }
+            }
+
+            if (! $changed) {
+                break;
             }
         }
+    }
 
-        $matchCount = MatchModel::where('bracket_id', $bracket->id)->count();
+    protected function slotState(BracketSlot $slot): string
+    {
+        if ($slot->team_id !== null) {
+            return 'known';
+        }
 
-        return ['matches' => $matchCount, 'byes' => $byes];
+        if ($slot->source_type === 'seed') {
+            return 'impossible';
+        }
+
+        $source = $slot->sourceMatch;
+
+        if (! $source instanceof MatchModel || $source->status === 'cancelled') {
+            return 'impossible';
+        }
+
+        if (! in_array($source->status, ['final', 'forfeit'], true)) {
+            return 'pending';
+        }
+
+        if ($slot->source_outcome === 'loser') {
+            return $source->home_team_id !== null && $source->away_team_id !== null
+                ? 'known'
+                : 'impossible';
+        }
+
+        return $source->winner_team_id !== null ? 'known' : 'pending';
+    }
+
+    protected function applyBye(MatchModel $match, int $winnerId): void
+    {
+        if ($match->best_of > 1) {
+            MatchModel::where('series_id', $match->id)
+                ->whereIn('status', ['conditional', 'scheduled'])
+                ->update(['status' => 'cancelled']);
+            $match->best_of = 1;
+        }
+
+        $match->home_score = null;
+        $match->away_score = null;
+        $match->winner_team_id = $winnerId;
+        $match->series_winner_team_id = $winnerId;
+        $match->game_winner_team_id = $winnerId;
+        $match->series_home_wins = (int) $match->home_team_id === $winnerId ? 1 : 0;
+        $match->series_away_wins = (int) $match->away_team_id === $winnerId ? 1 : 0;
+        $match->status = 'final';
+        $match->completed_at = null;
+        $match->save();
+
+        $this->propagateMatchResult($match, $winnerId);
+    }
+
+    protected function cancelMatch(MatchModel $match): void
+    {
+        if ($match->best_of > 1) {
+            MatchModel::where('series_id', $match->id)
+                ->whereIn('status', ['conditional', 'scheduled'])
+                ->update(['status' => 'cancelled']);
+            $match->best_of = 1;
+        }
+
+        $match->home_team_id = null;
+        $match->away_team_id = null;
+        $match->winner_team_id = null;
+        $match->series_winner_team_id = null;
+        $match->game_winner_team_id = null;
+        $match->status = 'cancelled';
+        $match->save();
+    }
+
+    protected function deleteBracketData(Tournament $tournament, string $format): void
+    {
+        $divisionIds = $tournament->divisions()->pluck('id');
+
+        if ($format === 'round-robin') {
+            $playoffBrackets = Bracket::whereIn('division_id', $divisionIds)
+                ->where('phase', 'playoffs')
+                ->get();
+
+            foreach ($playoffBrackets as $playoffBracket) {
+                $hasResults = MatchModel::where('bracket_id', $playoffBracket->id)
+                    ->whereIn('status', ['final', 'forfeit', 'in_progress'])
+                    ->exists();
+
+                if ($hasResults) {
+                    throw new \InvalidArgumentException('Playoffs already have results; the group stage cannot be regenerated.');
+                }
+            }
+
+            $bracketIds = Bracket::whereIn('division_id', $divisionIds)->pluck('id');
+            $this->deleteMatchesAndSlots($bracketIds);
+            Bracket::whereIn('id', $bracketIds)->delete();
+
+            return;
+        }
+
+        $bracketIds = Bracket::whereIn('division_id', $divisionIds)->pluck('id');
+        $this->deleteMatchesAndSlots($bracketIds);
+        Bracket::whereIn('id', $bracketIds)->delete();
     }
 
     /**
-     * @return array<int, int>
+     * @param  Collection<int, int>  $bracketIds
      */
-    protected function seedOrder(int $size): array
+    protected function deleteMatchesAndSlots(Collection $bracketIds): void
     {
-        $order = [1, 2];
-        while (count($order) < $size) {
-            $complement = count($order) * 2 + 1;
-            $new = [];
-            foreach ($order as $seed) {
-                $new[] = $seed;
-                $new[] = $complement - $seed;
-            }
-            $order = $new;
+        $matchIds = MatchModel::whereIn('bracket_id', $bracketIds)->pluck('id');
+
+        MatchSlot::whereIn('match_id', $matchIds)->delete();
+        MatchModel::whereIn('bracket_id', $bracketIds)->delete();
+        BracketSlot::whereIn('bracket_id', $bracketIds)->delete();
+    }
+
+    /**
+     * @param  list<int|null>  $orderedTeamIds
+     * @return array{matches: int, games: int, byes: int}
+     */
+    public function updateSlots(Bracket $bracket, array $orderedTeamIds): array
+    {
+        $tournament = $bracket->division?->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            throw new \InvalidArgumentException('Bracket is not attached to a tournament.');
         }
 
-        return $order;
+        $hasResults = MatchModel::where('bracket_id', $bracket->id)
+            ->whereIn('status', ['final', 'forfeit', 'in_progress'])
+            ->exists();
+
+        if ($hasResults) {
+            throw new \InvalidArgumentException('Cannot reassign slots after results are recorded.');
+        }
+
+        return DB::transaction(function () use ($bracket, $tournament, $orderedTeamIds): array {
+            $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+            $bestOf = [
+                0 => $this->bestOfRule($rules, 'best_of_final'),
+                1 => $this->bestOfRule($rules, 'best_of_semifinal'),
+                2 => $this->bestOfRule($rules, 'best_of_quarterfinal'),
+            ];
+            $teamCount = count(array_filter($orderedTeamIds, fn ($id): bool => $id !== null));
+
+            // Resolve the size before deleting rows: updateBracketSize reads the
+            // persisted winners rounds to keep the configured bracket width.
+            $size = match ($bracket->format) {
+                'single_elim' => $this->updateBracketSize($bracket, $teamCount, [2, 4, 8, 16, 32]),
+                'double_elim' => $this->updateBracketSize($bracket, $teamCount, [4, 8, 16, 32]),
+                default => null,
+            };
+
+            $this->deleteMatchesAndSlots(collect([$bracket->id]));
+
+            $plan = match ($bracket->format) {
+                'single_elim' => (new SingleEliminationBuilder)->build(
+                    (int) $size,
+                    $orderedTeamIds,
+                    $bestOf,
+                ),
+                'double_elim' => (new DoubleEliminationBuilder)->build(
+                    (int) $size,
+                    $orderedTeamIds,
+                    $bestOf,
+                ),
+                default => (new RoundRobinBuilder)->build(
+                    array_values(array_filter($orderedTeamIds, fn ($id): bool => $id !== null)),
+                    $this->roundRobinLegs($rules),
+                ),
+            };
+
+            return $this->persistPlan($tournament, $bracket, $plan);
+        });
     }
 
     public function correctScore(MatchModel $match, int $score1, int $score2, string $reason): void
@@ -1023,72 +822,90 @@ class BracketService
 
     protected function propagateMatchResult(MatchModel $match, ?int $winnerId): void
     {
-        if ($winnerId === null) {
+        if ($match->series_id !== null) {
+            return;
+        }
+
+        if ($match->best_of > 1 && $match->status === 'in_progress') {
             return;
         }
 
         $loserId = null;
-        if ($match->home_team_id !== null && $match->away_team_id !== null) {
-            $loserId = $match->home_team_id === $winnerId ? $match->away_team_id : $match->home_team_id;
+
+        if ($match->home_team_id !== null && $match->away_team_id !== null && $winnerId !== null) {
+            $loserId = (int) $match->home_team_id === $winnerId
+                ? (int) $match->away_team_id
+                : (int) $match->home_team_id;
         }
 
         $slots = BracketSlot::where('source_match_id', $match->id)->get();
 
         if ($slots->isEmpty()) {
-            $format = $match->bracket?->format;
-
-            if ($format === 'single_elim' || $format === null) {
-                $nextRound = (int) ($match->round_number / 2);
-
-                if ($nextRound >= 2) {
-                    $nextMatchNumber = (int) ceil($match->match_number / 2);
-                    $target = MatchModel::where('bracket_id', $match->bracket_id)
-                        ->where('round_number', $nextRound)
-                        ->where('match_number', $nextMatchNumber)
-                        ->first();
-
-                    if ($target !== null && ! in_array($target->status, ['final', 'forfeit'], true)) {
-                        if ($match->match_number % 2 !== 0) {
-                            $target->home_team_id = $winnerId;
-                        } else {
-                            $target->away_team_id = $winnerId;
-                        }
-                        $target->save();
-                    }
-                }
-            }
+            $this->propagateLegacySingleElimination($match, $winnerId);
 
             return;
         }
 
         foreach ($slots as $slot) {
-            $isLoserOutcome = $slot->source_outcome === 'loser';
-            $value = $isLoserOutcome ? $loserId : $winnerId;
+            $value = $slot->source_outcome === 'loser' ? $loserId : $winnerId;
 
-            if ($value === null) {
+            $target = MatchModel::where('bracket_id', $slot->bracket_id)
+                ->where('stage', $slot->stage)
+                ->where('round_number', $slot->round_number)
+                ->where('match_number', $slot->match_number)
+                ->whereNull('series_id')
+                ->first();
+
+            if (! $target instanceof MatchModel) {
                 continue;
             }
 
-            $target = MatchModel::where('bracket_id', $slot->bracket_id)
-                ->where('round_number', $slot->round_number)
-                ->where('match_number', $slot->match_number)
-                ->first();
-
-            if ($target !== null && in_array($target->status, ['final', 'forfeit'], true)) {
+            if (in_array($target->status, ['final', 'forfeit', 'in_progress'], true)) {
                 continue;
             }
 
             $slot->team_id = $value;
             $slot->save();
 
-            if ($target !== null) {
-                if ($slot->slot === 'home') {
-                    $target->home_team_id = $value;
-                } else {
-                    $target->away_team_id = $value;
-                }
-                $target->save();
+            $column = $slot->slot === 'home' ? 'home_team_id' : 'away_team_id';
+            $target->{$column} = $value;
+            $target->save();
+
+            $this->syncSeriesTeams($target);
+        }
+    }
+
+    protected function propagateLegacySingleElimination(MatchModel $match, ?int $winnerId): void
+    {
+        if ($winnerId === null) {
+            return;
+        }
+
+        $format = $match->bracket?->format;
+
+        if ($format !== 'single_elim' && $format !== null) {
+            return;
+        }
+
+        $nextRound = (int) ($match->round_number / 2);
+
+        if ($nextRound < 2) {
+            return;
+        }
+
+        $nextMatchNumber = (int) ceil($match->match_number / 2);
+        $target = MatchModel::where('bracket_id', $match->bracket_id)
+            ->where('round_number', $nextRound)
+            ->where('match_number', $nextMatchNumber)
+            ->first();
+
+        if ($target !== null && ! in_array($target->status, ['final', 'forfeit'], true)) {
+            if ($match->match_number % 2 !== 0) {
+                $target->home_team_id = $winnerId;
+            } else {
+                $target->away_team_id = $winnerId;
             }
+            $target->save();
         }
     }
 }
