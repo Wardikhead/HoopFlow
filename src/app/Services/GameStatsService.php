@@ -54,7 +54,11 @@ class GameStatsService
         $raw = is_array($match->quarters_json) ? $match->quarters_json : [];
         $team1 = $this->cleanQuarterList($raw['team1'] ?? []);
         $team2 = $this->cleanQuarterList($raw['team2'] ?? []);
-        $count = min(self::MAX_QUARTERS, max(self::MIN_QUARTERS, count($team1), count($team2)));
+        $maxQuarterIndex = (int) $match->playerQuarterStats->max('quarter_index');
+        $count = min(
+            self::MAX_QUARTERS,
+            max(self::MIN_QUARTERS, count($team1), count($team2), $maxQuarterIndex + 1),
+        );
 
         $team1 = $this->pad($team1, $count);
         $team2 = $this->pad($team2, $count);
@@ -133,6 +137,59 @@ class GameStatsService
             $this->writeAudit($match, 'stats.publish', $previous, [
                 'quarters' => $normalized['quarters'],
                 'finals' => ['team1' => $final1, 'team2' => $final2],
+            ]);
+        });
+
+        return $match->refresh();
+    }
+
+    /**
+     * @param  array{quarters?: array{team1?: array<int|string, mixed>, team2?: array<int|string, mixed>}, finals?: array{team1?: mixed, team2?: mixed}, stats?: array<string, mixed>}  $payload
+     */
+    public function correct(MatchModel $match, array $payload, string $reason): MatchModel
+    {
+        if ($match->status !== 'final') {
+            throw new \InvalidArgumentException('Only a final result can be corrected.');
+        }
+
+        if ($match->home_team_id === null || $match->away_team_id === null) {
+            throw new \InvalidArgumentException('Both teams must be known before correcting stats.');
+        }
+
+        $reason = trim($reason);
+        $length = mb_strlen($reason);
+
+        if ($length < 5) {
+            throw new \InvalidArgumentException('Enter at least 5 characters for the correction reason.');
+        }
+
+        if ($length > 500) {
+            throw new \InvalidArgumentException('The correction reason cannot exceed 500 characters.');
+        }
+
+        $normalized = $this->normalize($match, $payload);
+
+        $final1 = $this->intValue($payload['finals']['team1'] ?? null, 'Final score must be a whole number.');
+        $final2 = $this->intValue($payload['finals']['team2'] ?? null, 'Final score must be a whole number.');
+
+        if ($final1 !== array_sum($normalized['quarters']['team1']) || $final2 !== array_sum($normalized['quarters']['team2'])) {
+            throw new \InvalidArgumentException('Final score must equal the sum of the quarters.');
+        }
+
+        if ($final1 === $final2) {
+            throw new \InvalidArgumentException('Elimination games cannot end in a tie.');
+        }
+
+        $previous = is_array($match->quarters_json) ? $match->quarters_json : null;
+
+        DB::transaction(function () use ($match, $normalized, $final1, $final2, $previous, $reason): void {
+            $this->write($match, $normalized, false);
+            $this->bracketService->correctScore($match->refresh(), $final1, $final2, $reason);
+            $this->writeAudit($match, 'stats.correct', $previous, [
+                'quarters' => $normalized['quarters'],
+                'finals' => ['team1' => $final1, 'team2' => $final2],
+                'players' => count($normalized['stats']['team1']) + count($normalized['stats']['team2']),
+                'reason' => $reason,
             ]);
         });
 
