@@ -25,9 +25,7 @@ it('persists team identity fields when a coach registers', function () {
             'name' => 'Test Player '.$number,
             'number' => (string) $number,
             'position' => 'Point Guard (PG)',
-            'age' => '14',
-            'guardianConsent' => true,
-            'documentStatus' => 'pending',
+            'birthdate' => '2012-01-01',
         ];
     }
 
@@ -57,9 +55,10 @@ it('persists team identity fields when a coach registers', function () {
     expect($team->coach_name)->toBe('Coach Test');
     expect($team->shortLabel())->toBe('TVT');
     expect($team->displayColor())->toBe('#123456');
+    expect($team->players()->first()->birthdate->format('Y-m-d'))->toBe('2012-01-01');
 });
 
-it('persists coach document statuses for organizer review', function () {
+it('creates pending consent and pending documents for organizer review', function () {
     $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
     $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
 
@@ -69,9 +68,7 @@ it('persists coach document statuses for organizer review', function () {
             'name' => 'Document Player '.$number,
             'number' => (string) $number,
             'position' => 'Point Guard (PG)',
-            'age' => '14',
-            'guardianConsent' => true,
-            'documentStatus' => 'verified',
+            'birthdate' => '2012-01-01',
         ];
     }
 
@@ -91,10 +88,41 @@ it('persists coach document statuses for organizer review', function () {
     $team = Team::where('name', 'Documentville Titans')->firstOrFail();
 
     expect($team->players()->count())->toBe(8)
+        ->and($team->players()->where('consent_status', 'pending')->count())->toBe(8)
         ->and($team->players()
             ->whereHas('eligibilityDocuments', fn ($query) => $query
                 ->where('type', 'birth_certificate')
-                ->where('status', 'approved'))
+                ->where('status', 'pending'))
             ->count())->toBe(8)
-        ->and(app(EligibilityService::class)->status($team)['documentsComplete'])->toBeTrue();
+        ->and(app(EligibilityService::class)->status($team)['documentsComplete'])->toBeFalse();
+});
+
+it('rejects a birthdate outside the division age range at tournament start', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+
+    $players = [];
+    for ($number = 1; $number <= 8; $number++) {
+        $players[] = [
+            'name' => 'Too Old Player '.$number,
+            'number' => (string) $number,
+            'position' => 'Point Guard (PG)',
+            'birthdate' => '2000-01-01',
+        ];
+    }
+
+    Livewire::actingAs($coach)
+        ->test(TeamRegister::class, ['tournament_id' => $tournament->id])
+        ->set('name', 'Too Old Titans')
+        ->set('shortName', 'TOT')
+        ->set('city', 'Testville')
+        ->set('coach', 'Coach Test')
+        ->set('avatarColor', '#123456')
+        ->set('players', $players)
+        ->set('paymentMethod', 'GCash')
+        ->set('paymentRef', 'TOOOLD123')
+        ->call('save')
+        ->assertHasErrors(['players.0.birthdate']);
+
+    expect(Team::where('name', 'Too Old Titans')->exists())->toBeFalse();
 });

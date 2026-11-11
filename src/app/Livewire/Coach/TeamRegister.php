@@ -9,8 +9,10 @@ use App\Models\Player;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
+use App\Rules\EligibleBirthdate;
 use App\Services\AuditLogger;
 use App\Services\EligibilityService;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,7 +25,9 @@ use Livewire\Component;
 /**
  * @property-read Tournament|null $tournament
  * @property-read Team|null $existingTeam
- * @property-read int $divisionLimit
+ * @property-read Division|null $division
+ * @property-read int $divisionAgeMin
+ * @property-read int $divisionAgeMax
  * @property-read float $entryFee
  */
 #[Layout('layouts.public')]
@@ -119,9 +123,7 @@ class TeamRegister extends Component
             'name' => '',
             'number' => '',
             'position' => self::POSITIONS[0],
-            'age' => '',
-            'guardianConsent' => false,
-            'documentStatus' => 'pending',
+            'birthdate' => '',
         ];
     }
 
@@ -148,14 +150,21 @@ class TeamRegister extends Component
     }
 
     #[Computed]
-    public function divisionLimit(): int
+    public function division(): ?Division
     {
-        $division = $this->tournament?->divisions()->first();
-        $divisionName = $division instanceof Division ? $division->name : '';
+        return $this->tournament?->divisions()->first();
+    }
 
-        return preg_match('/(\d+)/', $divisionName, $matches) === 1
-            ? (int) $matches[1]
-            : 99;
+    #[Computed]
+    public function divisionAgeMin(): int
+    {
+        return $this->division?->age_min ?? 8;
+    }
+
+    #[Computed]
+    public function divisionAgeMax(): int
+    {
+        return $this->division?->age_max ?? 99;
     }
 
     #[Computed]
@@ -177,9 +186,7 @@ class TeamRegister extends Component
                 'name' => $player[0],
                 'number' => (string) $player[1],
                 'position' => self::POSITIONS[$index % count(self::POSITIONS)],
-                'age' => (string) $player[2],
-                'guardianConsent' => true,
-                'documentStatus' => 'verified',
+                'birthdate' => $this->demoBirthdate($player[2]),
             ];
         }, self::DEMO_PLAYERS, array_keys(self::DEMO_PLAYERS));
 
@@ -193,6 +200,24 @@ class TeamRegister extends Component
             message: 'Demo team, roster, and payment reference filled in. Review before submitting.',
             tone: 'info',
         );
+    }
+
+    protected function demoBirthdate(int $age): string
+    {
+        $reference = $this->tournament?->start_date ?? now();
+
+        return $reference->copy()->subYears($age)->format('Y-m-d');
+    }
+
+    public function ageAtTournamentStart(?string $birthdate): int|string
+    {
+        if ($birthdate === null || $birthdate === '') {
+            return '—';
+        }
+
+        $reference = $this->tournament?->start_date ?? now();
+
+        return (int) Carbon::parse($birthdate)->diffInYears($reference);
     }
 
     public function addPlayer(): void
@@ -352,22 +377,16 @@ class TeamRegister extends Component
                 $firstName = $parts[0] ?? $name;
                 $lastName = $parts[1] ?? '';
 
-                $documentStatus = (string) $player['documentStatus'];
-                $verified = $documentStatus === 'verified';
-
                 $createdPlayer = Player::create([
                     'team_id' => $team->id,
                     'first_name' => $firstName,
                     'last_name' => $lastName,
-                    'birthdate' => now()->subYears((int) $player['age'])->format('Y-m-d'),
+                    'birthdate' => (string) $player['birthdate'],
                     'jersey_number' => (int) $player['number'],
                     'position' => (string) $player['position'],
-                    'consent_at' => (bool) $player['guardianConsent'] ? now() : null,
-                    'eligibility_status' => $verified ? 'verified' : 'pending',
-                    'verified_at' => $verified ? now() : null,
                 ]);
 
-                $eligibility->syncDocumentStatus($createdPlayer, $documentStatus);
+                $eligibility->initializePlayer($createdPlayer);
             }
 
             $registration = Registration::create([
@@ -437,16 +456,12 @@ class TeamRegister extends Component
      */
     protected function rosterRules(): array
     {
-        $limit = $this->divisionLimit();
-
         return [
             'players' => ['required', 'array', 'min:8', 'max:12'],
             'players.*.name' => ['required', 'string', 'min:2', 'max:255'],
             'players.*.number' => ['required', 'integer', 'min:1', 'max:99'],
             'players.*.position' => ['required', 'string', 'in:'.implode(',', self::POSITIONS)],
-            'players.*.age' => ['required', 'integer', 'min:8', 'max:'.$limit],
-            'players.*.guardianConsent' => ['accepted'],
-            'players.*.documentStatus' => ['required', 'string', 'in:pending,verified'],
+            'players.*.birthdate' => ['required', new EligibleBirthdate($this->division, $this->tournament)],
         ];
     }
 
@@ -482,9 +497,7 @@ class TeamRegister extends Component
             'players.*.number.integer' => 'Use 1–99.',
             'players.*.number.min' => 'Use 1–99.',
             'players.*.number.max' => 'Use 1–99.',
-            'players.*.age.min' => 'Age must be 8–'.$this->divisionLimit().'.',
-            'players.*.age.max' => 'Age must be 8–'.$this->divisionLimit().'.',
-            'players.*.guardianConsent.accepted' => 'Guardian consent is required.',
+            'players.*.birthdate.required' => 'Enter the player birthdate.',
             'paymentRef.regex' => 'Use 6–24 letters, numbers, or dashes.',
         ];
     }

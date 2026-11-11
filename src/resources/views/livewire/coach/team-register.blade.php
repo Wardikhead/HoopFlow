@@ -128,8 +128,8 @@
             <section data-step-panel="1" @if ($step !== 1) hidden @endif>
                 <div class="hf-between hf-mb-2">
                     <div>
-                        <p class="hf-small hf-muted hf-mb-0">A roster needs 8 to 12 players. Jersey numbers must be unique and every player needs guardian consent.</p>
-                        <p class="hf-small hf-muted hf-mb-0">Age limit for {{ $division?->name ?? 'this division' }}: 8 to {{ $this->divisionLimit }}.</p>
+                        <p class="hf-small hf-muted hf-mb-0">A roster needs 8 to 12 players. Jersey numbers must be unique. Birthdate must fall within {{ $this->division?->name ?? 'the division' }} limits ({{ $this->divisionAgeMin }}–{{ $this->divisionAgeMax }}) at tournament start.</p>
+                        <p class="hf-small hf-muted hf-mb-0">Guardian consent and documents are reviewed by the organizer after submission.</p>
                     </div>
                     <button type="button" class="hf-btn hf-btn--sm" wire:click="addPlayer" data-testid="register-add-player">
                         <i class="bi bi-plus-lg"></i> Add player
@@ -169,25 +169,10 @@
                                     @error('players.'.$index.'.position') <p class="hf-field-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
-                                    <label class="hf-label" for="playerAge{{ $index }}">Age</label>
-                                    <input class="hf-input" id="playerAge{{ $index }}" type="number" min="8" max="{{ $this->divisionLimit }}" wire:model="players.{{ $index }}.age"
-                                           @error('players.'.$index.'.age') aria-invalid="true" @enderror data-testid="register-player-age-{{ $index }}">
-                                    @error('players.'.$index.'.age') <p class="hf-field-error">{{ $message }}</p> @enderror
-                                </div>
-                                <div class="hf-field">
-                                    <label class="hf-label" for="playerDocument{{ $index }}">Documents</label>
-                                    <select class="hf-select" id="playerDocument{{ $index }}" wire:model="players.{{ $index }}.documentStatus" data-testid="register-player-document-{{ $index }}">
-                                        <option value="verified">Verified</option>
-                                        <option value="pending">Pending review</option>
-                                    </select>
-                                    @error('players.'.$index.'.documentStatus') <p class="hf-field-error">{{ $message }}</p> @enderror
-                                </div>
-                                <div class="hf-field hf-field--full">
-                                    <label class="hf-check">
-                                        <input type="checkbox" wire:model="players.{{ $index }}.guardianConsent" data-testid="register-player-consent-{{ $index }}">
-                                        Guardian consent on file
-                                    </label>
-                                    @error('players.'.$index.'.guardianConsent') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                    <label class="hf-label" for="playerBirthdate{{ $index }}">Birthdate</label>
+                                    <input class="hf-input" id="playerBirthdate{{ $index }}" type="date" max="{{ now()->format('Y-m-d') }}" wire:model="players.{{ $index }}.birthdate"
+                                           @error('players.'.$index.'.birthdate') aria-invalid="true" @enderror data-testid="register-player-birthdate-{{ $index }}">
+                                    @error('players.'.$index.'.birthdate') <p class="hf-field-error">{{ $message }}</p> @enderror
                                 </div>
                             </div>
                         </div>
@@ -202,8 +187,8 @@
                         <ul class="hf-small hf-muted hf-mt-1">
                             <li>8–12 players on the roster</li>
                             <li>Unique jersey numbers from 1 to 99</li>
-                            <li>Guardian consent for every player</li>
-                            <li>PSA birth certificate reviewed by the organizer</li>
+                            <li>Birthdates inside the division age range</li>
+                            <li>Organizer reviews guardian consent and PSA birth certificates after submission</li>
                         </ul>
                     </div>
                     <div class="hf-card hf-card--flat">
@@ -240,7 +225,6 @@
             <section data-step-panel="3" @if ($step !== 3) hidden @endif>
                 @php
                     $filledPlayers = collect($players)->filter(fn ($player) => trim((string) ($player['name'] ?? '')) !== '');
-                    $consentCount = $filledPlayers->filter(fn ($player) => (bool) ($player['guardianConsent'] ?? false))->count();
                 @endphp
                 <div class="hf-grid hf-grid--3 hf-mb-3">
                     <div class="hf-card hf-card--flat">
@@ -251,7 +235,7 @@
                     <div class="hf-card hf-card--flat">
                         <span class="hf-kpi-label">Roster</span>
                         <strong class="hf-kpi-value" style="font-size: 34px">{{ $filledPlayers->count() }}</strong>
-                        <p class="hf-small hf-muted hf-mb-0">players · {{ $consentCount }} with consent</p>
+                        <p class="hf-small hf-muted hf-mb-0">players · consent and documents pending organizer review</p>
                     </div>
                     <div class="hf-card hf-card--flat">
                         <span class="hf-kpi-label">Payment</span>
@@ -267,8 +251,8 @@
                                     <th scope="col">#</th>
                                     <th scope="col">Player</th>
                                     <th scope="col">Position</th>
-                                    <th scope="col">Age</th>
-                                    <th scope="col">Documents</th>
+                                    <th scope="col">Age at start</th>
+                                    <th scope="col">Eligibility</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -277,14 +261,14 @@
                                         <td>{{ $player['number'] }}</td>
                                         <td><strong>{{ $player['name'] }}</strong></td>
                                         <td>{{ $player['position'] }}</td>
-                                        <td>{{ $player['age'] }}</td>
-                                        <td><x-status-chip :status="$player['documentStatus']" /></td>
+                                        <td>{{ $this->ageAtTournamentStart($player['birthdate'] ?? null) }}</td>
+                                        <td><x-status-chip status="pending" label="Pending organizer review" /></td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
-                    <p class="hf-small hf-muted hf-mt-2 hf-mb-0">Submitting creates a pending team. The organizer reviews eligibility before seeding.</p>
+                    <p class="hf-small hf-muted hf-mt-2 hf-mb-0">Submitting creates a pending team. The organizer records guardian consent and verifies documents in Submissions.</p>
                 </div>
             </section>
 
