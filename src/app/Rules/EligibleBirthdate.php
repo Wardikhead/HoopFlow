@@ -45,8 +45,8 @@ class EligibleBirthdate implements ValidationRule
             : $today;
 
         $age = (int) $birthdate->diff($reference)->y;
-        $min = $this->division?->age_min ?? 8;
-        $max = $this->division?->age_max ?? 99;
+        $min = $this->division->age_min ?? 8;
+        $max = $this->division->age_max ?? 99;
 
         if ($age < $min || $age > $max) {
             $divisionName = $this->division?->name;

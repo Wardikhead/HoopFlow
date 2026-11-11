@@ -109,11 +109,11 @@ class EligibilityService
 
         if ($status === 'verified') {
             if ($player->verified_at === null) {
-                $player->verified_at = $document?->reviewed_at ?? now();
+                $player->verified_at = $document->reviewed_at ?? now();
             }
 
             if ($player->verified_by === null) {
-                $player->verified_by = $document?->reviewed_by ?? $actor?->id;
+                $player->verified_by = $document->reviewed_by ?? $actor?->id;
             }
         } else {
             $player->verified_by = null;
