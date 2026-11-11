@@ -268,6 +268,39 @@ it('updates player document status from submissions and audits it', function () 
     ]);
 });
 
+it('blocks approval when a player is outside the division age range', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::query()
+        ->where('status', 'submitted')
+        ->whereHas('division', fn ($query) => $query->where('age_max', 17))
+        ->firstOrFail();
+
+    foreach ($registration->team->players()->get() as $player) {
+        $player->update(['consent_status' => 'verified', 'consent_at' => now()]);
+        $player->eligibilityDocuments()->updateOrCreate(
+            ['type' => 'birth_certificate'],
+            [
+                'status' => 'approved',
+                'reviewed_by' => $organizer->id,
+                'reviewed_at' => now(),
+            ],
+        );
+    }
+
+    $overAge = $registration->tournament->start_date->copy()->subYears(30)->format('Y-m-d');
+    $registration->team->players()->firstOrFail()->update(['birthdate' => $overAge]);
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->set('approveAnyway', true)
+        ->call('confirmApprove')
+        ->assertHasErrors(['approveAnyway']);
+
+    expect($registration->fresh()->status)->toBe('submitted')
+        ->and($registration->fresh()->roster_locked_at)->toBeNull();
+});
+
 it('renders inline status controls in the submission detail', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
     $registration = Registration::where('status', 'submitted')->firstOrFail();
@@ -277,7 +310,10 @@ it('renders inline status controls in the submission detail', function () {
         ->test(SubmissionsIndex::class)
         ->call('openReview', $registration->id)
         ->assertSeeHtml('data-testid="submission-consent-'.$player->id.'"')
-        ->assertSeeHtml('data-testid="submission-document-'.$player->id.'"');
+        ->assertSeeHtml('data-testid="submission-document-'.$player->id.'"')
+        ->assertSeeHtml('aria-haspopup="listbox"')
+        ->assertSee('Guardian consent recorded')
+        ->assertSee('Birth certificate approved');
 });
 
 it('requires an override before approving incomplete eligibility', function () {

@@ -151,6 +151,16 @@
                 $reviewEligibility = $reviewEligibilityService->status($reviewTeam ?? new \App\Models\Team());
                 $reviewPayment = $review->payment;
                 $reviewPaymentChipStatus = $reviewPayment?->status === 'verified' ? 'paid' : ($reviewPayment?->status ?? 'pending');
+                $consentOptions = [
+                    ['value' => 'pending', 'label' => 'Pending', 'description' => 'Guardian consent still to be collected', 'tone' => 'warning', 'icon' => 'hourglass-split'],
+                    ['value' => 'verified', 'label' => 'Verified', 'description' => 'Guardian consent recorded', 'tone' => 'success', 'icon' => 'check-circle-fill'],
+                    ['value' => 'missing', 'label' => 'Missing', 'description' => 'No guardian consent on file', 'tone' => 'danger', 'icon' => 'x-circle-fill'],
+                ];
+                $documentOptions = [
+                    ['value' => 'pending', 'label' => 'Pending', 'description' => 'Birth certificate awaiting review', 'tone' => 'warning', 'icon' => 'hourglass-split'],
+                    ['value' => 'approved', 'label' => 'Verified', 'description' => 'Birth certificate approved', 'tone' => 'success', 'icon' => 'check-circle-fill'],
+                    ['value' => 'missing', 'label' => 'Missing', 'description' => 'No birth certificate on file', 'tone' => 'danger', 'icon' => 'file-earmark-x'],
+                ];
             @endphp
             <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeReview()" x-on:click="if ($event.target === $el) $wire.closeReview()" wire:key="submission-review-dialog" data-testid="submission-review-dialog">
                 <div class="hf-dialog__head">
@@ -188,11 +198,18 @@
                             <p class="hf-small hf-muted hf-mb-0">Amount {{ '₱'.number_format((float) ($reviewPayment?->amount ?? 0)) }} · {{ ucfirst($reviewPaymentChipStatus) }}</p>
                         </div>
                     </div>
-                    <h3 class="hf-section-title">Roster ({{ $reviewPlayers->count() }})</h3>
-                    <div class="hf-table-wrap">
+                    <div class="hf-between hf-mt-2">
+                        <h3 class="hf-section-title hf-mb-0">Roster ({{ $reviewPlayers->count() }})</h3>
+                        <div class="hf-status-legend" aria-hidden="true">
+                            <span class="hf-status-legend__item hf-status-legend__item--success"><i class="bi bi-check-circle-fill"></i>Verified</span>
+                            <span class="hf-status-legend__item hf-status-legend__item--warning"><i class="bi bi-hourglass-split"></i>Pending</span>
+                            <span class="hf-status-legend__item hf-status-legend__item--danger"><i class="bi bi-x-circle-fill"></i>Missing</span>
+                        </div>
+                    </div>
+                    <div class="hf-table-wrap hf-mt-1">
                         <table class="hf-table">
                             <thead>
-                                <tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Consent</th><th scope="col">Documents</th></tr>
+                                <tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age at start</th><th scope="col">Consent</th><th scope="col">Documents</th></tr>
                             </thead>
                             <tbody>
                                 @foreach ($reviewPlayers as $player)
@@ -201,30 +218,45 @@
                                             ->firstWhere('type', \App\Services\EligibilityService::DOCUMENT_TYPE);
                                         $documentStatus = $document?->status ?? 'pending';
                                         $editable = in_array($review->status, ['submitted', 'approved'], true);
+                                        $ageAtStart = $reviewEligibilityService->ageAtTournamentStart($player->birthdate, $review->tournament);
+                                        $ageIssue = $reviewEligibilityService->ageIssue($player->birthdate, $review->division, $review->tournament);
                                     @endphp
-                                    <tr wire:key="review-player-{{ $player->id }}">
+                                    <tr wire:key="review-player-{{ $player->id }}" @class(['is-ineligible' => $ageIssue !== null])>
                                         <td>{{ $player->jersey_number }}</td>
                                         <td>{{ $player->first_name }} {{ $player->last_name }}</td>
                                         <td>{{ $player->position }}</td>
-                                        <td>{{ $player->birthdate?->age ?? '—' }}</td>
+                                        <td>
+                                            <span class="hf-player-age">
+                                                <strong>{{ $ageAtStart ?? '—' }}</strong>
+                                                @if ($ageIssue)
+                                                    <span class="hf-chip hf-chip--danger" title="{{ $ageIssue }}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>Out of range</span>
+                                                @endif
+                                            </span>
+                                        </td>
                                         <td>
                                             @if ($editable)
-                                                <select class="hf-select" wire:change="updateConsent({{ $player->id }}, $event.target.value)" data-testid="submission-consent-{{ $player->id }}">
-                                                    <option value="pending" @selected($player->consent_status === 'pending')>Pending</option>
-                                                    <option value="verified" @selected($player->consent_status === 'verified')>Verified</option>
-                                                    <option value="missing" @selected($player->consent_status === 'missing')>Missing</option>
-                                                </select>
+                                                <x-status-select
+                                                    :value="$player->consent_status"
+                                                    :options="$consentOptions"
+                                                    action="updateConsent"
+                                                    :player-id="$player->id"
+                                                    testid="submission-consent-{{ $player->id }}"
+                                                    label="Guardian consent"
+                                                />
                                             @else
                                                 @include('components.status-chip', ['status' => $player->consent_status])
                                             @endif
                                         </td>
                                         <td>
                                             @if ($editable)
-                                                <select class="hf-select" wire:change="updateDocument({{ $player->id }}, $event.target.value)" data-testid="submission-document-{{ $player->id }}">
-                                                    <option value="pending" @selected($documentStatus === 'pending')>Pending</option>
-                                                    <option value="approved" @selected($documentStatus === 'approved')>Verified</option>
-                                                    <option value="missing" @selected($documentStatus === 'missing')>Missing</option>
-                                                </select>
+                                                <x-status-select
+                                                    :value="$documentStatus"
+                                                    :options="$documentOptions"
+                                                    action="updateDocument"
+                                                    :player-id="$player->id"
+                                                    testid="submission-document-{{ $player->id }}"
+                                                    label="Birth certificate"
+                                                />
                                             @else
                                                 @include('components.status-chip', ['status' => $documentStatus === 'approved' ? 'verified' : $documentStatus])
                                             @endif
@@ -250,7 +282,11 @@
     @if ($approvingId !== null)
         @php $approveReg = $this->findRegistration($approvingId); @endphp
         @if ($approveReg)
-            @php $approveIssues = $this->approvalIssues($approveReg->id); @endphp
+            @php
+                $approveIssues = collect($this->approvalIssues($approveReg->id));
+                $ageBlockers = $approveIssues->filter(fn (array $issue): bool => $issue['ageIssue'] !== null);
+                $overrideIssues = $approveIssues->reject(fn (array $issue): bool => $issue['ageIssue'] !== null);
+            @endphp
             <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelApprove()" x-on:click="if ($event.target === $el) $wire.cancelApprove()" wire:key="submission-approve-confirm-dialog" data-testid="submission-approve-confirm-dialog">
                 <div class="hf-dialog__head">
                     <h2 class="hf-dialog__title">Approve {{ $approveReg->team?->name ?? 'team' }}?</h2>
@@ -258,11 +294,22 @@
                 </div>
                 <div class="hf-dialog__body">
                     <p class="hf-small hf-muted">The team becomes eligible for seeding and its roster locks for the coach.</p>
-                    @if ($approveIssues !== [])
-                        <div class="hf-card hf-card--flat hf-mt-2" style="border-color: var(--hf-alert)">
+                    @if ($ageBlockers->isNotEmpty())
+                        <div class="hf-callout hf-callout--danger hf-mt-2" data-testid="submission-age-blockers">
+                            <strong class="hf-small"><i class="bi bi-shield-x" aria-hidden="true"></i> Age eligibility blocks approval</strong>
+                            <ul class="hf-small hf-mt-1 hf-mb-0">
+                                @foreach ($ageBlockers as $issue)
+                                    <li><strong>{{ $issue['name'] }}</strong> — {{ $issue['ageIssue'] }}</li>
+                                @endforeach
+                            </ul>
+                            <p class="hf-small hf-mb-0 hf-mt-1">Correct the birthdate or move the player to an eligible division. Age issues cannot be overridden.</p>
+                        </div>
+                    @endif
+                    @if ($overrideIssues->isNotEmpty())
+                        <div class="hf-callout hf-callout--warning hf-mt-2">
                             <strong class="hf-small">Incomplete eligibility</strong>
-                            <ul class="hf-small hf-muted hf-mt-1">
-                                @foreach ($approveIssues as $issue)
+                            <ul class="hf-small hf-mt-1">
+                                @foreach ($overrideIssues as $issue)
                                     <li>{{ $issue['name'] }} — consent {{ $issue['consent'] }}, documents {{ $issue['document'] }}</li>
                                 @endforeach
                             </ul>
@@ -270,13 +317,13 @@
                                 <input type="checkbox" wire:model="approveAnyway" data-testid="submission-approve-anyway">
                                 Approve anyway
                             </label>
-                            @error('approveAnyway') <p class="hf-field-error">{{ $message }}</p> @enderror
                         </div>
                     @endif
+                    @error('approveAnyway') <p class="hf-field-error hf-mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="cancelApprove()" data-testid="submission-approve-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" data-testid="submission-approve-confirm" @disabled($approveIssues !== [] && ! $approveAnyway)>Approve team</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" data-testid="submission-approve-confirm" @disabled($ageBlockers->isNotEmpty() || ($overrideIssues->isNotEmpty() && ! $approveAnyway))>Approve team</button>
                 </div>
             </dialog>
         @endif

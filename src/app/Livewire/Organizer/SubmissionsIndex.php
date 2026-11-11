@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Organizer;
 
-use App\Models\EligibilityDocument;
 use App\Models\Player;
 use App\Models\Registration;
 use App\Models\Team;
@@ -81,6 +80,12 @@ class SubmissionsIndex extends Component
     public function confirmApprove(): void
     {
         if ($this->approvingId === null) {
+            return;
+        }
+
+        if ($this->ageIssues($this->approvingId) !== []) {
+            $this->addError('approveAnyway', 'Fix the age eligibility issues before approving this team.');
+
             return;
         }
 
@@ -224,12 +229,12 @@ class SubmissionsIndex extends Component
     }
 
     /**
-     * @return array<int, array{name: string, consent: string, document: string}>
+     * @return array<int, array{name: string, consent: string, document: string, age: int|null, ageIssue: string|null}>
      */
     public function approvalIssues(int $registrationId): array
     {
         $registration = Registration::query()
-            ->with(['team.players.eligibilityDocuments'])
+            ->with(['team.players.eligibilityDocuments', 'division', 'tournament'])
             ->find($registrationId);
 
         $team = $registration?->team;
@@ -238,16 +243,10 @@ class SubmissionsIndex extends Component
             return [];
         }
 
-        return $team->players
-            ->filter(function (Player $player): bool {
-                $document = $player->eligibilityDocuments
-                    ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
+        $eligibility = app(EligibilityService::class);
 
-                return $player->consent_status !== 'verified'
-                    || ! $document instanceof EligibilityDocument
-                    || $document->status !== 'approved';
-            })
-            ->map(function (Player $player): array {
+        return $team->players
+            ->map(function (Player $player) use ($eligibility, $registration): array {
                 $document = $player->eligibilityDocuments
                     ->firstWhere('type', EligibilityService::DOCUMENT_TYPE);
 
@@ -255,10 +254,32 @@ class SubmissionsIndex extends Component
                     'name' => trim($player->first_name.' '.$player->last_name),
                     'consent' => $player->consent_status,
                     'document' => $document->status ?? 'pending',
+                    'age' => $eligibility->ageAtTournamentStart($player->birthdate, $registration->tournament),
+                    'ageIssue' => $eligibility->ageIssue(
+                        $player->birthdate,
+                        $registration->division,
+                        $registration->tournament,
+                    ),
                 ];
             })
+            ->filter(fn (array $issue): bool => $issue['consent'] !== 'verified'
+                || $issue['document'] !== 'approved'
+                || $issue['ageIssue'] !== null)
             ->values()
             ->all();
+    }
+
+    /**
+     * Age problems cannot be overridden: an ineligible player invalidates the whole roster.
+     *
+     * @return array<int, array{name: string, consent: string, document: string, age: int|null, ageIssue: string|null}>
+     */
+    public function ageIssues(int $registrationId): array
+    {
+        return array_values(array_filter(
+            $this->approvalIssues($registrationId),
+            fn (array $issue): bool => $issue['ageIssue'] !== null,
+        ));
     }
 
     protected function reviewingRegistration(): ?Registration
@@ -274,6 +295,10 @@ class SubmissionsIndex extends Component
 
     protected function doApprove(int $registrationId): void
     {
+        if ($this->ageIssues($registrationId) !== []) {
+            return;
+        }
+
         $registration = Registration::query()->find($registrationId);
 
         if ($registration === null || $registration->status !== 'submitted') {
