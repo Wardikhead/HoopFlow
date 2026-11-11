@@ -1343,6 +1343,51 @@ textarea {
   margin-bottom: 14px;
 }
 
+.hf-period-nav {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  margin-bottom: 14px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-pill);
+  background: var(--hf-surface-2);
+  scrollbar-width: thin;
+}
+
+.hf-period-nav__btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--hf-pill);
+  background: transparent;
+  color: var(--hf-muted);
+  cursor: pointer;
+  font-family: var(--hf-font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.hf-period-nav__btn:hover {
+  background: color-mix(in srgb, var(--hf-ink) 6%, transparent);
+  color: var(--hf-ink);
+}
+
+.hf-period-nav__btn.is-active {
+  background: var(--hf-primary);
+  box-shadow: 0 2px 0 var(--hf-primary-pressed);
+  color: #fff;
+}
+
+.hf-period-nav__btn:focus-visible {
+  outline: 2px solid var(--hf-primary);
+  outline-offset: 2px;
+}
+
 .hf-filter {
   min-height: 38px;
   padding: 0 12px;
