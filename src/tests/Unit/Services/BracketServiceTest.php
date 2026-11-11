@@ -115,6 +115,52 @@ it('throws on invalid format', function () {
         ->toThrow(InvalidArgumentException::class);
 });
 
+it('routes double-elimination winners and losers through the correct stages', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $service = new BracketService;
+    $service->generate($tournament, 'double-elimination');
+
+    $bracket = \App\Models\Bracket::whereIn(
+        'division_id',
+        $tournament->divisions()->pluck('id'),
+    )->where('format', 'double_elim')->firstOrFail();
+
+    $wb1m1 = MatchModel::where('bracket_id', $bracket->id)
+        ->where('stage', 'winners')->where('round_number', 1)->where('match_number', 1)
+        ->firstOrFail();
+    $wb1m2 = MatchModel::where('bracket_id', $bracket->id)
+        ->where('stage', 'winners')->where('round_number', 1)->where('match_number', 2)
+        ->firstOrFail();
+
+    $service->recordScore($wb1m1, 80, 70);
+    $service->recordScore($wb1m2, 78, 74);
+
+    $wb2m1 = MatchModel::where('bracket_id', $bracket->id)
+        ->where('stage', 'winners')->where('round_number', 2)->where('match_number', 1)
+        ->firstOrFail();
+
+    $lb1m1 = MatchModel::where('bracket_id', $bracket->id)
+        ->where('stage', 'losers')->where('round_number', 1)->where('match_number', 1)
+        ->firstOrFail();
+
+    expect($wb2m1->home_team_id)->toBe($wb1m1->home_team_id)
+        ->and($wb2m1->away_team_id)->toBe($wb1m2->home_team_id)
+        ->and($lb1m1->home_team_id)->toBe($wb1m1->away_team_id)
+        ->and($lb1m1->away_team_id)->toBe($wb1m2->away_team_id);
+
+    $service->recordScore($wb2m1, 75, 70);
+
+    $lb2m1 = MatchModel::where('bracket_id', $bracket->id)
+        ->where('stage', 'losers')->where('round_number', 2)->where('match_number', 1)
+        ->firstOrFail();
+
+    expect($lb2m1->away_team_id)->toBe($wb2m1->away_team_id);
+
+    $service->recordScore($lb1m1, 90, 85);
+
+    expect($lb2m1->fresh()->home_team_id)->toBe($lb1m1->home_team_id);
+});
+
 it('corrects a score and propagates the changed winner', function () {
     $match = MatchModel::where('round_number', 8)->where('match_number', 2)->firstOrFail();
 

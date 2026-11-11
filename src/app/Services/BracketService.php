@@ -662,6 +662,7 @@ class BracketService
         if ($score1 < 0 || $score2 < 0) {
             throw new \InvalidArgumentException('Scores must be zero or positive whole numbers.');
         }
+
         if ($score1 === $score2) {
             throw new \InvalidArgumentException('Elimination games cannot end in a tie.');
         }
@@ -669,40 +670,24 @@ class BracketService
         DB::transaction(function () use ($match, $score1, $score2): void {
             $match->refresh();
 
-            if (in_array($match->status, ['final', 'forfeit'], true)) {
+            if (in_array($match->status, ['final', 'forfeit', 'cancelled', 'conditional'], true)) {
                 throw new \InvalidArgumentException('Use correction to change a recorded result.');
             }
 
-            if ($match->home_team_id === null || $match->away_team_id === null) {
-                throw new \InvalidArgumentException('Both teams must be known before entering a score.');
+            if ($match->series_id === null && $match->best_of > 1 && $match->status === 'in_progress') {
+                throw new \InvalidArgumentException('Game 1 is already recorded. Score the active game.');
             }
 
-            $homeTeamId = (int) $match->home_team_id;
-            $awayTeamId = (int) $match->away_team_id;
-            $winnerId = $score1 > $score2 ? $homeTeamId : $awayTeamId;
-
-            $previousHomeScore = $match->home_score;
-            $previousAwayScore = $match->away_score;
-            $previousWinnerId = $match->winner_team_id;
-
-            $match->home_score = $score1;
-            $match->away_score = $score2;
-            $match->winner_team_id = $winnerId;
-            $match->status = 'final';
-            $match->completed_at = now();
-            $match->forfeit_reason = null;
-            $match->save();
-
-            $this->propagateMatchResult($match, $winnerId);
+            $this->applyGameResult($match, $score1, $score2, 'final');
 
             $this->writeAudit($match, 'score.save', [
-                'home_score' => $previousHomeScore,
-                'away_score' => $previousAwayScore,
-                'winner_team_id' => $previousWinnerId,
+                'home_score' => null,
+                'away_score' => null,
+                'winner_team_id' => null,
             ], [
                 'home_score' => $score1,
                 'away_score' => $score2,
-                'winner_team_id' => $winnerId,
+                'winner_team_id' => $match->game_winner_team_id,
             ]);
         });
     }
@@ -716,42 +701,27 @@ class BracketService
         DB::transaction(function () use ($match, $forfeitSide): void {
             $match->refresh();
 
-            if (in_array($match->status, ['final', 'forfeit'], true)) {
+            if (in_array($match->status, ['final', 'forfeit', 'cancelled', 'conditional'], true)) {
                 throw new \InvalidArgumentException('Only a scheduled game can be recorded as a forfeit.');
             }
 
-            if ($match->home_team_id === null || $match->away_team_id === null) {
-                throw new \InvalidArgumentException('Both teams must be known before recording a forfeit.');
+            if ($match->series_id === null && $match->best_of > 1 && $match->status === 'in_progress') {
+                throw new \InvalidArgumentException('Game 1 is already recorded. Score the active game.');
             }
 
-            $homeTeamId = (int) $match->home_team_id;
-            $awayTeamId = (int) $match->away_team_id;
-            $winnerId = $forfeitSide === 1 ? $awayTeamId : $homeTeamId;
             $score1 = $forfeitSide === 1 ? 0 : 20;
             $score2 = $forfeitSide === 2 ? 0 : 20;
 
-            $previousHomeScore = $match->home_score;
-            $previousAwayScore = $match->away_score;
-            $previousWinnerId = $match->winner_team_id;
-
-            $match->home_score = $score1;
-            $match->away_score = $score2;
-            $match->winner_team_id = $winnerId;
-            $match->status = 'forfeit';
-            $match->completed_at = now();
-            $match->forfeit_reason = 'Forfeit recorded';
-            $match->save();
-
-            $this->propagateMatchResult($match, $winnerId);
+            $this->applyGameResult($match, $score1, $score2, 'forfeit', 'Forfeit recorded');
 
             $this->writeAudit($match, 'score.forfeit', [
-                'home_score' => $previousHomeScore,
-                'away_score' => $previousAwayScore,
-                'winner_team_id' => $previousWinnerId,
+                'home_score' => null,
+                'away_score' => null,
+                'winner_team_id' => null,
             ], [
                 'home_score' => $score1,
                 'away_score' => $score2,
-                'winner_team_id' => $winnerId,
+                'winner_team_id' => $match->game_winner_team_id,
                 'forfeit_side' => $forfeitSide,
             ]);
         });
@@ -766,33 +736,182 @@ class BracketService
                 return;
             }
 
-            $team1Id = $match->home_team_id;
-            $team2Id = $match->away_team_id;
-
-            $winnerId = $match->winner_team_id;
-
-            if ($winnerId === null) {
-                if ($team1Id === null && $team2Id === null) {
-                    return;
-                }
-                if ($team1Id === null) {
-                    $winnerId = $team2Id;
-                } elseif ($team2Id === null) {
-                    $winnerId = $team1Id;
-                } else {
-                    $winnerId = $match->home_score > $match->away_score ? $team1Id : $team2Id;
-                }
+            if ($match->home_team_id === null || $match->away_team_id === null) {
+                return;
             }
 
-            $match->winner_team_id = $winnerId;
-            $match->status = 'final';
-            if ($match->completed_at === null) {
-                $match->completed_at = now();
+            if (in_array($match->status, ['final', 'forfeit', 'in_progress'], true)) {
+                return;
             }
-            $match->save();
 
-            $this->propagateMatchResult($match, $winnerId);
+            $this->applyGameResult(
+                $match,
+                (int) $match->home_score,
+                (int) $match->away_score,
+                'final',
+            );
         });
+    }
+
+    /**
+     * @return array{winnerId: int, loserId: int|null}
+     */
+    protected function applyGameResult(MatchModel $game, int $score1, int $score2, string $status, ?string $forfeitReason = null): array
+    {
+        $homeTeamId = $game->home_team_id !== null ? (int) $game->home_team_id : null;
+        $awayTeamId = $game->away_team_id !== null ? (int) $game->away_team_id : null;
+
+        if ($homeTeamId === null || $awayTeamId === null) {
+            throw new \InvalidArgumentException('Both teams must be known before entering a score.');
+        }
+
+        $winnerId = $score1 > $score2 ? $homeTeamId : $awayTeamId;
+        $loserId = $winnerId === $homeTeamId ? $awayTeamId : $homeTeamId;
+
+        $game->home_score = $score1;
+        $game->away_score = $score2;
+        $game->game_winner_team_id = $winnerId;
+        $game->winner_team_id = $game->series_id === null && $game->best_of > 1
+            ? null
+            : $winnerId;
+        $game->status = $status;
+        $game->forfeit_reason = $forfeitReason;
+        $game->completed_at = now();
+        $game->save();
+
+        if ($game->series_id === null) {
+            if ($game->best_of > 1) {
+                $this->syncSeries($game);
+            } else {
+                $game->series_winner_team_id = $winnerId;
+                $game->series_home_wins = $winnerId === $homeTeamId ? 1 : 0;
+                $game->series_away_wins = $winnerId === $awayTeamId ? 1 : 0;
+                $game->save();
+                $this->propagateMatchResult($game, $winnerId);
+
+                if ($game->bracket instanceof Bracket) {
+                    $this->resolveStructuralByes($game->bracket);
+                }
+            }
+        } else {
+            $anchor = MatchModel::find($game->series_id);
+
+            if ($anchor instanceof MatchModel) {
+                $this->syncSeries($anchor);
+            }
+        }
+
+        return ['winnerId' => $winnerId, 'loserId' => $loserId];
+    }
+
+    public function seriesWinsNeeded(int $bestOf): int
+    {
+        return intdiv($bestOf, 2) + 1;
+    }
+
+    public function syncSeries(MatchModel $anchor): void
+    {
+        if ($anchor->series_id !== null) {
+            return;
+        }
+
+        if ($anchor->best_of <= 1) {
+            $anchor->series_winner_team_id = $anchor->winner_team_id;
+            $anchor->series_home_wins = $anchor->winner_team_id !== null && (int) $anchor->winner_team_id === (int) $anchor->home_team_id ? 1 : 0;
+            $anchor->series_away_wins = $anchor->winner_team_id !== null && (int) $anchor->winner_team_id === (int) $anchor->away_team_id ? 1 : 0;
+            $anchor->save();
+
+            return;
+        }
+
+        $games = MatchModel::where('series_id', $anchor->id)
+            ->orderBy('game_number')
+            ->get();
+
+        $allGames = $games->prepend($anchor);
+        $homeWins = 0;
+        $awayWins = 0;
+        $lastDecidingGame = null;
+        $needed = $this->seriesWinsNeeded($anchor->best_of);
+
+        foreach ($allGames as $game) {
+            $isCompleted = $game->is($anchor)
+                ? $game->game_winner_team_id !== null
+                : in_array($game->status, ['final', 'forfeit'], true);
+
+            if (! $isCompleted || $game->game_winner_team_id === null) {
+                continue;
+            }
+
+            if ((int) $game->game_winner_team_id === (int) $anchor->home_team_id) {
+                $homeWins++;
+                if ($homeWins === $needed) {
+                    $lastDecidingGame = $game;
+                }
+            } elseif ((int) $game->game_winner_team_id === (int) $anchor->away_team_id) {
+                $awayWins++;
+                if ($awayWins === $needed) {
+                    $lastDecidingGame = $game;
+                }
+            }
+        }
+
+        $anchor->series_home_wins = $homeWins;
+        $anchor->series_away_wins = $awayWins;
+
+        if ($homeWins >= $needed || $awayWins >= $needed) {
+            $winnerId = $homeWins >= $needed ? $anchor->home_team_id : $anchor->away_team_id;
+            $anchor->winner_team_id = $winnerId;
+            $anchor->series_winner_team_id = $winnerId;
+            $anchor->status = $lastDecidingGame?->status === 'forfeit' ? 'forfeit' : 'final';
+            $anchor->completed_at ??= now();
+            $anchor->save();
+
+            $this->cancelRemainingSeriesGames($anchor);
+            $this->propagateMatchResult($anchor, $winnerId);
+
+            return;
+        }
+
+        $hasCompletedGame = $allGames->contains(
+            fn (MatchModel $game): bool => in_array($game->status, ['final', 'forfeit'], true),
+        );
+
+        $anchor->winner_team_id = null;
+        $anchor->series_winner_team_id = null;
+        $anchor->status = $hasCompletedGame ? 'in_progress' : 'scheduled';
+        $anchor->completed_at = null;
+        $anchor->save();
+
+        $this->syncSeriesTeams($anchor);
+        $this->activateNextSeriesGame($anchor);
+    }
+
+    public function cancelRemainingSeriesGames(MatchModel $anchor): void
+    {
+        MatchModel::where('series_id', $anchor->id)
+            ->where('status', 'conditional')
+            ->update(['status' => 'cancelled']);
+    }
+
+    protected function activateNextSeriesGame(MatchModel $anchor): void
+    {
+        $games = MatchModel::where('series_id', $anchor->id)
+            ->orderBy('game_number')
+            ->get();
+
+        $next = $games->first(
+            fn (MatchModel $game): bool => ! in_array($game->status, ['final', 'forfeit'], true),
+        );
+
+        if (! $next instanceof MatchModel) {
+            return;
+        }
+
+        $next->status = 'scheduled';
+        $next->home_team_id = $anchor->home_team_id;
+        $next->away_team_id = $anchor->away_team_id;
+        $next->save();
     }
 
     /**
