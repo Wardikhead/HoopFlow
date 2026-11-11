@@ -9,6 +9,7 @@ use App\Models\Player;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
+use App\Rules\EligibleBirthdate;
 use App\Services\DashboardService;
 use App\Services\EligibilityService;
 use Illuminate\Contracts\View\View;
@@ -42,9 +43,6 @@ class MyTeam extends Component
     /** @var array<int, string> */
     public const PAYMENT_METHODS = ['GCash', 'Maya', 'Bank transfer', 'Cash'];
 
-    /** @var array<int, string> */
-    public const DOCUMENT_STATUSES = ['verified', 'pending', 'missing'];
-
     public ?int $teamId = null;
 
     public ?int $tournamentId = null;
@@ -59,11 +57,7 @@ class MyTeam extends Component
 
     public string $playerPosition = '';
 
-    public string $playerAge = '';
-
-    public bool $playerConsent = false;
-
-    public string $playerDocumentStatus = 'pending';
+    public string $playerBirthdate = '';
 
     public bool $showRemoveDialog = false;
 
@@ -147,7 +141,10 @@ class MyTeam extends Component
         return Team::query()
             ->with([
                 'coachUser',
-                'players' => fn ($query) => $query->orderBy('jersey_number')->orderBy('id'),
+                'players' => fn ($query) => $query
+                    ->with('eligibilityDocuments')
+                    ->orderBy('jersey_number')
+                    ->orderBy('id'),
                 'registrations.tournament',
                 'registrations.division',
                 'registrations.payment',
@@ -330,11 +327,7 @@ class MyTeam extends Component
             $this->playerName = trim($player->first_name.' '.$player->last_name);
             $this->playerNumber = (string) $player->jersey_number;
             $this->playerPosition = self::POSITIONS[$this->positionIndex($player->position)] ?? self::POSITIONS[0];
-            $this->playerAge = $player->birthdate !== null ? (string) $player->birthdate->age : '';
-            $this->playerConsent = $player->consent_at !== null;
-            $this->playerDocumentStatus = in_array($player->eligibility_status, self::DOCUMENT_STATUSES, true)
-                ? $player->eligibility_status
-                : 'pending';
+            $this->playerBirthdate = $player->birthdate?->format('Y-m-d') ?? '';
         } else {
             if ($team->players->count() >= 12) {
                 $this->dispatch('hf-toast', title: 'Roster full', message: 'A roster can have at most 12 players.', tone: 'warning');
@@ -346,9 +339,7 @@ class MyTeam extends Component
             $this->playerName = '';
             $this->playerNumber = '';
             $this->playerPosition = self::POSITIONS[0];
-            $this->playerAge = '';
-            $this->playerConsent = false;
-            $this->playerDocumentStatus = 'pending';
+            $this->playerBirthdate = '';
         }
 
         $this->showPlayerDialog = true;
@@ -397,53 +388,51 @@ class MyTeam extends Component
         $parts = preg_split('/\s+/', $name, 2) ?: [];
         $firstName = $parts[0] ?? $name;
         $lastName = $parts[1] ?? '';
-        $documentStatus = $this->playerDocumentStatus;
-        $consent = $this->playerConsent;
+        $birthdate = $this->playerBirthdate;
         $number = (int) $this->playerNumber;
-        $age = (int) $this->playerAge;
+        $birthdateChanged = $player instanceof Player
+            && $player->birthdate?->format('Y-m-d') !== $birthdate;
 
-        DB::transaction(function () use ($team, $player, $firstName, $lastName, $name, $number, $age, $consent, $documentStatus): void {
+        DB::transaction(function () use ($team, $player, $firstName, $lastName, $name, $number, $birthdate, $birthdateChanged): void {
             $eligibility = app(EligibilityService::class);
 
             $attributes = [
                 'first_name' => $firstName,
                 'last_name' => $lastName,
-                'birthdate' => now()->subYears($age)->format('Y-m-d'),
+                'birthdate' => $birthdate,
                 'jersey_number' => $number,
                 'position' => $this->playerPosition,
-                'consent_at' => $consent ? ($player instanceof Player ? ($player->consent_at ?? now()) : now()) : null,
-                'eligibility_status' => $documentStatus,
-                'verified_at' => $documentStatus === 'verified'
-                    ? ($player instanceof Player ? ($player->verified_at ?? now()) : now())
-                    : null,
             ];
 
             if ($player instanceof Player) {
                 $before = [
                     'name' => trim($player->first_name.' '.$player->last_name),
                     'number' => $player->jersey_number,
-                    'documentStatus' => $player->eligibility_status,
+                    'birthdate' => $player->birthdate?->format('Y-m-d'),
                 ];
 
                 $player->update($attributes);
-                $eligibility->syncDocumentStatus($player, $documentStatus);
+
+                if ($birthdateChanged) {
+                    $eligibility->resetDocumentReview($player);
+                }
 
                 $this->writeAudit($team, 'team.roster.update', $before, [
                     'name' => $name,
                     'number' => $number,
-                    'documentStatus' => $documentStatus,
+                    'birthdate' => $birthdate,
                 ]);
 
                 return;
             }
 
             $createdPlayer = $team->players()->create($attributes);
-            $eligibility->syncDocumentStatus($createdPlayer, $documentStatus);
+            $eligibility->initializePlayer($createdPlayer);
 
             $this->writeAudit($team, 'team.roster.add', null, [
                 'name' => $name,
                 'number' => $number,
-                'documentStatus' => $documentStatus,
+                'birthdate' => $birthdate,
             ]);
         });
 
@@ -618,9 +607,7 @@ class MyTeam extends Component
             'playerName' => ['required', 'string', 'min:2', 'max:255'],
             'playerNumber' => ['required', 'integer', 'min:1', 'max:99', $unique],
             'playerPosition' => ['required', 'string', 'in:'.implode(',', self::POSITIONS)],
-            'playerAge' => ['required', 'integer', 'min:8', 'max:99'],
-            'playerConsent' => ['boolean'],
-            'playerDocumentStatus' => ['required', 'string', 'in:'.implode(',', self::DOCUMENT_STATUSES)],
+            'playerBirthdate' => ['required', new EligibleBirthdate($this->registration?->division, $this->tournament)],
         ];
     }
 
@@ -636,9 +623,7 @@ class MyTeam extends Component
             'playerNumber.min' => 'Use 1–99.',
             'playerNumber.max' => 'Use 1–99.',
             'playerNumber.unique' => 'That jersey number is already taken.',
-            'playerAge.required' => 'Enter the player age.',
-            'playerAge.min' => 'Age must be 8–99.',
-            'playerAge.max' => 'Age must be 8–99.',
+            'playerBirthdate.required' => 'Enter the player birthdate.',
         ];
     }
 
