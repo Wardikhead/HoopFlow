@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Registration;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\Bracket\BracketPlan;
 use App\Services\Bracket\DoubleEliminationBuilder;
@@ -401,12 +402,14 @@ class BracketService
                 if ($homeState === 'impossible' && $awayState === 'impossible') {
                     $this->cancelMatch($match);
                     $changed = true;
+
                     continue;
                 }
 
                 if ($match->home_team_id !== null && $awayState === 'impossible') {
                     $this->applyBye($match, (int) $match->home_team_id);
                     $changed = true;
+
                     continue;
                 }
 
@@ -598,12 +601,15 @@ class BracketService
     public function correctScore(MatchModel $match, int $score1, int $score2, string $reason): void
     {
         $reason = trim($reason);
+
         if ($reason === '') {
             throw new \InvalidArgumentException('Correction reason is required.');
         }
+
         if ($score1 < 0 || $score2 < 0) {
             throw new \InvalidArgumentException('Scores must be zero or positive whole numbers.');
         }
+
         if ($score1 === $score2) {
             throw new \InvalidArgumentException('Elimination games cannot end in a tie.');
         }
@@ -611,50 +617,299 @@ class BracketService
         DB::transaction(function () use ($match, $score1, $score2, $reason): void {
             $match->refresh();
 
-            $previousScore1 = $match->home_score;
-            $previousScore2 = $match->away_score;
-            $previousWinnerId = $match->winner_team_id;
-
-            $team1Id = $match->home_team_id;
-            $team2Id = $match->away_team_id;
-
-            if ($team1Id === null && $team2Id === null) {
-                throw new \InvalidArgumentException('Match has no teams.');
+            if (! in_array($match->status, ['final', 'forfeit', 'in_progress'], true)) {
+                throw new \InvalidArgumentException('Only a recorded result can be corrected.');
             }
 
-            if ($team1Id === null) {
-                $winnerId = $team2Id;
-            } elseif ($team2Id === null) {
-                $winnerId = $team1Id;
-            } else {
-                $winnerId = $score1 > $score2 ? $team1Id : $team2Id;
+            $anchor = $match->series_id !== null
+                ? MatchModel::find($match->series_id)
+                : $match;
+
+            if (! $anchor instanceof MatchModel) {
+                throw new \InvalidArgumentException('Series anchor not found.');
+            }
+
+            $previousHomeScore = $match->home_score;
+            $previousAwayScore = $match->away_score;
+            $previousWinnerId = $match->winner_team_id;
+            $previousGameWinnerId = $match->game_winner_team_id;
+
+            $newGameWinnerId = $score1 > $score2
+                ? (int) $match->home_team_id
+                : (int) $match->away_team_id;
+
+            $winnerChanged = (int) $previousGameWinnerId !== $newGameWinnerId;
+
+            if ($winnerChanged && $this->downstreamHasResults($anchor)) {
+                throw new \InvalidArgumentException('Cannot change this result because a later matchup already has a result.');
+            }
+
+            if ($winnerChanged) {
+                $this->clearDownstream($anchor);
             }
 
             $match->home_score = $score1;
             $match->away_score = $score2;
-            $match->winner_team_id = $winnerId;
+            $match->game_winner_team_id = $newGameWinnerId;
+            $match->winner_team_id = $match->series_id === null && $match->best_of > 1
+                ? null
+                : $newGameWinnerId;
             $match->status = 'final';
             $match->forfeit_reason = null;
+
             if ($match->completed_at === null) {
                 $match->completed_at = now();
             }
+
             $match->save();
 
-            if ($previousWinnerId !== $winnerId) {
-                $this->propagateMatchResult($match, $winnerId);
+            if ($anchor->id === $match->id && $anchor->best_of <= 1) {
+                $anchor->series_winner_team_id = $newGameWinnerId;
+                $anchor->series_home_wins = $newGameWinnerId === (int) $anchor->home_team_id ? 1 : 0;
+                $anchor->series_away_wins = $newGameWinnerId === (int) $anchor->away_team_id ? 1 : 0;
+                $anchor->save();
+
+                if ($winnerChanged) {
+                    $this->propagateMatchResult($anchor, $newGameWinnerId);
+                }
+            } else {
+                $this->syncSeries($anchor);
+            }
+
+            $this->syncGrandFinalReset($anchor);
+
+            $bracket = $anchor->bracket;
+
+            if ($bracket instanceof Bracket) {
+                $this->resolveStructuralByes($bracket);
             }
 
             $this->writeAudit($match, 'score.correct', [
-                'home_score' => $previousScore1,
-                'away_score' => $previousScore2,
+                'home_score' => $previousHomeScore,
+                'away_score' => $previousAwayScore,
                 'winner_team_id' => $previousWinnerId,
             ], [
                 'home_score' => $score1,
                 'away_score' => $score2,
-                'winner_team_id' => $winnerId,
+                'winner_team_id' => $newGameWinnerId,
                 'reason' => $reason,
             ]);
         });
+    }
+
+    public function syncGrandFinalReset(MatchModel $grandFinal): void
+    {
+        if ($grandFinal->stage !== 'grand_final' || $grandFinal->best_of > 1) {
+            return;
+        }
+
+        $reset = MatchModel::where('bracket_id', $grandFinal->bracket_id)
+            ->where('stage', 'reset')
+            ->first();
+
+        if (! $reset instanceof MatchModel) {
+            return;
+        }
+
+        if (! in_array($grandFinal->status, ['final', 'forfeit'], true)) {
+            $reset->status = 'conditional';
+            $reset->home_team_id = $grandFinal->home_team_id;
+            $reset->away_team_id = $grandFinal->away_team_id;
+            $reset->save();
+
+            return;
+        }
+
+        $winnersFinal = MatchModel::where('bracket_id', $grandFinal->bracket_id)
+            ->where('stage', 'winners')
+            ->whereNull('series_id')
+            ->orderByDesc('round_number')
+            ->first();
+
+        $winnersChampionId = $winnersFinal?->winner_team_id;
+
+        if ($winnersChampionId !== null && (int) $grandFinal->winner_team_id === (int) $winnersChampionId) {
+            if (! in_array($reset->status, ['final', 'forfeit'], true)) {
+                $reset->status = 'cancelled';
+                $reset->save();
+            }
+
+            return;
+        }
+
+        if (in_array($reset->status, ['conditional', 'cancelled'], true)) {
+            $reset->status = 'scheduled';
+            $reset->home_team_id = $grandFinal->home_team_id;
+            $reset->away_team_id = $grandFinal->away_team_id;
+            $reset->save();
+        }
+    }
+
+    public function champion(Tournament $tournament): ?Team
+    {
+        $format = $tournament->format();
+        $divisionIds = $tournament->divisions()->pluck('id');
+
+        if ($format === 'round-robin') {
+            $playoff = Bracket::whereIn('division_id', $divisionIds)
+                ->where('phase', 'playoffs')
+                ->first();
+
+            return $playoff instanceof Bracket
+                ? $this->singleEliminationChampion($playoff)
+                : null;
+        }
+
+        $bracket = Bracket::whereIn('division_id', $divisionIds)
+            ->where('phase', 'main')
+            ->first();
+
+        if (! $bracket instanceof Bracket) {
+            return null;
+        }
+
+        return $format === 'double-elimination'
+            ? $this->doubleEliminationChampion($bracket)
+            : $this->singleEliminationChampion($bracket);
+    }
+
+    protected function singleEliminationChampion(Bracket $bracket): ?Team
+    {
+        $final = MatchModel::where('bracket_id', $bracket->id)
+            ->whereNull('series_id')
+            ->where('stage', 'winners')
+            ->orderByDesc('round_number')
+            ->first();
+
+        if (! $final instanceof MatchModel || ! in_array($final->status, ['final', 'forfeit'], true)) {
+            return null;
+        }
+
+        return $final->winnerTeam instanceof Team ? $final->winnerTeam : null;
+    }
+
+    protected function doubleEliminationChampion(Bracket $bracket): ?Team
+    {
+        $grandFinal = MatchModel::where('bracket_id', $bracket->id)
+            ->where('stage', 'grand_final')
+            ->first();
+
+        if (! $grandFinal instanceof MatchModel || ! in_array($grandFinal->status, ['final', 'forfeit'], true)) {
+            return null;
+        }
+
+        if ($grandFinal->best_of > 1) {
+            return $grandFinal->winnerTeam instanceof Team ? $grandFinal->winnerTeam : null;
+        }
+
+        $reset = MatchModel::where('bracket_id', $bracket->id)
+            ->where('stage', 'reset')
+            ->first();
+
+        if ($reset instanceof MatchModel && in_array($reset->status, ['final', 'forfeit'], true)) {
+            return $reset->winnerTeam instanceof Team ? $reset->winnerTeam : null;
+        }
+
+        $winnersFinal = MatchModel::where('bracket_id', $bracket->id)
+            ->where('stage', 'winners')
+            ->whereNull('series_id')
+            ->orderByDesc('round_number')
+            ->first();
+
+        if ($winnersFinal instanceof MatchModel
+            && $winnersFinal->winner_team_id !== null
+            && (int) $grandFinal->winner_team_id === (int) $winnersFinal->winner_team_id) {
+            return $grandFinal->winnerTeam instanceof Team ? $grandFinal->winnerTeam : null;
+        }
+
+        return null;
+    }
+
+    protected function downstreamHasResults(MatchModel $anchor): bool
+    {
+        $slots = BracketSlot::where('source_match_id', $anchor->id)->get();
+
+        foreach ($slots as $slot) {
+            if ($slot->stage === 'reset') {
+                continue;
+            }
+
+            $target = MatchModel::where('bracket_id', $slot->bracket_id)
+                ->where('stage', $slot->stage)
+                ->where('round_number', $slot->round_number)
+                ->where('match_number', $slot->match_number)
+                ->whereNull('series_id')
+                ->first();
+
+            if (! $target instanceof MatchModel) {
+                continue;
+            }
+
+            if ($target->status === 'final' && $target->isByeGame()) {
+                continue;
+            }
+
+            if (in_array($target->status, ['final', 'forfeit', 'in_progress'], true)) {
+                return true;
+            }
+        }
+
+        if ($anchor->stage === 'grand_final') {
+            $reset = MatchModel::where('bracket_id', $anchor->bracket_id)
+                ->where('stage', 'reset')
+                ->first();
+
+            if ($reset instanceof MatchModel && in_array($reset->status, ['final', 'forfeit', 'in_progress'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function clearDownstream(MatchModel $source): void
+    {
+        $slots = BracketSlot::where('source_match_id', $source->id)->get();
+
+        foreach ($slots as $slot) {
+            if ($slot->stage === 'reset') {
+                continue;
+            }
+
+            $target = MatchModel::where('bracket_id', $slot->bracket_id)
+                ->where('stage', $slot->stage)
+                ->where('round_number', $slot->round_number)
+                ->where('match_number', $slot->match_number)
+                ->whereNull('series_id')
+                ->first();
+
+            if (! $target instanceof MatchModel) {
+                continue;
+            }
+
+            if (in_array($target->status, ['final', 'forfeit', 'in_progress'], true) && ! $target->isByeGame()) {
+                throw new \InvalidArgumentException('Cannot change this result because a later matchup already has a result.');
+            }
+
+            $slot->team_id = null;
+            $slot->save();
+
+            $column = $slot->slot === 'home' ? 'home_team_id' : 'away_team_id';
+            $target->{$column} = null;
+
+            if (($target->status === 'final' && $target->isByeGame()) || $target->status === 'cancelled') {
+                $target->status = 'scheduled';
+                $target->winner_team_id = null;
+                $target->series_winner_team_id = null;
+                $target->game_winner_team_id = null;
+                $target->save();
+                $this->clearDownstream($target);
+            } else {
+                $target->save();
+            }
+
+            $this->syncSeriesTeams($target);
+        }
     }
 
     public function recordScore(MatchModel $match, int $score1, int $score2): void
@@ -799,6 +1054,10 @@ class BracketService
             if ($anchor instanceof MatchModel) {
                 $this->syncSeries($anchor);
             }
+        }
+
+        if ($game->series_id === null && $game->stage === 'grand_final') {
+            $this->syncGrandFinalReset($game);
         }
 
         return ['winnerId' => $winnerId, 'loserId' => $loserId];
