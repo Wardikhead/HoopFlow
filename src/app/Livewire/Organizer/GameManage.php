@@ -20,6 +20,7 @@ use Livewire\Component;
  * @property-read Team|null $homeTeam
  * @property-read Team|null $awayTeam
  * @property-read bool $isLocked
+ * @property-read bool $hasEditableBoxScore
  * @property-read list<string> $quarterLabels
  * @property-read Collection<int, Tournament> $tournaments
  * @property-read Collection<int, MatchModel> $matches
@@ -69,6 +70,10 @@ class GameManage extends Component
 
     public string $errorMessage = '';
 
+    public bool $correctionMode = false;
+
+    public string $correctionReason = '';
+
     public function mount(int|string|null $match = null): void
     {
         abort_unless(auth()->user()?->hasRole('organizer') ?? false, 403);
@@ -88,6 +93,10 @@ class GameManage extends Component
         }
 
         $this->selectMatch($found);
+
+        if (request()->boolean('correct')) {
+            $this->enterCorrectionMode();
+        }
     }
 
     #[Computed]
@@ -124,7 +133,18 @@ class GameManage extends Component
     #[Computed]
     public function isLocked(): bool
     {
-        return in_array($this->match?->status, ['final', 'forfeit'], true);
+        return ! $this->correctionMode
+            && in_array($this->match?->status, ['final', 'forfeit'], true);
+    }
+
+    #[Computed]
+    public function hasEditableBoxScore(): bool
+    {
+        $match = $this->match;
+
+        return $match instanceof MatchModel
+            && $match->playerStats->isNotEmpty()
+            && $match->playerQuarterStats->isNotEmpty();
     }
 
     /**
@@ -216,6 +236,26 @@ class GameManage extends Component
     public function statPoints(array $quarter): int
     {
         return app(GameStatsService::class)->pointsFor($quarter);
+    }
+
+    public function statPointsForSide(string $side): int
+    {
+        $entries = match ($side) {
+            'team1' => $this->stats['team1'],
+            'team2' => $this->stats['team2'],
+            default => [],
+        };
+
+        $service = app(GameStatsService::class);
+        $total = 0;
+
+        foreach ($entries as $entry) {
+            foreach ($entry['quarters'] as $quarter) {
+                $total += $service->pointsFor($quarter);
+            }
+        }
+
+        return $total;
     }
 
     public function setActiveQuarter(int $index): void
@@ -361,6 +401,10 @@ class GameManage extends Component
 
     public function saveDraft(): void
     {
+        if ($this->correctionMode) {
+            return;
+        }
+
         $match = $this->editableMatch();
 
         if ($match === null) {
@@ -381,6 +425,10 @@ class GameManage extends Component
 
     public function requestPublish(): void
     {
+        if ($this->correctionMode) {
+            return;
+        }
+
         if ($this->editableMatch() === null) {
             return;
         }
@@ -432,6 +480,81 @@ class GameManage extends Component
         $this->toast('Result published. The winner advances to the next round.', 'Result published');
     }
 
+    public function requestSaveCorrection(): void
+    {
+        if (! $this->correctionMode) {
+            return;
+        }
+
+        $match = $this->editableMatch();
+
+        if ($match === null) {
+            return;
+        }
+
+        $this->validate([
+            'correctionReason' => ['required', 'string', 'min:5', 'max:500'],
+        ], [
+            'correctionReason.required' => 'Enter at least 5 characters for the correction reason.',
+            'correctionReason.min' => 'Enter at least 5 characters for the correction reason.',
+        ]);
+
+        $sum1 = array_sum($this->quarters['team1']);
+        $sum2 = array_sum($this->quarters['team2']);
+
+        if ((int) $this->finals['team1'] !== $sum1 || (int) $this->finals['team2'] !== $sum2) {
+            $this->fail('Final score must equal the sum of the quarters.');
+
+            return;
+        }
+
+        if ($sum1 === $sum2) {
+            $this->fail('Elimination games cannot end in a tie.');
+
+            return;
+        }
+
+        $this->errorMessage = '';
+        $this->openConfirm(
+            'Save correction?',
+            'This updates the score and box score, may rewrite the downstream bracket if the winner changes, and is written to the audit trail.',
+            'Save correction',
+            'danger',
+            'confirmSaveCorrection',
+        );
+    }
+
+    public function confirmSaveCorrection(): void
+    {
+        $this->showConfirm = false;
+        $match = $this->editableMatch();
+
+        if ($match === null) {
+            return;
+        }
+
+        try {
+            app(GameStatsService::class)->correct($match, $this->payload(), $this->correctionReason);
+        } catch (\InvalidArgumentException $exception) {
+            $this->fail($exception->getMessage());
+
+            return;
+        }
+
+        $this->redirect(route('gameStats', ['match' => $match->id]));
+    }
+
+    public function cancelCorrection(): void
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel) {
+            return;
+        }
+
+        $this->redirect(route('gameStats', ['match' => $match->id]));
+    }
+
     public function closeConfirm(): void
     {
         $this->showConfirm = false;
@@ -447,6 +570,27 @@ class GameManage extends Component
         $this->matchId = (int) $match->id;
         $this->requestedMatchMissing = false;
         $this->loadEditor($match);
+    }
+
+    protected function enterCorrectionMode(): void
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel || $match->status !== 'final') {
+            return;
+        }
+
+        Gate::authorize('correctScore', $match);
+
+        if (! $this->hasEditableBoxScore) {
+            $this->redirect(route('gameStats', ['match' => $match->id, 'correct' => 1]));
+
+            return;
+        }
+
+        $this->correctionMode = true;
+        $this->correctionReason = '';
+        $this->errorMessage = '';
     }
 
     protected function loadEditor(MatchModel $match): void
@@ -482,6 +626,25 @@ class GameManage extends Component
 
         if (! $match instanceof MatchModel) {
             return null;
+        }
+
+        if ($this->correctionMode) {
+            if ($match->status !== 'final') {
+                $this->fail('Only a final result can be corrected.');
+
+                return null;
+            }
+
+            Gate::authorize('correctScore', $match);
+            Gate::authorize('enterStats', $match);
+
+            if ($match->home_team_id === null || $match->away_team_id === null) {
+                $this->fail('Both teams must be known before entering stats.');
+
+                return null;
+            }
+
+            return $match;
         }
 
         if (in_array($match->status, ['final', 'forfeit'], true)) {

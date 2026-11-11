@@ -225,3 +225,174 @@ it('keys stat rows by the active quarter so bindings cannot leak across quarters
         ->call('setActiveQuarter', 1)
         ->assertSeeHtml('wire:key="ingame-stat-row-team1-'.$playerId.'-1"');
 });
+
+function gmFinalWithQuarters(): MatchModel
+{
+    $match = gmMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+
+    PlayerStatQuarter::query()->create([
+        'match_id' => $match->id,
+        'player_id' => $stat->player_id,
+        'team_id' => $stat->team_id,
+        'quarter_index' => 0,
+        'field_goals_made' => 2,
+        'field_goals_attempted' => 4,
+        'three_points_made' => 1,
+        'three_points_attempted' => 2,
+        'free_throws_made' => 1,
+        'free_throws_attempted' => 2,
+        'points' => 6,
+    ]);
+
+    return $match;
+}
+
+it('opens correction mode for a final game with an editable box score', function () {
+    $match = gmFinalWithQuarters();
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertSet('correctionMode', true)
+        ->assertSeeHtml('data-testid="ingame-correction-banner"')
+        ->assertSeeHtml('data-testid="ingame-correction-reason"')
+        ->assertSeeHtml('data-testid="ingame-save-correction"')
+        ->assertSeeHtml('data-testid="ingame-cancel-correction"')
+        ->assertDontSeeHtml('data-testid="ingame-save"')
+        ->assertDontSeeHtml('data-testid="ingame-publish"')
+        ->assertDontSee('Locked result');
+});
+
+it('keeps a final game locked without the correction flag', function () {
+    $match = gmFinalWithQuarters();
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertSet('correctionMode', false)
+        ->assertSee('Locked result')
+        ->assertDontSeeHtml('data-testid="ingame-correction-banner"')
+        ->assertSeeHtml('data-testid="ingame-correct"');
+});
+
+it('links a locked editable game to correction mode', function () {
+    $match = gmFinalWithQuarters();
+
+    $this->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->get('/game-manage?match='.$match->id)
+        ->assertOk()
+        ->assertSee(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+});
+
+it('redirects correction mode to the score-only dialog when quarter rows are missing', function () {
+    $match = gmMatch(8, 1);
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertRedirect(route('gameStats', ['match' => $match->id, 'correct' => 1]));
+});
+
+it('ignores the correction flag for a scheduled game', function () {
+    $match = gmMatch(8, 3);
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertSet('correctionMode', false)
+        ->assertSeeHtml('data-testid="ingame-save"')
+        ->assertDontSeeHtml('data-testid="ingame-correction-banner"');
+});
+
+it('forbids correction mode to non-organizers', function () {
+    $match = gmFinalWithQuarters();
+
+    $this->actingAs(gmUser('coach.marcus@hoopflow.ph'))
+        ->get('/game-manage?match='.$match->id.'&correct=1')
+        ->assertForbidden();
+});
+
+it('shows a mismatch warning in correction mode without blocking the save', function () {
+    $match = gmFinalWithQuarters();
+
+    $component = Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->assertSeeHtml('data-testid="ingame-mismatch-team1"')
+        ->assertSee('Player points 6 · Final 78 · 72 unassigned');
+
+    $component
+        ->set('quarters.team1', [20, 20, 20, 20])
+        ->set('quarters.team2', [18, 18, 17, 17])
+        ->set('finals.team1', 80)
+        ->set('finals.team2', 70)
+        ->set('correctionReason', 'Referee review changed the home total.')
+        ->call('requestSaveCorrection')
+        ->assertSet('showConfirm', true)
+        ->assertSet('confirmAction', 'confirmSaveCorrection')
+        ->call('confirmSaveCorrection')
+        ->assertRedirect(route('gameStats', ['match' => $match->id]));
+
+    $match->refresh();
+
+    expect((int) $match->home_score)->toBe(80)
+        ->and($match->quarters_json['team1'])->toBe([20, 20, 20, 20])
+        ->and(AuditLog::where('action', 'score.correct')->where('entity_id', $match->id)->exists())->toBeTrue()
+        ->and(AuditLog::where('action', 'stats.correct')->where('entity_id', $match->id)->exists())->toBeTrue();
+});
+
+it('requires a correction reason', function () {
+    $match = gmFinalWithQuarters();
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->set('correctionReason', 'oops')
+        ->call('requestSaveCorrection')
+        ->assertHasErrors('correctionReason')
+        ->assertSet('showConfirm', false);
+});
+
+it('rejects a correction when the final does not equal the quarters', function () {
+    $match = gmFinalWithQuarters();
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->set('correctionReason', 'A valid correction reason.')
+        ->set('quarters.team1', [20, 20, 20, 20])
+        ->set('finals.team1', 79)
+        ->call('requestSaveCorrection')
+        ->assertSet('showConfirm', false)
+        ->assertSet('errorMessage', 'Final score must equal the sum of the quarters.');
+});
+
+it('cancels a correction without writing', function () {
+    $match = gmFinalWithQuarters();
+    $before = (int) $match->home_score;
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->set('quarters.team1', [20, 20, 20, 20])
+        ->call('cancelCorrection')
+        ->assertRedirect(route('gameStats', ['match' => $match->id]));
+
+    expect((int) $match->refresh()->home_score)->toBe($before)
+        ->and(AuditLog::where('action', 'stats.correct')->where('entity_id', $match->id)->exists())->toBeFalse();
+});
+
+it('ignores draft and publish actions in correction mode', function () {
+    $match = gmFinalWithQuarters();
+
+    Livewire::withQueryParams(['correct' => 1])
+        ->actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $match->id])
+        ->call('saveDraft')
+        ->call('requestPublish')
+        ->assertSet('showConfirm', false);
+
+    expect(AuditLog::where('action', 'stats.save')->where('entity_id', $match->id)->exists())->toBeFalse();
+});
