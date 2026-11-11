@@ -36,8 +36,76 @@ it('generates an 8-team double-elimination bracket', function () {
 
     $result = (new BracketService)->generate($tournament, 'double-elimination');
 
-    expect($result['matches'])->toBe(14);
+    expect($result['matches'])->toBe(15);
     expect($result['byes'])->toBe(0);
+});
+
+it('generates a true 8-team double-elimination bracket', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+
+    $result = (new BracketService)->generate($tournament, 'double-elimination');
+
+    $bracket = \App\Models\Bracket::whereIn(
+        'division_id',
+        $tournament->divisions()->pluck('id'),
+    )->where('format', 'double_elim')->firstOrFail();
+
+    $counts = MatchModel::where('bracket_id', $bracket->id)
+        ->whereNull('series_id')
+        ->selectRaw('stage, count(*) as total')
+        ->groupBy('stage')
+        ->pluck('total', 'stage');
+
+    expect($result['matches'])->toBe(15)
+        ->and($result['byes'])->toBe(0)
+        ->and($counts->get('winners'))->toBe(7)
+        ->and($counts->get('losers'))->toBe(6)
+        ->and($counts->get('grand_final'))->toBe(1)
+        ->and($counts->get('reset'))->toBe(1);
+});
+
+it('resolves byes and cancellations in a 5-team double-elimination bracket', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $division = $tournament->divisions()->firstOrFail();
+
+    // Keep only five approved teams for this probe.
+    $approved = \App\Models\Registration::where('tournament_id', $tournament->id)
+        ->where('status', 'approved')
+        ->orderBy('seed')
+        ->get();
+
+    $approved->slice(5)->each(fn ($registration) => $registration->update(['status' => 'pending']));
+
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['slots' => 8]),
+    ]);
+
+    $result = (new BracketService)->generate($tournament, 'double-elimination');
+
+    $bracket = \App\Models\Bracket::where('division_id', $division->id)
+        ->where('format', 'double_elim')
+        ->firstOrFail();
+
+    expect($result['matches'])->toBe(15)
+        ->and($result['byes'])->toBeGreaterThanOrEqual(3)
+        ->and(MatchModel::where('bracket_id', $bracket->id)->where('status', 'cancelled')->count())->toBeGreaterThanOrEqual(1)
+        ->and(MatchModel::where('bracket_id', $bracket->id)
+            ->whereNull('series_id')
+            ->where('status', 'scheduled')
+            ->whereNull('home_team_id')
+            ->whereNull('away_team_id')
+            ->count())->toBeGreaterThan(0);
+});
+
+it('respects configured slots and rejects approved teams above the limit', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['slots' => 4]),
+    ]);
+
+    expect(fn () => (new BracketService)->generate($tournament, 'double-elimination'))
+        ->toThrow(InvalidArgumentException::class, 'Approved teams exceed the configured slots.');
 });
 
 it('throws on invalid format', function () {
