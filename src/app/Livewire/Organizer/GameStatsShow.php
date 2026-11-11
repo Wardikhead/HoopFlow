@@ -27,6 +27,7 @@ use Livewire\Component;
  * @property-read array{team1: list<int>, team2: list<int>}|null $quarters
  * @property-read bool $hasStats
  * @property-read bool $hasEditableBoxScore
+ * @property-read list<array{side: string, team: string, points: int, score: int, editable: bool}> $scoreMismatch
  * @property-read list<array{key: string, label: string, index: int|null}> $periods
  * @property-read string $periodLabel
  * @property-read bool $hasQuarterData
@@ -203,6 +204,66 @@ class GameStatsShow extends Component
         return $match instanceof MatchModel
             && $match->playerStats->isNotEmpty()
             && $match->playerQuarterStats->isNotEmpty();
+    }
+
+    /**
+     * @return list<array{side: string, team: string, points: int, score: int, editable: bool}>
+     */
+    #[Computed]
+    public function scoreMismatch(): array
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel
+            || ! in_array($match->status, ['final', 'forfeit'], true)
+            || $match->home_score === null
+            || $match->away_score === null
+            || $match->playerStats->isEmpty()) {
+            return [];
+        }
+
+        $editable = $this->hasEditableBoxScore;
+        $mismatches = [];
+
+        /** @var list<array{side: string, team: Team|null, teamId: int|null, score: int}> $teams */
+        $teams = [
+            [
+                'side' => 'team1',
+                'team' => $match->homeTeam,
+                'teamId' => $match->home_team_id !== null ? (int) $match->home_team_id : null,
+                'score' => (int) $match->home_score,
+            ],
+            [
+                'side' => 'team2',
+                'team' => $match->awayTeam,
+                'teamId' => $match->away_team_id !== null ? (int) $match->away_team_id : null,
+                'score' => (int) $match->away_score,
+            ],
+        ];
+
+        foreach ($teams as $entry) {
+            if ($entry['teamId'] === null) {
+                continue;
+            }
+
+            $points = (int) $match->playerStats
+                ->where('team_id', $entry['teamId'])
+                ->sum('points');
+
+            if ($points === $entry['score']) {
+                continue;
+            }
+
+            $mismatches[] = [
+                'side' => $entry['side'],
+                'team' => $entry['team'] instanceof Team ? $entry['team']->name : 'Team',
+                'points' => $points,
+                'score' => $entry['score'],
+                'editable' => $editable,
+            ];
+        }
+
+        return $mismatches;
     }
 
     /**
