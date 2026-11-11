@@ -177,7 +177,10 @@
             <div class="hf-between hf-wrap hf-mb-2">
                 <div>
                     <span class="hf-eyebrow">{{ $match->status === 'scheduled' && $hasStats ? 'Draft box score' : 'Official box score' }}</span>
-                    <h2 class="hf-section-title hf-mb-0">Player stats</h2>
+                    <div class="hf-flex hf-items-center hf-gap-2">
+                        <h2 class="hf-section-title hf-mb-0">Player stats</h2>
+                        <span class="hf-chip hf-chip--slate" data-testid="stats-period-label">{{ $this->periodLabel }}</span>
+                    </div>
                 </div>
                 <div class="hf-filter-row" data-testid="stats-side-filters">
                     <button type="button" class="hf-chip hf-chip--{{ $side === 'all' ? 'primary' : 'slate' }}" wire:click="$set('side', 'all')" aria-pressed="{{ $side === 'all' ? 'true' : 'false' }}" data-testid="stats-side-all">All</button>
@@ -189,6 +192,25 @@
                     @endif
                 </div>
             </div>
+
+            @if ($home && $away)
+                <nav class="hf-period-nav" aria-label="Player stat period" data-testid="stats-period-nav">
+                    @foreach ($this->periods as $period)
+                        <button
+                            type="button"
+                            class="hf-period-nav__btn {{ $this->period === $period['key'] ? 'is-active' : '' }}"
+                            wire:click="setPeriod('{{ $period['key'] }}')"
+                            aria-pressed="{{ $this->period === $period['key'] ? 'true' : 'false' }}"
+                            @if ($this->period === $period['key']) aria-current="true" @endif
+                            data-testid="stats-period-{{ $period['key'] }}"
+                        >{{ $period['label'] }}</button>
+                    @endforeach
+                </nav>
+
+                @if (! $this->hasQuarterData)
+                    <p class="hf-small hf-muted hf-mb-2" data-testid="stats-period-note">Per-quarter player stats were not recorded for this game.</p>
+                @endif
+            @endif
 
             <div class="hf-field hf-mb-2">
                 <label class="hf-label" for="statsSearch">Search player</label>
@@ -218,11 +240,7 @@
                             $team = $entry['team'];
                             $sideKey = $entry['sideKey'];
                             $rows = $this->rowsFor($team);
-                            $totals = [
-                                'points' => array_sum(array_column($rows, 'points')),
-                                'assists' => array_sum(array_column($rows, 'assists')),
-                                'rebounds' => array_sum(array_column($rows, 'rebounds')),
-                            ];
+                            $totals = $this->totalsFor($rows);
                         @endphp
                         <section class="hf-mb-3" data-testid="stats-team-{{ $team->id }}">
                             @if (count($rows) === 0)
@@ -251,18 +269,43 @@
                                             <tr>
                                                 <th scope="col" class="is-num">#</th>
                                                 <th scope="col">Player</th>
-                                                @foreach ([['key' => 'points', 'label' => 'PTS'], ['key' => 'assists', 'label' => 'AST'], ['key' => 'rebounds', 'label' => 'REB']] as $column)
-                                                    <th scope="col" class="is-num">
-                                                        <button type="button" class="hf-section-link" wire:click="sortBy('{{ $column['key'] }}')" data-testid="stats-sort-{{ $sideKey }}-{{ $column['key'] }}">
-                                                            {{ $column['label'] }}
-                                                            @if ($sortKey === $column['key'])
-                                                                <i class="bi bi-caret-{{ $sortDirection === 'asc' ? 'up' : 'down' }}-fill" aria-hidden="true"></i>
-                                                            @else
-                                                                <i class="bi bi-arrow-down-up hf-muted" aria-hidden="true"></i>
-                                                            @endif
-                                                        </button>
-                                                    </th>
-                                                @endforeach
+                                                <th scope="col" class="is-num">FG</th>
+                                                <th scope="col" class="is-num">3PT</th>
+                                                <th scope="col" class="is-num">FT</th>
+                                                <th scope="col" class="is-num">
+                                                    <button type="button" class="hf-section-link" wire:click="sortBy('rebounds')" data-testid="stats-sort-{{ $sideKey }}-rebounds">
+                                                        REB
+                                                        @if ($sortKey === 'rebounds')
+                                                            <i class="bi bi-caret-{{ $sortDirection === 'asc' ? 'up' : 'down' }}-fill" aria-hidden="true"></i>
+                                                        @else
+                                                            <i class="bi bi-arrow-down-up hf-muted" aria-hidden="true"></i>
+                                                        @endif
+                                                    </button>
+                                                </th>
+                                                <th scope="col" class="is-num">
+                                                    <button type="button" class="hf-section-link" wire:click="sortBy('assists')" data-testid="stats-sort-{{ $sideKey }}-assists">
+                                                        AST
+                                                        @if ($sortKey === 'assists')
+                                                            <i class="bi bi-caret-{{ $sortDirection === 'asc' ? 'up' : 'down' }}-fill" aria-hidden="true"></i>
+                                                        @else
+                                                            <i class="bi bi-arrow-down-up hf-muted" aria-hidden="true"></i>
+                                                        @endif
+                                                    </button>
+                                                </th>
+                                                <th scope="col" class="is-num">STL</th>
+                                                <th scope="col" class="is-num">BLK</th>
+                                                <th scope="col" class="is-num">TO</th>
+                                                <th scope="col" class="is-num">PF</th>
+                                                <th scope="col" class="is-num">
+                                                    <button type="button" class="hf-section-link" wire:click="sortBy('points')" data-testid="stats-sort-{{ $sideKey }}-points">
+                                                        PTS
+                                                        @if ($sortKey === 'points')
+                                                            <i class="bi bi-caret-{{ $sortDirection === 'asc' ? 'up' : 'down' }}-fill" aria-hidden="true"></i>
+                                                        @else
+                                                            <i class="bi bi-arrow-down-up hf-muted" aria-hidden="true"></i>
+                                                        @endif
+                                                    </button>
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -273,65 +316,36 @@
                                                         <strong>{{ $row['name'] }}</strong>
                                                         <span class="hf-small hf-muted" style="display: block">{{ $row['position'] ?: 'Player' }}</span>
                                                     </td>
+                                                    <td class="is-num">{{ $row['fgm'] }}/{{ $row['fga'] }}</td>
+                                                    <td class="is-num">{{ $row['tpm'] }}/{{ $row['tpa'] }}</td>
+                                                    <td class="is-num">{{ $row['ftm'] }}/{{ $row['fta'] }}</td>
+                                                    <td class="is-num">{{ $row['reb'] }}</td>
+                                                    <td class="is-num">{{ $row['ast'] }}</td>
+                                                    <td class="is-num">{{ $row['stl'] }}</td>
+                                                    <td class="is-num">{{ $row['blk'] }}</td>
+                                                    <td class="is-num">{{ $row['to'] }}</td>
+                                                    <td class="is-num">{{ $row['pf'] }}</td>
                                                     <td class="is-num">{{ $row['points'] }}</td>
-                                                    <td class="is-num">{{ $row['assists'] }}</td>
-                                                    <td class="is-num">{{ $row['rebounds'] }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
                                         <tfoot>
                                             <tr>
                                                 <td colspan="2"><strong>Team totals</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['fgm'] }}/{{ $totals['fga'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['tpm'] }}/{{ $totals['tpa'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['ftm'] }}/{{ $totals['fta'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['reb'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['ast'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['stl'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['blk'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['to'] }}</strong></td>
+                                                <td class="is-num"><strong>{{ $totals['pf'] }}</strong></td>
                                                 <td class="is-num"><strong>{{ $totals['points'] }}</strong></td>
-                                                <td class="is-num"><strong>{{ $totals['assists'] }}</strong></td>
-                                                <td class="is-num"><strong>{{ $totals['rebounds'] }}</strong></td>
                                             </tr>
                                         </tfoot>
                                     </table>
                                 </div>
-                                @foreach ($rows as $row)
-                                    @if ($row['hasQuarters'])
-                                        <details class="hf-card hf-card--flat hf-mt-2" data-testid="stats-player-quarters-{{ $sideKey }}-{{ $row['playerId'] }}">
-                                            <summary><strong>{{ $row['name'] }}</strong> — by quarter</summary>
-                                            <div class="hf-table-wrap hf-mt-2">
-                                                <table class="hf-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th scope="col">Q</th>
-                                                            <th scope="col" class="is-num">PTS</th>
-                                                            <th scope="col" class="is-num">FG</th>
-                                                            <th scope="col" class="is-num">3PT</th>
-                                                            <th scope="col" class="is-num">FT</th>
-                                                            <th scope="col" class="is-num">REB</th>
-                                                            <th scope="col" class="is-num">AST</th>
-                                                            <th scope="col" class="is-num">STL</th>
-                                                            <th scope="col" class="is-num">BLK</th>
-                                                            <th scope="col" class="is-num">TO</th>
-                                                            <th scope="col" class="is-num">PF</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($row['quarters'] as $index => $quarter)
-                                                            <tr data-testid="stats-player-quarter-{{ $sideKey }}-{{ $row['playerId'] }}-{{ $index }}">
-                                                                <td>{{ $index < 4 ? 'Q'.($index + 1) : 'OT'.($index - 3) }}</td>
-                                                                <td class="is-num">{{ $quarter['pts'] }}</td>
-                                                                <td class="is-num">{{ $quarter['fgm'] }}/{{ $quarter['fga'] }}</td>
-                                                                <td class="is-num">{{ $quarter['tpm'] }}/{{ $quarter['tpa'] }}</td>
-                                                                <td class="is-num">{{ $quarter['ftm'] }}/{{ $quarter['fta'] }}</td>
-                                                                <td class="is-num">{{ $quarter['reb'] }}</td>
-                                                                <td class="is-num">{{ $quarter['ast'] }}</td>
-                                                                <td class="is-num">{{ $quarter['stl'] }}</td>
-                                                                <td class="is-num">{{ $quarter['blk'] }}</td>
-                                                                <td class="is-num">{{ $quarter['to'] }}</td>
-                                                                <td class="is-num">{{ $quarter['pf'] }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </details>
-                                    @endif
-                                @endforeach
                             @endif
                         </section>
                     @endforeach

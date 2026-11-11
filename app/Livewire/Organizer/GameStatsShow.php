@@ -279,7 +279,17 @@ class GameStatsShow extends Component
     }
 
     /**
-     * @return array<int, array{playerId: int, name: string, number: int|string|null, position: string|null, points: int, assists: int, rebounds: int, hasQuarters: bool, quarters: array<int, array<string, int>>}>
+     * @return array<int, array{
+     *   playerId: int,
+     *   name: string,
+     *   number: int|string|null,
+     *   position: string|null,
+     *   fgm: int, fga: int,
+     *   tpm: int, tpa: int,
+     *   ftm: int, fta: int,
+     *   reb: int, ast: int, stl: int, blk: int, to: int, pf: int,
+     *   points: int
+     * }>
      */
     public function rowsFor(?Team $team): array
     {
@@ -291,56 +301,115 @@ class GameStatsShow extends Component
 
         $term = mb_strtolower(trim($this->search));
         $key = in_array($this->sortKey, ['points', 'assists', 'rebounds'], true) ? $this->sortKey : 'points';
+        $sortField = match ($key) {
+            'assists' => 'ast',
+            'rebounds' => 'reb',
+            default => 'points',
+        };
         $factor = $this->sortDirection === 'asc' ? 1 : -1;
+        $quarterIndex = $this->period === 'all' ? null : (int) $this->period;
         $quarterRows = $match->playerQuarterStats->groupBy('player_id');
-        $quarterData = $this->quarters;
-        $count = is_array($quarterData) ? count($quarterData['team1']) : 4;
 
         return $match->playerStats
             ->where('team_id', $team->id)
-            ->map(function (PlayerStat $stat) use ($quarterRows, $count): array {
+            ->map(function (PlayerStat $stat) use ($quarterRows, $quarterIndex): array {
                 $player = $stat->player;
                 $name = trim(($player->first_name ?? '').' '.($player->last_name ?? ''));
-                $rows = $quarterRows->get((int) $stat->player_id, collect());
-                $quarters = [];
-
-                for ($index = 0; $index < $count; $index++) {
-                    $row = $rows->firstWhere('quarter_index', $index);
-                    $quarters[$index] = $this->shortQuarter($row instanceof PlayerStatQuarter ? $row : null);
-                }
+                $line = $quarterIndex === null
+                    ? $this->statLineFromAggregate($stat)
+                    : $this->statLineFromQuarter(
+                        $quarterRows->get((int) $stat->player_id, collect())
+                            ->firstWhere('quarter_index', $quarterIndex)
+                    );
 
                 return [
                     'playerId' => (int) $stat->player_id,
                     'name' => $name !== '' ? $name : 'Player',
                     'number' => $player->jersey_number,
                     'position' => $player->position,
-                    'points' => (int) ($stat->points ?? 0),
-                    'assists' => (int) ($stat->assists ?? 0),
-                    'rebounds' => (int) ($stat->rebounds ?? 0),
-                    'hasQuarters' => $rows->isNotEmpty(),
-                    'quarters' => $quarters,
+                    ...$line,
                 ];
             })
             ->filter(fn (array $row): bool => $term === '' || str_contains(mb_strtolower($row['name']), $term))
-            ->sort(fn (array $a, array $b): int => (($a[$key] <=> $b[$key]) * $factor) ?: strcasecmp($a['name'], $b['name']))
+            ->sort(fn (array $a, array $b): int => (($a[$sortField] <=> $b[$sortField]) * $factor) ?: strcasecmp($a['name'], $b['name']))
             ->values()
             ->all();
     }
 
     /**
-     * @return array<string, int>
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array{fgm: int, fga: int, tpm: int, tpa: int, ftm: int, fta: int, reb: int, ast: int, stl: int, blk: int, to: int, pf: int, points: int}
      */
-    protected function shortQuarter(?PlayerStatQuarter $row): array
+    public function totalsFor(array $rows): array
     {
-        $out = [];
+        $totals = array_fill_keys(
+            ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf', 'points'],
+            0,
+        );
 
-        foreach (GameStatsService::FIELDS as $short => $column) {
-            $out[$short] = (int) ($row?->getAttribute($column) ?? 0);
+        foreach ($rows as $row) {
+            foreach (array_keys($totals) as $key) {
+                $totals[$key] += (int) ($row[$key] ?? 0);
+            }
         }
 
-        $out['pts'] = (int) ($row?->getAttribute('points') ?? 0);
+        return $totals;
+    }
 
-        return $out;
+    /**
+     * @return array{fgm: int, fga: int, tpm: int, tpa: int, ftm: int, fta: int, reb: int, ast: int, stl: int, blk: int, to: int, pf: int, points: int}
+     */
+    protected function statLineFromAggregate(PlayerStat $stat): array
+    {
+        return [
+            'fgm' => (int) ($stat->field_goals_made ?? 0),
+            'fga' => (int) ($stat->field_goals_attempted ?? 0),
+            'tpm' => (int) ($stat->three_points_made ?? 0),
+            'tpa' => (int) ($stat->three_points_attempted ?? 0),
+            'ftm' => (int) ($stat->free_throws_made ?? 0),
+            'fta' => (int) ($stat->free_throws_attempted ?? 0),
+            'reb' => (int) ($stat->rebounds ?? 0),
+            'ast' => (int) ($stat->assists ?? 0),
+            'stl' => (int) ($stat->steals ?? 0),
+            'blk' => (int) ($stat->blocks ?? 0),
+            'to' => (int) ($stat->turnovers ?? 0),
+            'pf' => (int) ($stat->fouls ?? 0),
+            'points' => (int) ($stat->points ?? 0),
+        ];
+    }
+
+    /**
+     * @return array{fgm: int, fga: int, tpm: int, tpa: int, ftm: int, fta: int, reb: int, ast: int, stl: int, blk: int, to: int, pf: int, points: int}
+     */
+    protected function statLineFromQuarter(?PlayerStatQuarter $row): array
+    {
+        if (! $row instanceof PlayerStatQuarter) {
+            return array_fill_keys(
+                ['fgm', 'fga', 'tpm', 'tpa', 'ftm', 'fta', 'reb', 'ast', 'stl', 'blk', 'to', 'pf', 'points'],
+                0,
+            );
+        }
+
+        $fgm = (int) ($row->field_goals_made ?? 0);
+        $tpm = (int) ($row->three_points_made ?? 0);
+        $ftm = (int) ($row->free_throws_made ?? 0);
+        $points = (int) ($row->points ?? 0);
+
+        return [
+            'fgm' => $fgm,
+            'fga' => (int) ($row->field_goals_attempted ?? 0),
+            'tpm' => $tpm,
+            'tpa' => (int) ($row->three_points_attempted ?? 0),
+            'ftm' => $ftm,
+            'fta' => (int) ($row->free_throws_attempted ?? 0),
+            'reb' => (int) ($row->rebounds ?? 0),
+            'ast' => (int) ($row->assists ?? 0),
+            'stl' => (int) ($row->steals ?? 0),
+            'blk' => (int) ($row->blocks ?? 0),
+            'to' => (int) ($row->turnovers ?? 0),
+            'pf' => (int) ($row->fouls ?? 0),
+            'points' => $points > 0 ? $points : $fgm * 2 + $tpm * 3 + $ftm,
+        ];
     }
 
     public function setPeriod(string $period): void

@@ -440,3 +440,131 @@ it('falls back to all for an unknown or unavailable period', function () {
         ->test(GameStatsShow::class, ['match' => $match->id])
         ->assertSet('period', '0');
 });
+
+it('builds the full stat line for the selected period and totals it', function () {
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->with('player')
+        ->firstOrFail();
+
+    $stat->forceFill([
+        'field_goals_made' => 10,
+        'field_goals_attempted' => 20,
+        'three_points_made' => 2,
+        'three_points_attempted' => 6,
+        'free_throws_made' => 5,
+        'free_throws_attempted' => 6,
+        'rebounds' => 9,
+        'assists' => 4,
+        'steals' => 3,
+        'blocks' => 1,
+        'turnovers' => 2,
+        'fouls' => 3,
+        'points' => 29,
+    ])->save();
+
+    gsQuarterStat($match, $stat, 0, [
+        'fgm' => 3, 'fga' => 7, 'tpm' => 1, 'tpa' => 3, 'ftm' => 2, 'fta' => 2,
+        'reb' => 4, 'ast' => 2, 'stl' => 1, 'blk' => 0, 'to' => 1, 'pf' => 2, 'points' => 10,
+    ]);
+    gsQuarterStat($match, $stat, 1, [
+        'fgm' => 2, 'fga' => 5, 'tpm' => 0, 'tpa' => 1, 'ftm' => 1, 'fta' => 2,
+        'reb' => 3, 'ast' => 1, 'stl' => 1, 'blk' => 1, 'to' => 0, 'pf' => 1, 'points' => 5,
+    ]);
+
+    $component = Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id]);
+    $allRows = collect($component->instance()->rowsFor($match->homeTeam));
+    $allRow = $allRows->firstWhere('playerId', $stat->player_id);
+
+    expect($allRow)->not->toBeNull()
+        ->and($allRow['fgm'])->toBe(10)
+        ->and($allRow['fga'])->toBe(20)
+        ->and($allRow['tpm'])->toBe(2)
+        ->and($allRow['tpa'])->toBe(6)
+        ->and($allRow['ftm'])->toBe(5)
+        ->and($allRow['fta'])->toBe(6)
+        ->and($allRow['reb'])->toBe(9)
+        ->and($allRow['ast'])->toBe(4)
+        ->and($allRow['stl'])->toBe(3)
+        ->and($allRow['blk'])->toBe(1)
+        ->and($allRow['to'])->toBe(2)
+        ->and($allRow['pf'])->toBe(3)
+        ->and($allRow['points'])->toBe(29);
+
+    $component->instance()->setPeriod('0');
+    $q1Rows = collect($component->instance()->rowsFor($match->homeTeam));
+    $q1Row = $q1Rows->firstWhere('playerId', $stat->player_id);
+
+    expect($q1Row)->not->toBeNull()
+        ->and($q1Row['fgm'])->toBe(3)
+        ->and($q1Row['fga'])->toBe(7)
+        ->and($q1Row['points'])->toBe(10);
+
+    $totals = $component->instance()->totalsFor($component->instance()->rowsFor($match->homeTeam));
+
+    expect($totals['fgm'])->toBe(3)
+        ->and($totals['fga'])->toBe(7)
+        ->and($totals['points'])->toBe(10);
+});
+
+it('sorts the table by the selected period stats', function () {
+    $match = gsMatch(8, 1);
+    $stats = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->with('player')
+        ->orderBy('id')
+        ->take(2)
+        ->get();
+
+    expect($stats)->toHaveCount(2);
+
+    $first = $stats[0];
+    $second = $stats[1];
+
+    gsQuarterStat($match, $first, 0, ['fgm' => 1, 'fga' => 1, 'points' => 2]);
+    gsQuarterStat($match, $second, 0, ['fgm' => 5, 'fga' => 6, 'points' => 12]);
+
+    $component = Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id]);
+
+    $component->instance()->setPeriod('0');
+    $component->instance()->sortKey = 'points';
+    $component->instance()->sortDirection = 'desc';
+
+    $rows = $component->instance()->rowsFor($match->homeTeam);
+
+    expect($rows[0]['playerId'])->toBe($second->player_id)
+        ->and($rows[1]['playerId'])->toBe($first->player_id);
+});
+
+it('renders the period navigator and the full stat-line columns', function () {
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+
+    gsQuarterStat($match, $stat, 0, ['fgm' => 3, 'fga' => 7, 'tpm' => 1, 'tpa' => 3, 'ftm' => 2, 'fta' => 2, 'reb' => 4, 'ast' => 2, 'stl' => 1, 'to' => 1, 'pf' => 2, 'points' => 10]);
+    gsQuarterStat($match, $stat, 1, ['fgm' => 2, 'fga' => 5, 'tpm' => 0, 'tpa' => 1, 'ftm' => 1, 'fta' => 2, 'reb' => 3, 'ast' => 1, 'blk' => 1, 'pf' => 1, 'points' => 5]);
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->assertSeeHtml('data-testid="stats-period-nav"')
+        ->assertSeeHtml('data-testid="stats-period-all"')
+        ->assertSeeHtml('data-testid="stats-period-0"')
+        ->assertSeeHtml('data-testid="stats-period-1"')
+        ->assertDontSeeHtml('data-testid="stats-period-2"')
+        ->assertSeeHtml('data-testid="stats-period-label"')
+        ->assertSee('FG')
+        ->assertSee('3PT')
+        ->assertSee('FT')
+        ->assertSee('STL')
+        ->assertSee('BLK')
+        ->assertSee('TO')
+        ->assertSee('PF')
+        ->call('setPeriod', '0')
+        ->assertSee('3/7')
+        ->assertSee('1/3')
+        ->assertSee('2/2');
+});
