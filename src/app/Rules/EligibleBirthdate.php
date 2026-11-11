@@ -4,6 +4,7 @@ namespace App\Rules;
 
 use App\Models\Division;
 use App\Models\Tournament;
+use App\Services\EligibilityService;
 use Carbon\CarbonImmutable;
 use Closure;
 use DateTimeImmutable;
@@ -40,20 +41,22 @@ class EligibleBirthdate implements ValidationRule
             return;
         }
 
+        if (! $this->division instanceof Division) {
+            $fail('No division is assigned to this registration. Contact the organizer.');
+
+            return;
+        }
+
+        $eligibility = app(EligibilityService::class);
         $reference = $this->tournament?->start_date !== null
             ? CarbonImmutable::parse($this->tournament->start_date)
             : $today;
 
         $age = (int) $birthdate->diff($reference)->y;
-        $min = $this->division->age_min ?? 8;
-        $max = $this->division->age_max ?? 99;
+        $range = $eligibility->ageRange($this->division);
 
-        if ($age < $min || $age > $max) {
-            $divisionName = $this->division?->name;
-
-            $fail($divisionName !== null
-                ? "Player must be {$min}–{$max} for {$divisionName} at tournament start."
-                : "Player must be {$min}–{$max} at tournament start.");
+        if ($age < $range['min'] || $age > $range['max']) {
+            $fail("Player must be {$range['min']}–{$range['max']} for {$this->division->name} at tournament start.");
         }
     }
 }

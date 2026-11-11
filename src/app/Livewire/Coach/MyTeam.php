@@ -3,6 +3,7 @@
 namespace App\Livewire\Coach;
 
 use App\Models\AuditLog;
+use App\Models\Division;
 use App\Models\MatchModel;
 use App\Models\Payment;
 use App\Models\Player;
@@ -26,6 +27,7 @@ use Livewire\Component;
  * @property-read Team|null $team
  * @property-read Registration|null $registration
  * @property-read Tournament|null $tournament
+ * @property-read Division|null $division
  * @property-read Payment|null $payment
  * @property-read array{wins: int, losses: int} $record
  * @property-read MatchModel|null $nextMatch
@@ -194,7 +196,25 @@ class MyTeam extends Component
     {
         $tournament = $this->registration?->tournament;
 
-        return $tournament instanceof Tournament ? $tournament : null;
+        if ($tournament instanceof Tournament) {
+            return $tournament;
+        }
+
+        return $this->tournamentId !== null
+            ? Tournament::query()->find($this->tournamentId)
+            : null;
+    }
+
+    #[Computed]
+    public function division(): ?Division
+    {
+        $division = $this->registration?->division;
+
+        if ($division instanceof Division) {
+            return $division;
+        }
+
+        return $this->tournament?->divisions()->first();
     }
 
     #[Computed]
@@ -607,7 +627,7 @@ class MyTeam extends Component
             'playerName' => ['required', 'string', 'min:2', 'max:255'],
             'playerNumber' => ['required', 'integer', 'min:1', 'max:99', $unique],
             'playerPosition' => ['required', 'string', 'in:'.implode(',', self::POSITIONS)],
-            'playerBirthdate' => ['required', new EligibleBirthdate($this->registration?->division, $this->tournament)],
+            'playerBirthdate' => ['required', new EligibleBirthdate($this->division, $this->tournament)],
         ];
     }
 

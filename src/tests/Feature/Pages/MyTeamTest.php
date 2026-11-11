@@ -1,9 +1,12 @@
 <?php
 
 use App\Livewire\Coach\MyTeam;
+use App\Models\Division;
 use App\Models\EligibilityDocument;
 use App\Models\Player;
+use App\Models\Registration;
 use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -12,7 +15,19 @@ uses(RefreshDatabase::class);
 
 it('updates player fields without touching consent or document status', function () {
     $coach = User::factory()->create();
+    $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
+    $division = Division::factory()->create([
+        'tournament_id' => $tournament->id,
+        'name' => 'Under 15 (U15)',
+        'age_min' => null,
+        'age_max' => 15,
+    ]);
     $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    Registration::factory()->create([
+        'tournament_id' => $tournament->id,
+        'division_id' => $division->id,
+        'team_id' => $team->id,
+    ]);
     $player = Player::factory()->create([
         'team_id' => $team->id,
         'birthdate' => '2012-01-01',
@@ -43,7 +58,19 @@ it('updates player fields without touching consent or document status', function
 
 it('resets document review when the coach changes the birthdate', function () {
     $coach = User::factory()->create();
+    $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
+    $division = Division::factory()->create([
+        'tournament_id' => $tournament->id,
+        'name' => 'Under 15 (U15)',
+        'age_min' => null,
+        'age_max' => 15,
+    ]);
     $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    Registration::factory()->create([
+        'tournament_id' => $tournament->id,
+        'division_id' => $division->id,
+        'team_id' => $team->id,
+    ]);
     $player = Player::factory()->create([
         'team_id' => $team->id,
         'birthdate' => '2012-01-01',
@@ -87,6 +114,61 @@ it('rejects a birthdate outside the allowed range', function () {
         ->set('playerBirthdate', '2020-01-01')
         ->call('savePlayer')
         ->assertHasErrors(['playerBirthdate']);
+});
+
+it('rejects an over-age birthdate when the roster has no registration loaded', function () {
+    $coach = User::factory()->create();
+    $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
+    Division::factory()->create([
+        'tournament_id' => $tournament->id,
+        'name' => 'Under 17 (U17)',
+        'age_min' => null,
+        'age_max' => 17,
+    ]);
+    $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'birthdate' => '2010-01-01',
+    ]);
+
+    Livewire::actingAs($coach)
+        ->test(MyTeam::class, ['teamId' => $team->id, 'tournamentId' => $tournament->id])
+        ->call('openPlayerDialog', $player->id)
+        ->set('playerBirthdate', '1996-01-01')
+        ->call('savePlayer')
+        ->assertHasErrors(['playerBirthdate']);
+
+    expect($player->fresh()->birthdate?->format('Y-m-d'))->toBe('2010-01-01');
+});
+
+it('rejects an over-age birthdate against the registered division', function () {
+    $coach = User::factory()->create();
+    $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
+    $division = Division::factory()->create([
+        'tournament_id' => $tournament->id,
+        'name' => 'Under 17 (U17)',
+        'age_min' => null,
+        'age_max' => 17,
+    ]);
+    $team = Team::factory()->create(['coach_user_id' => $coach->id]);
+    Registration::factory()->create([
+        'tournament_id' => $tournament->id,
+        'division_id' => $division->id,
+        'team_id' => $team->id,
+    ]);
+    $player = Player::factory()->create([
+        'team_id' => $team->id,
+        'birthdate' => '2010-01-01',
+    ]);
+
+    Livewire::actingAs($coach)
+        ->test(MyTeam::class, ['teamId' => $team->id, 'tournamentId' => $tournament->id])
+        ->call('openPlayerDialog', $player->id)
+        ->set('playerBirthdate', '1996-01-01')
+        ->call('savePlayer')
+        ->assertHasErrors(['playerBirthdate']);
+
+    expect($player->fresh()->birthdate?->format('Y-m-d'))->toBe('2010-01-01');
 });
 
 it('does not expose consent or document editing in the player dialog', function () {
