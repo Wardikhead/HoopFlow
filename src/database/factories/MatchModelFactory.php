@@ -24,6 +24,7 @@ class MatchModelFactory extends Factory
             'id' => $id,
             'bracket_id' => Bracket::factory(),
             'tournament_id' => fn (array $attributes) => Bracket::find($attributes['bracket_id'])->division->tournament_id ?? Tournament::factory(),
+            'stage' => 'winners',
             'round_number' => 1,
             'match_number' => 1,
             'home_team_id' => Team::factory(),
@@ -34,6 +35,13 @@ class MatchModelFactory extends Factory
             'status' => 'scheduled',
             'completed_at' => null,
             'forfeit_reason' => null,
+            'series_id' => null,
+            'game_number' => 1,
+            'best_of' => 1,
+            'series_home_wins' => 0,
+            'series_away_wins' => 0,
+            'series_winner_team_id' => null,
+            'game_winner_team_id' => null,
         ];
     }
 }

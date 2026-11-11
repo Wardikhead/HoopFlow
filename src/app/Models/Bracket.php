@@ -9,11 +9,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['division_id', 'name', 'format', 'seeding_method', 'status', 'generated_at'])]
+#[Fillable(['division_id', 'name', 'format', 'seeding_method', 'status', 'generated_at', 'phase'])]
 class Bracket extends Model
 {
     /** @use HasFactory<Factory> */
     use HasFactory;
+
+    /** @var array<string, int> */
+    private array $roundCountCache = [];
+
+    public function roundCount(string $stage): int
+    {
+        if (! array_key_exists($stage, $this->roundCountCache)) {
+            $this->roundCountCache[$stage] = (int) $this->matches()
+                ->where('stage', $stage)
+                ->whereNull('series_id')
+                ->distinct()
+                ->count('round_number');
+        }
+
+        return $this->roundCountCache[$stage];
+    }
 
     protected function casts(): array
     {

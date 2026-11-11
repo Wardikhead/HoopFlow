@@ -20,6 +20,7 @@ class BracketFactory extends Factory
             'seeding_method' => 'random',
             'status' => 'draft',
             'generated_at' => null,
+            'phase' => 'main',
         ];
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['bracket_id', 'round_number', 'match_number', 'slot', 'source_type', 'source_match_id', 'source_outcome', 'team_id'])]
+#[Fillable(['bracket_id', 'stage', 'round_number', 'match_number', 'slot', 'source_type', 'source_match_id', 'source_outcome', 'team_id'])]
 class BracketSlot extends Model
 {
     /** @use HasFactory<Factory> */

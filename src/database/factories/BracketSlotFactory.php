@@ -15,6 +15,7 @@ class BracketSlotFactory extends Factory
     {
         return [
             'bracket_id' => Bracket::factory(),
+            'stage' => 'winners',
             'round_number' => 1,
             'match_number' => 1,
             'slot' => 'A',

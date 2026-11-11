@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['bracket_id', 'tournament_id', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason', 'quarters_json'])]
+#[Fillable(['bracket_id', 'tournament_id', 'stage', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason', 'quarters_json', 'series_id', 'game_number', 'best_of', 'series_home_wins', 'series_away_wins', 'series_winner_team_id', 'game_winner_team_id'])]
 class MatchModel extends Model
 {
     public $incrementing = false;
@@ -37,7 +37,81 @@ class MatchModel extends Model
         return [
             'completed_at' => 'datetime',
             'quarters_json' => 'array',
+            'series_id' => 'integer',
+            'game_number' => 'integer',
+            'best_of' => 'integer',
+            'series_home_wins' => 'integer',
+            'series_away_wins' => 'integer',
+            'series_winner_team_id' => 'integer',
+            'game_winner_team_id' => 'integer',
         ];
+    }
+
+    public function isSeriesAnchor(): bool
+    {
+        return $this->series_id === null;
+    }
+
+    public function isSeriesGame(): bool
+    {
+        return $this->series_id !== null;
+    }
+
+    public function isBye(): bool
+    {
+        return $this->isByeGame();
+    }
+
+    /**
+     * @return HasMany<MatchModel, $this>
+     */
+    public function series(): HasMany
+    {
+        return $this->hasMany(MatchModel::class, 'series_id')->orderBy('game_number');
+    }
+
+    /**
+     * @return BelongsTo<MatchModel, $this>
+     */
+    public function seriesAnchor(): BelongsTo
+    {
+        return $this->belongsTo(MatchModel::class, 'series_id');
+    }
+
+    /**
+     * @return BelongsTo<Team, $this>
+     */
+    public function seriesWinnerTeam(): BelongsTo
+    {
+        return $this->belongsTo(Team::class, 'series_winner_team_id');
+    }
+
+    /**
+     * @return BelongsTo<Team, $this>
+     */
+    public function gameWinnerTeam(): BelongsTo
+    {
+        return $this->belongsTo(Team::class, 'game_winner_team_id');
+    }
+
+    public function activeGame(): ?MatchModel
+    {
+        if ($this->best_of <= 1) {
+            return $this->status === 'scheduled' ? $this : null;
+        }
+
+        if ($this->status === 'scheduled') {
+            return $this;
+        }
+
+        if ($this->status !== 'in_progress') {
+            return null;
+        }
+
+        return $this->series()
+            ->where('status', 'scheduled')
+            ->orderBy('game_number')
+            ->first();
     }
 
     /**
