@@ -88,6 +88,22 @@
             </div>
         </section>
 
+        @if ($this->scoreMismatch !== [])
+            <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-score-mismatch">
+                <div class="hf-between hf-wrap">
+                    <span class="hf-chip hf-chip--gold"><i class="bi bi-exclamation-triangle"></i> Box score mismatch</span>
+                </div>
+                @foreach ($this->scoreMismatch as $mismatch)
+                    <p class="hf-small hf-mt-1 hf-mb-0">
+                        Box score doesn’t match the final score: <strong>{{ $mismatch['team'] }}</strong> player points {{ $mismatch['points'] }} vs final {{ $mismatch['score'] }}.
+                        @if (! $mismatch['editable'])
+                            Per-quarter stats were not recorded, so only the score can be corrected.
+                        @endif
+                    </p>
+                @endforeach
+            </div>
+        @endif
+
         @if ($correction)
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-correction">
                 <div class="hf-between hf-wrap">

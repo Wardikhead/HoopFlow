@@ -700,3 +700,42 @@ it('blocks a direct score-only correction confirmation when quarter stats exist'
 
     expect((int) $match->refresh()->home_score)->toBe(78);
 });
+
+it('warns when player points do not match an aggregate-only final score', function () {
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+    $stat->forceFill(['points' => (int) $stat->points - 2])->save();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-score-mismatch"')
+        ->assertSee('Box score doesn’t match the final score')
+        ->assertSee('vs final 78')
+        ->assertSee('Per-quarter stats were not recorded, so only the score can be corrected.');
+});
+
+it('does not warn when player points match the final score', function () {
+    $match = gsMatch(8, 1);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertDontSeeHtml('data-testid="stats-score-mismatch"');
+});
+
+it('does not add the aggregate-only note when quarter rows exist', function () {
+    $match = gsMakeEditableFinal();
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+    $stat->forceFill(['points' => (int) $stat->points - 2])->save();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-score-mismatch"')
+        ->assertDontSee('Per-quarter stats were not recorded, so only the score can be corrected.');
+});
