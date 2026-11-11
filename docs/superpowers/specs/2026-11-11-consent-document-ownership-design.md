@@ -165,7 +165,7 @@ New `App\Rules\EligibleBirthdate` rule, used by both coach components:
 - valid `Y-m-d` date;
 - not in the future;
 - age measured on the tournament start date (today if no start date);
-- age between the division's `age_min` and `age_max`, falling back to 8–99 when either is null.
+- age between the division's `age_min` and `age_max`, falling back to 8 for a null minimum and 99 for a null maximum (the seeded divisions use `age_min = null`, `age_max = 17`).
 
 Error message example:
 
@@ -218,6 +218,8 @@ UI:
 - `app/Models/EligibilityDocument.php` (if casts or helpers are needed)
 - new `app/Rules/EligibleBirthdate.php`
 - new migration under `database/migrations/`
+- `database/factories/PlayerFactory.php`
+- `database/seeders/PrototypeSeeder.php`
 - `resources/views/livewire/coach/team-register.blade.php`
 - `resources/views/livewire/coach/my-team.blade.php`
 - `resources/views/livewire/organizer/submissions-index.blade.php`
