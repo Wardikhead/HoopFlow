@@ -196,13 +196,39 @@
                             </thead>
                             <tbody>
                                 @foreach ($reviewPlayers as $player)
-                                    <tr>
+                                    @php
+                                        $document = $player->eligibilityDocuments
+                                            ->firstWhere('type', \App\Services\EligibilityService::DOCUMENT_TYPE);
+                                        $documentStatus = $document?->status ?? 'pending';
+                                        $editable = in_array($review->status, ['submitted', 'approved'], true);
+                                    @endphp
+                                    <tr wire:key="review-player-{{ $player->id }}">
                                         <td>{{ $player->jersey_number }}</td>
                                         <td>{{ $player->first_name }} {{ $player->last_name }}</td>
                                         <td>{{ $player->position }}</td>
                                         <td>{{ $player->birthdate?->age ?? '—' }}</td>
-                                        <td><span class="hf-chip hf-chip--{{ $player->consent_at ? 'success' : 'danger' }}">{{ $player->consent_at ? 'On file' : 'Missing' }}</span></td>
-                                        <td>@include('components.status-chip', ['status' => $reviewEligibilityService->documentStatusForPlayer($player)])</td>
+                                        <td>
+                                            @if ($editable)
+                                                <select class="hf-select" wire:change="updateConsent({{ $player->id }}, $event.target.value)" data-testid="submission-consent-{{ $player->id }}">
+                                                    <option value="pending" @selected($player->consent_status === 'pending')>Pending</option>
+                                                    <option value="verified" @selected($player->consent_status === 'verified')>Verified</option>
+                                                    <option value="missing" @selected($player->consent_status === 'missing')>Missing</option>
+                                                </select>
+                                            @else
+                                                @include('components.status-chip', ['status' => $player->consent_status])
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($editable)
+                                                <select class="hf-select" wire:change="updateDocument({{ $player->id }}, $event.target.value)" data-testid="submission-document-{{ $player->id }}">
+                                                    <option value="pending" @selected($documentStatus === 'pending')>Pending</option>
+                                                    <option value="approved" @selected($documentStatus === 'approved')>Verified</option>
+                                                    <option value="missing" @selected($documentStatus === 'missing')>Missing</option>
+                                                </select>
+                                            @else
+                                                @include('components.status-chip', ['status' => $documentStatus === 'approved' ? 'verified' : $documentStatus])
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
