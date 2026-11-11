@@ -26,6 +26,7 @@ use Livewire\Component;
  * @property-read bool $canCorrect
  * @property-read array{team1: list<int>, team2: list<int>}|null $quarters
  * @property-read bool $hasStats
+ * @property-read bool $hasEditableBoxScore
  * @property-read list<array{key: string, label: string, index: int|null}> $periods
  * @property-read string $periodLabel
  * @property-read bool $hasQuarterData
@@ -192,6 +193,16 @@ class GameStatsShow extends Component
         $match = $this->match;
 
         return $match instanceof MatchModel && $match->playerStats->isNotEmpty();
+    }
+
+    #[Computed]
+    public function hasEditableBoxScore(): bool
+    {
+        $match = $this->match;
+
+        return $match instanceof MatchModel
+            && $match->playerStats->isNotEmpty()
+            && $match->playerQuarterStats->isNotEmpty();
     }
 
     /**
@@ -468,6 +479,12 @@ class GameStatsShow extends Component
             return;
         }
 
+        if ($this->hasEditableBoxScore) {
+            $this->redirect(route('gameManage', ['match' => $match->id]));
+
+            return;
+        }
+
         $this->score1 = 0;
         $this->score2 = 0;
         $this->forfeitSide = 0;
@@ -558,6 +575,12 @@ class GameStatsShow extends Component
             return;
         }
 
+        if ($this->hasEditableBoxScore) {
+            $this->redirect(route('gameManage', ['match' => $match->id]));
+
+            return;
+        }
+
         $this->validate([
             'score1' => ['required', 'integer', 'min:0', 'max:199'],
             'score2' => ['required', 'integer', 'min:0', 'max:199'],
@@ -602,6 +625,12 @@ class GameStatsShow extends Component
             return;
         }
 
+        if ($match->status === 'final' && $this->hasEditableBoxScore) {
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+
+            return;
+        }
+
         $this->score1 = $match->home_score !== null ? (int) $match->home_score : 0;
         $this->score2 = $match->away_score !== null ? (int) $match->away_score : 0;
         $this->reason = '';
@@ -630,6 +659,12 @@ class GameStatsShow extends Component
 
         if (! in_array($match->status, ['final', 'forfeit'], true)) {
             $this->addError('reason', 'Only a recorded result can be corrected.');
+
+            return;
+        }
+
+        if ($match->status === 'final' && $this->hasEditableBoxScore) {
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
 
             return;
         }
@@ -699,6 +734,14 @@ class GameStatsShow extends Component
 
         Gate::authorize('correctScore', $match);
 
+        if ($match->status === 'scheduled' && $this->hasEditableBoxScore) {
+            $this->showScoreConsole = false;
+            $this->scoreHistory = [];
+            $this->redirect(route('gameManage', ['match' => $match->id]));
+
+            return;
+        }
+
         $score1 = (int) ($this->score1 ?? 0);
         $score2 = (int) ($this->score2 ?? 0);
         $winner = $score1 > $score2 ? $match->homeTeam : $match->awayTeam;
@@ -746,6 +789,13 @@ class GameStatsShow extends Component
         }
 
         Gate::authorize('correctScore', $match);
+
+        if ($match->status === 'final' && $this->hasEditableBoxScore) {
+            $this->showCorrection = false;
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+
+            return;
+        }
 
         $bracketService->correctScore(
             $match,

@@ -581,3 +581,122 @@ it('renders the period navigator and the full stat-line columns', function () {
         ->assertSee('1/3')
         ->assertSee('2/2');
 });
+
+function gsMakeEditableFinal(): MatchModel
+{
+    $match = gsMatch(8, 1);
+    $stat = PlayerStat::where('match_id', $match->id)
+        ->where('team_id', $match->home_team_id)
+        ->firstOrFail();
+
+    gsQuarterStat($match, $stat, 0, ['fgm' => 2, 'fga' => 4, 'points' => 4]);
+
+    return $match;
+}
+
+function gsDraftEditable(MatchModel $match): void
+{
+    $loaded = app(GameStatsService::class)->load($match);
+    $playerId = (int) array_key_first($loaded['stats']['team1']);
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['fgm'] = 2;
+    $loaded['stats']['team1'][$playerId]['quarters'][0]['fga'] = 4;
+
+    app(GameStatsService::class)->saveDraft($match, $loaded);
+}
+
+it('routes a final editable box score correction to the combined editor', function () {
+    $match = gsMakeEditableFinal();
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->call('openCorrection')
+        ->assertRedirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+});
+
+it('redirects a final editable correct deep link to the combined editor', function () {
+    $match = gsMakeEditableFinal();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$match->id.'&correct=1')
+        ->assertRedirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+});
+
+it('keeps the score-only correction dialog for an aggregate-only final', function () {
+    $match = gsMatch(8, 1);
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->call('openCorrection')
+        ->assertNoRedirect()
+        ->assertSet('showCorrection', true)
+        ->assertSeeHtml('data-testid="stats-correction-dialog"');
+});
+
+it('routes final score entry to the editor when draft quarter stats exist', function () {
+    $match = gsMatch(8, 3);
+    gsDraftEditable($match);
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->call('openScoreConsole')
+        ->assertRedirect(route('gameManage', ['match' => $match->id]));
+});
+
+it('blocks a score-only finalize when draft quarter stats exist', function () {
+    $match = gsMatch(8, 3);
+    gsDraftEditable($match);
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->set('score1', 10)
+        ->set('score2', 8)
+        ->call('requestFinalizeScore')
+        ->assertRedirect(route('gameManage', ['match' => $match->id]));
+
+    expect($match->refresh()->status)->toBe('scheduled')
+        ->and($match->home_score)->toBeNull();
+});
+
+it('blocks a direct score-only finalize confirmation when draft quarter stats exist', function () {
+    $match = gsMatch(8, 3);
+    gsDraftEditable($match);
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->set('confirmAction', 'finalize')
+        ->set('score1', 10)
+        ->set('score2', 8)
+        ->call('confirm')
+        ->assertRedirect(route('gameManage', ['match' => $match->id]));
+
+    expect($match->refresh()->status)->toBe('scheduled');
+});
+
+it('blocks a score-only correction when quarter stats exist', function () {
+    $match = gsMakeEditableFinal();
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->set('score1', 80)
+        ->set('score2', 70)
+        ->set('reason', 'Referee review changed the score.')
+        ->call('requestCorrection')
+        ->assertRedirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+
+    expect((int) $match->refresh()->home_score)->toBe(78);
+});
+
+it('blocks a direct score-only correction confirmation when quarter stats exist', function () {
+    $match = gsMakeEditableFinal();
+
+    Livewire::actingAs(gsUser('organizer@hoopflow.ph'))
+        ->test(GameStatsShow::class, ['match' => $match->id])
+        ->set('confirmAction', 'correction')
+        ->set('score1', 80)
+        ->set('score2', 70)
+        ->set('reason', 'Referee review changed the score.')
+        ->call('confirm')
+        ->assertRedirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+
+    expect((int) $match->refresh()->home_score)->toBe(78);
+});
