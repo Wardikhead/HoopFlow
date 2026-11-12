@@ -123,6 +123,8 @@ class BracketService
                 $tournament->organization_id,
             );
 
+            app(TournamentLifecycleService::class)->activate($tournament);
+
             return $result;
         });
     }
@@ -228,6 +230,8 @@ class BracketService
                 ],
                 $tournament->organization_id,
             );
+
+            app(TournamentLifecycleService::class)->activate($tournament);
 
             return $result;
         });
