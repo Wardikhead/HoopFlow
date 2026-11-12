@@ -337,7 +337,7 @@ class BracketDemoSeeder extends Seeder
             'name' => 'HoopFlow Double Elimination Showcase',
             'slug' => 'demo-double-elimination',
             'start' => '2026-12-08',
-            'end' => '2026-12-16',
+            'end' => '2027-01-15',
             'format' => 'double-elimination',
             'division' => 'Under 17 (U17)',
             'age_max' => 17,

@@ -204,7 +204,7 @@ it('records an audit entry when a bracket is generated', function () {
     expect($log->after_json)->toHaveKey('byes');
 });
 
-it('records an audit entry when a schedule is generated', function () {
+it('records an audit entry when a schedule is published', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
     $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
 
@@ -219,18 +219,45 @@ it('records an audit entry when a schedule is generated', function () {
 
     $this->actingAs($organizer);
 
-    $lastId = (int) (AuditLog::where('action', 'schedule.generate')->max('id') ?? 0);
+    $lastId = (int) (AuditLog::where('action', 'schedule.publish')->max('id') ?? 0);
 
     app(SchedulingService::class)->generate($tournament);
 
-    $log = AuditLog::where('action', 'schedule.generate')->where('id', '>', $lastId)->firstOrFail();
+    $log = AuditLog::where('action', 'schedule.publish')->where('id', '>', $lastId)->firstOrFail();
 
-    expect($log->entity_type)->toBe('tournament');
-    expect((int) $log->entity_id)->toBe((int) $tournament->id);
-    expect((int) $log->actor_user_id)->toBe((int) $organizer->id);
-    expect($log->after_json['courts'])->toBe(4);
-    expect($log->after_json['slotMinutes'])->toBe(30);
-    expect($log->after_json['restMinutes'])->toBe(15);
+    expect($log->entity_type)->toBe('tournament')
+        ->and((int) $log->entity_id)->toBe((int) $tournament->id)
+        ->and((int) $log->actor_user_id)->toBe((int) $organizer->id)
+        ->and($log->after_json['courts'])->toBe(4)
+        ->and($log->after_json['slotMinutes'])->toBe(30)
+        ->and($log->after_json['restMinutes'])->toBe(15)
+        ->and($log->after_json['matches'])->toBeGreaterThan(0)
+        ->and($log->after_json['firstDate'])->not->toBeNull()
+        ->and($log->after_json['lastDate'])->not->toBeNull();
+});
+
+it('labels schedule publishes and rebuilds on the audit page', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->update([
+            'status' => 'scheduled',
+            'home_score' => null,
+            'away_score' => null,
+            'winner_team_id' => null,
+        ]);
+
+    $service = app(SchedulingService::class);
+    $service->publish($tournament, $service->plan($tournament));
+    $service->publish($tournament, $service->plan($tournament), 'schedule.rebuild');
+
+    $this->actingAs($organizer)
+        ->get('/audit')
+        ->assertOk()
+        ->assertSee('Schedule published')
+        ->assertSee('Schedule rebuilt');
 });
 
 it('records an audit entry when a match is rescheduled', function () {

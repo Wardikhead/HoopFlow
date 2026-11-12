@@ -6,6 +6,7 @@ use App\Models\MatchSlot;
 use App\Models\Player;
 use App\Models\Team;
 use App\Models\Tournament;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -72,10 +73,10 @@ it('leaves round-robin playoffs ungenerated', function () {
         ->and(Bracket::where('division_id', $tournament->divisions()->value('id'))->where('phase', 'playoffs')->exists())->toBeFalse();
 });
 
-it('schedules every playable game and no conditional series game', function () {
+it('schedules every playable and potential game inside the tournament dates', function () {
     $expected = [
         'demo-single-elimination' => 15,
-        'demo-double-elimination' => 30,
+        'demo-double-elimination' => 46,
         'demo-round-robin' => 28,
     ];
 
@@ -85,8 +86,25 @@ it('schedules every playable game and no conditional series game', function () {
         expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe($slotCount);
     }
 
+    $unscheduled = MatchModel::query()
+        ->whereIn('status', ['scheduled', 'conditional'])
+        ->whereDoesntHave('matchSlots')
+        ->count();
+
+    expect($unscheduled)->toBe(0);
+
+    foreach (array_keys($expected) as $slug) {
+        $tournament = Tournament::where('slug', $slug)->firstOrFail();
+        $slots = MatchSlot::where('tournament_id', $tournament->id)->get();
+        $first = Carbon::parse($slots->min('start_at'))->startOfDay();
+        $last = Carbon::parse($slots->max('start_at'))->startOfDay();
+
+        expect($first->gte($tournament->start_date?->copy()->startOfDay()))->toBeTrue()
+            ->and($last->lte($tournament->end_date?->copy()->startOfDay()))->toBeTrue();
+    }
+
     $conditional = MatchModel::where('status', 'conditional')->pluck('id');
 
     expect($conditional)->not->toBeEmpty()
-        ->and(MatchSlot::whereIn('match_id', $conditional)->count())->toBe(0);
+        ->and(MatchSlot::whereIn('match_id', $conditional)->count())->toBe($conditional->count());
 });
