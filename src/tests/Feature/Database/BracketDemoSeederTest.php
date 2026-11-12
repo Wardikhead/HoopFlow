@@ -2,6 +2,7 @@
 
 use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\MatchSlot;
 use App\Models\Player;
 use App\Models\Team;
 use App\Models\Tournament;
@@ -69,4 +70,23 @@ it('leaves round-robin playoffs ungenerated', function () {
 
     expect($tournament->ruleValue('playoff_teams'))->toBe(4)
         ->and(Bracket::where('division_id', $tournament->divisions()->value('id'))->where('phase', 'playoffs')->exists())->toBeFalse();
+});
+
+it('schedules every playable game and no conditional series game', function () {
+    $expected = [
+        'demo-single-elimination' => 15,
+        'demo-double-elimination' => 30,
+        'demo-round-robin' => 28,
+    ];
+
+    foreach ($expected as $slug => $slotCount) {
+        $tournament = Tournament::where('slug', $slug)->firstOrFail();
+
+        expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe($slotCount);
+    }
+
+    $conditional = MatchModel::where('status', 'conditional')->pluck('id');
+
+    expect($conditional)->not->toBeEmpty()
+        ->and(MatchSlot::whereIn('match_id', $conditional)->count())->toBe(0);
 });
