@@ -16,6 +16,7 @@ use App\Models\Tournament;
 use App\Models\User;
 use App\Models\Venue;
 use App\Services\BracketService;
+use App\Services\SchedulingService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -324,6 +325,7 @@ class BracketDemoSeeder extends Seeder
 
         $this->registerTeams($tournament, $teams, 1500);
         app(BracketService::class)->generate($tournament, 'single-elimination');
+        app(SchedulingService::class)->generate($tournament);
     }
 
     /**
@@ -349,6 +351,7 @@ class BracketDemoSeeder extends Seeder
 
         $this->registerTeams($tournament, $teams, 1500);
         app(BracketService::class)->generate($tournament, 'double-elimination');
+        app(SchedulingService::class)->generate($tournament);
     }
 
     /**
@@ -374,5 +377,6 @@ class BracketDemoSeeder extends Seeder
 
         $this->registerTeams($tournament, $teams, 1000);
         app(BracketService::class)->generate($tournament, 'round-robin');
+        app(SchedulingService::class)->generate($tournament);
     }
 }
