@@ -2,11 +2,13 @@
 
 use App\Livewire\Organizer\GameStatsShow;
 use App\Models\AuditLog;
+use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\PlayerStat;
 use App\Models\PlayerStatQuarter;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\BracketService;
 use App\Services\GameStatsService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -738,4 +740,105 @@ it('does not add the aggregate-only note when quarter rows exist', function () {
         ->assertOk()
         ->assertSeeHtml('data-testid="stats-score-mismatch"')
         ->assertDontSee('Per-quarter stats were not recorded, so only the score can be corrected.');
+});
+
+function gsSeriesFixture(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))->firstOrFail();
+    $final = MatchModel::where('bracket_id', $bracket->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->orderBy('seed')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = (int) $teams[0];
+    $final->away_team_id = (int) $teams[1];
+    $final->save();
+    $service->syncSeriesTeams($final);
+    $service->recordScore($final->fresh(), 80, 70);
+
+    $game2 = MatchModel::where('series_id', $final->id)->where('game_number', 2)->firstOrFail();
+    $game3 = MatchModel::where('series_id', $final->id)->where('game_number', 3)->firstOrFail();
+
+    return [$tournament, $final->fresh(), $game2, $game3, $service];
+}
+
+it('shows the series strip and official context on a final game box score', function () {
+    [, $final, $game2] = gsSeriesFixture();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$final->id)
+        ->assertOk()
+        ->assertSee('Official box score')
+        ->assertSee('Game 1 of 3')
+        ->assertSeeHtml('data-testid="stats-series-games"')
+        ->assertSeeHtml('href="'.route('gameStats', ['match' => $game2->id]).'"')
+        ->assertSee('Game 1');
+});
+
+it('shows a scheduled empty state and then a draft warning for the same game', function () {
+    [, , $game2] = gsSeriesFixture();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$game2->id)
+        ->assertOk()
+        ->assertSee('No stats yet.')
+        ->assertDontSee('Official box score');
+
+    $loaded = app(GameStatsService::class)->load($game2);
+    app(GameStatsService::class)->saveDraft($game2, $loaded);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$game2->id)
+        ->assertOk()
+        ->assertSee('Draft box score')
+        ->assertSee('Draft stats — not official until the game is published.');
+});
+
+it('explains conditional and cancelled series games', function () {
+    [, , , $game3, $service] = gsSeriesFixture();
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$game3->id)
+        ->assertOk()
+        ->assertSee('This game is only played if needed.');
+
+    $game2 = MatchModel::where('series_id', $game3->series_id)->where('game_number', 2)->firstOrFail();
+    $service->recordScore($game2->fresh(), 80, 70);
+
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match='.$game3->id)
+        ->assertOk()
+        ->assertSee('This game was cancelled when the series ended early.');
+});
+
+it('keeps the series strip visible but organizer actions hidden for fans', function () {
+    [, $final] = gsSeriesFixture();
+
+    $this->actingAs(gsUser('fan.juan@hoopflow.ph'))
+        ->get('/game-stats?match='.$final->id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="stats-series-games"')
+        ->assertSee('Official box score')
+        ->assertDontSee('Correct score')
+        ->assertDontSee('Enter final score');
+});
+
+it('returns 404 for an unknown game id', function () {
+    $this->actingAs(gsUser('organizer@hoopflow.ph'))
+        ->get('/game-stats?match=999999')
+        ->assertNotFound();
 });

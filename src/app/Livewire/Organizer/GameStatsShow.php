@@ -11,6 +11,7 @@ use App\Services\BracketService;
 use App\Services\GameStatsService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -27,6 +28,11 @@ use Livewire\Component;
  * @property-read array{team1: list<int>, team2: list<int>}|null $quarters
  * @property-read bool $hasStats
  * @property-read bool $hasEditableBoxScore
+ * @property-read MatchModel|null $seriesAnchor
+ * @property-read Collection<int, MatchModel> $seriesGames
+ * @property-read string $seriesSummary
+ * @property-read string $boxScoreLabel
+ * @property-read string $boxScoreMessage
  * @property-read list<array{side: string, team: string, points: int, score: int, editable: bool}> $scoreMismatch
  * @property-read list<array{key: string, label: string, index: int|null}> $periods
  * @property-read string $periodLabel
@@ -96,6 +102,10 @@ class GameStatsShow extends Component
         }
 
         $this->period = $this->resolvePeriod($this->period);
+
+        if ($this->matchId !== null && ! MatchModel::query()->whereKey($this->matchId)->exists()) {
+            abort(404);
+        }
     }
 
     #[Computed]
@@ -204,6 +214,139 @@ class GameStatsShow extends Component
         return $match instanceof MatchModel
             && $match->playerStats->isNotEmpty()
             && $match->playerQuarterStats->isNotEmpty();
+    }
+
+    #[Computed]
+    public function seriesAnchor(): ?MatchModel
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel || $match->best_of <= 1) {
+            return null;
+        }
+
+        return $match->series_id !== null ? $match->seriesAnchor : $match;
+    }
+
+    /**
+     * @return Collection<int, MatchModel>
+     */
+    #[Computed]
+    public function seriesGames(): Collection
+    {
+        $anchor = $this->seriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return new Collection;
+        }
+
+        return MatchModel::query()
+            ->where(function ($query) use ($anchor): void {
+                $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
+            })
+            ->orderBy('game_number')
+            ->get();
+    }
+
+    #[Computed]
+    public function seriesSummary(): string
+    {
+        $anchor = $this->seriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return '';
+        }
+
+        $homeWins = (int) $anchor->series_home_wins;
+        $awayWins = (int) $anchor->series_away_wins;
+        $home = $anchor->homeTeam?->shortLabel() ?? 'Home';
+        $away = $anchor->awayTeam?->shortLabel() ?? 'Away';
+
+        if ($anchor->series_winner_team_id !== null) {
+            $winner = (int) $anchor->series_winner_team_id === (int) $anchor->home_team_id ? $home : $away;
+
+            return $winner.' wins the series '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+        }
+
+        if ($homeWins === 0 && $awayWins === 0) {
+            return 'Series not started';
+        }
+
+        if ($homeWins === $awayWins) {
+            return 'Series tied '.$homeWins.'–'.$awayWins;
+        }
+
+        $leader = $homeWins > $awayWins ? $home : $away;
+
+        return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+    }
+
+    /**
+     * The series anchor doubles as Game 1 and stores the aggregate series state.
+     * Once Game 1 has a game winner, report it as a completed game even when the
+     * series itself is still in progress.
+     */
+    public function seriesGameStatus(MatchModel $game): string
+    {
+        if ($game->series_id === null && $game->best_of > 1 && $game->game_winner_team_id !== null) {
+            return $game->forfeit_reason !== null || $game->status === 'forfeit' ? 'forfeit' : 'final';
+        }
+
+        return $game->status;
+    }
+
+    public function seriesGameStatusLabel(MatchModel $game): string
+    {
+        return match ($this->seriesGameStatus($game)) {
+            'final' => 'Final',
+            'forfeit' => 'Forfeit',
+            'scheduled' => 'Scheduled',
+            'in_progress' => 'In progress',
+            'conditional' => 'If needed',
+            'cancelled' => 'Not needed',
+            default => $game->statusLabel(),
+        };
+    }
+
+    #[Computed]
+    public function boxScoreLabel(): string
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel) {
+            return 'Box score';
+        }
+
+        return match (true) {
+            in_array($this->seriesGameStatus($match), ['final', 'forfeit'], true) => 'Official box score',
+            $this->hasStats => 'Draft box score',
+            $match->status === 'conditional' => 'If needed',
+            $match->status === 'cancelled' => 'Not needed',
+            default => 'Box score not started',
+        };
+    }
+
+    #[Computed]
+    public function boxScoreMessage(): string
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel) {
+            return '';
+        }
+
+        $slot = $match->matchSlots->first();
+        $date = $slot?->start_at?->format('M j, Y') ?? 'TBD';
+        $time = $slot?->start_at?->format('g:i A') ?? 'TBD';
+        $court = $slot?->court?->name ?? 'Court TBD';
+
+        return match (true) {
+            $match->status === 'scheduled' && $this->hasStats => 'Draft stats — not official until the game is published.',
+            $match->status === 'scheduled' => 'No stats yet. Scheduled '.$date.' at '.$time.' on '.$court.'.',
+            $match->status === 'conditional' => 'This game is only played if needed.',
+            $match->status === 'cancelled' => 'This game was cancelled when the series ended early.',
+            default => '',
+        };
     }
 
     /**

@@ -51,7 +51,12 @@
             <div>
                 <span class="hf-eyebrow">{{ $match->tournament?->divisions?->first()?->name ?? 'Tournament' }} · {{ $match->tournament?->name ?? 'HoopFlow' }}</span>
                 <h1 class="hf-page-title">Game stats</h1>
-                <p class="hf-page-desc">{{ $match->roundLabel() }} · {{ $court?->name ?? 'Court TBD' }} · {{ $tipoff }}.</p>
+                <p class="hf-page-desc">
+                    {{ $match->roundLabel() }} · {{ $court?->name ?? 'Court TBD' }} · {{ $tipoff }}.
+                    @if ($this->seriesAnchor)
+                        · {{ $match->seriesGameLabel() }} · {{ $this->seriesSummary }}
+                    @endif
+                </p>
             </div>
             <div class="hf-page-actions">
                 <a class="hf-btn" href="{!! route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) !!}" data-testid="stats-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
@@ -62,6 +67,28 @@
                 @endif
             </div>
         </header>
+
+        @if ($this->seriesAnchor)
+            <section class="hf-card hf-card--flat hf-mb-3" data-testid="stats-series">
+                <div class="hf-btn-row" data-testid="stats-series-games">
+                    @foreach ($this->seriesGames as $seriesGame)
+                        @php
+                            $isCurrent = (int) $seriesGame->id === (int) $match->id;
+                            $summary = ($seriesGame->home_score ?? '–').'–'.($seriesGame->away_score ?? '–');
+                        @endphp
+                        @if ($isCurrent)
+                            <span class="hf-chip hf-chip--primary" aria-current="true" data-testid="stats-series-game-{{ $seriesGame->id }}">
+                                Game {{ $seriesGame->game_number }} · {{ $summary }} · {{ $this->seriesGameStatusLabel($seriesGame) }}
+                            </span>
+                        @else
+                            <a class="hf-chip hf-chip--slate" href="{{ route('gameStats', ['match' => $seriesGame->id]) }}" data-testid="stats-series-game-{{ $seriesGame->id }}">
+                                Game {{ $seriesGame->game_number }} · {{ $summary }} · {{ $this->seriesGameStatusLabel($seriesGame) }}
+                            </a>
+                        @endif
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         <section class="hf-hero" data-testid="scoreboard-{{ $match->id }}">
             <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $match->roundLabel() }} · {{ $match->status }}</span>
@@ -189,10 +216,21 @@
             </section>
         @endif
 
+        @if ($this->boxScoreMessage !== '')
+            <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-state-banner">
+                <div class="hf-between hf-wrap">
+                    <span class="hf-chip hf-chip--{{ $match->status === 'cancelled' ? 'slate' : ($match->status === 'conditional' ? 'gold' : 'primary') }}">
+                        {{ $this->boxScoreLabel }}
+                    </span>
+                </div>
+                <p class="hf-small hf-mt-1 hf-mb-0">{{ $this->boxScoreMessage }}</p>
+            </div>
+        @endif
+
         <section class="hf-card hf-mb-3" data-testid="stats-box-score">
             <div class="hf-between hf-wrap hf-mb-2">
                 <div>
-                    <span class="hf-eyebrow">{{ $match->status === 'scheduled' && $hasStats ? 'Draft box score' : 'Official box score' }}</span>
+                    <span class="hf-eyebrow">{{ $this->boxScoreLabel }}</span>
                     <div class="hf-flex hf-items-center hf-gap-2">
                         <h2 class="hf-section-title hf-mb-0">Player stats</h2>
                         <span class="hf-chip hf-chip--slate" data-testid="stats-period-label">{{ $this->periodLabel }}</span>
