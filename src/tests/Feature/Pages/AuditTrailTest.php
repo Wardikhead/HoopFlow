@@ -265,18 +265,10 @@ it('records an audit entry when bracket slots are reassigned', function () {
             'winner_team_id' => null,
         ]);
 
-    $assignments = MatchModel::query()
+    $expectedAssignments = Registration::query()
         ->where('tournament_id', $tournament->id)
-        ->where('round_number', 1)
-        ->orderBy('match_number')
-        ->get()
-        ->map(fn (MatchModel $match): array => [
-            'matchId' => (int) $match->id,
-            'home' => $match->home_team_id !== null ? (int) $match->home_team_id : null,
-            'away' => $match->away_team_id !== null ? (int) $match->away_team_id : null,
-        ])
-        ->values()
-        ->all();
+        ->where('status', 'approved')
+        ->count();
 
     $this->actingAs($organizer);
 
@@ -285,7 +277,6 @@ it('records an audit entry when bracket slots are reassigned', function () {
     Livewire::actingAs($organizer)
         ->test(BracketShow::class)
         ->call('openEditSlots')
-        ->set('slotAssignments', $assignments)
         ->call('saveSlots')
         ->assertHasNoErrors();
 
@@ -294,5 +285,5 @@ it('records an audit entry when bracket slots are reassigned', function () {
     expect($log->entity_type)->toBe('tournament');
     expect((int) $log->entity_id)->toBe((int) $tournament->id);
     expect((int) $log->actor_user_id)->toBe((int) $organizer->id);
-    expect($log->after_json['assignments'])->toHaveCount(count($assignments));
+    expect($log->after_json['assignments'])->toHaveCount($expectedAssignments);
 });

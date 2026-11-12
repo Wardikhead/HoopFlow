@@ -7,9 +7,7 @@ final class BracketPlan
     /**
      * @param  list<MatchupPlan>  $matchups
      */
-    public function __construct(public readonly array $matchups)
-    {
-    }
+    public function __construct(public readonly array $matchups) {}
 
     /**
      * @return array<string, MatchupPlan>

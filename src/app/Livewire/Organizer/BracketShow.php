@@ -74,7 +74,7 @@ class BracketShow extends Component
     /** @var array<int, array{score1: int, score2: int}> */
     public array $scoreHistory = [];
 
-    /** @var array<int, array{matchId: int, home: int|null, away: int|null}> */
+    /** @var array<int, array{seed: int, team_id: int|null}> */
     public array $slotAssignments = [];
 
     public function mount(int|string|null $id = null): void
@@ -515,7 +515,7 @@ class BracketShow extends Component
             ->values()
             ->map(fn (Registration $registration, int $index): array => [
                 'seed' => $index + 1,
-                'team_id' => $registration->team_id !== null ? (int) $registration->team_id : null,
+                'team_id' => (int) $registration->team_id,
             ])
             ->all();
 

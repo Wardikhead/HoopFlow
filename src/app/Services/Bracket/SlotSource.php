@@ -10,8 +10,7 @@ final class SlotSource
         public readonly ?string $sourceStage = null,
         public readonly ?int $sourceRound = null,
         public readonly ?int $sourceMatch = null,
-    ) {
-    }
+    ) {}
 
     public static function seed(?int $teamId): self
     {

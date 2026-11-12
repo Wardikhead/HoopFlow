@@ -19,7 +19,7 @@ final class RoundRobinBuilder
             throw new \InvalidArgumentException('Meetings per pair must be between 1 and 10.');
         }
 
-        $rotation = array_values($teamIds);
+        $rotation = $teamIds;
 
         if ($teamCount % 2 !== 0) {
             $rotation[] = null;
@@ -30,7 +30,7 @@ final class RoundRobinBuilder
         $matchups = [];
 
         for ($leg = 1; $leg <= $legs; $leg++) {
-            $rotation = array_values($teamIds);
+            $rotation = $teamIds;
 
             if ($teamCount % 2 !== 0) {
                 $rotation[] = null;
