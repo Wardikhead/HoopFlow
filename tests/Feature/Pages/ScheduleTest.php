@@ -9,6 +9,7 @@ use App\Models\Tournament;
 use App\Models\User;
 use App\Services\BracketService;
 use App\Services\SchedulingService;
+use Carbon\Carbon;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -199,12 +200,16 @@ it('builds a preview from editable settings and publishes the exact edited row',
         ?? throw new RuntimeException('This test needs another court.');
 
     $component
-        ->call('updatePreviewAssignment', $edited['matchId'], (int) $court->id, $edited['scheduledAt'])
+        ->call('updatePreviewAssignment', $edited['matchId'], (int) $court->id, null)
+        ->call('updatePreviewAssignment', $edited['matchId'], null, $edited['scheduledAt'])
         ->call('publishSchedule')
         ->assertSet('showPreview', false)
         ->assertDispatched('hf-toast');
 
-    expect((int) MatchSlot::where('match_id', $edited['matchId'])->value('court_id'))->toBe((int) $court->id)
+    $slot = MatchSlot::where('match_id', $edited['matchId'])->firstOrFail();
+
+    expect((int) $slot->court_id)->toBe((int) $court->id)
+        ->and($slot->start_at?->format('Y-m-d H:i:s'))->toBe(Carbon::parse($edited['scheduledAt'])->format('Y-m-d H:i:s'))
         ->and(AuditLog::where('action', 'schedule.publish')->count())->toBe(1);
 });
 
