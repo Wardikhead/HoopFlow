@@ -23,14 +23,18 @@ class SchedulingService
      *     courts: Collection<int, Court>,
      *     slotMinutes: int,
      *     restMinutes: int,
-     *     startDate: string
+     *     startDate: string,
+     *     endDate: string|null,
+     *     weekdays: list<int>,
+     *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
      * }
      */
     public function plan(Tournament $tournament, array $options = []): array
     {
         $matches = MatchModel::query()
             ->where('tournament_id', $tournament->id)
-            ->where('status', 'scheduled')
+            ->whereIn('status', ['scheduled', 'conditional'])
+            ->with('bracket:id,format')
             ->get()
             ->reject(fn (MatchModel $match): bool => $match->isByeGame())
             ->values();
@@ -52,12 +56,47 @@ class SchedulingService
         $courts = $this->courts($tournament);
 
         if ($courts->isEmpty()) {
-            throw new InvalidArgumentException('Choose at least one court.');
+            throw new InvalidArgumentException('Choose at least one court for this tournament.');
         }
 
+        $tournamentStart = $tournament->start_date?->copy()->startOfDay();
+        $tournamentEnd = $tournament->end_date?->copy()->startOfDay();
+
         $startDate = isset($options['startDate']) && is_string($options['startDate']) && $options['startDate'] !== ''
-            ? Carbon::parse($options['startDate'])->format('Y-m-d')
-            : $this->startDate($tournament);
+            ? Carbon::parse($options['startDate'])->startOfDay()
+            : ($tournamentStart ?? Carbon::today());
+
+        if ($tournamentStart instanceof Carbon && $startDate->lt($tournamentStart)) {
+            throw new InvalidArgumentException('Start date must be within the tournament dates.');
+        }
+
+        $endDate = null;
+
+        if (isset($options['endDate']) && is_string($options['endDate']) && $options['endDate'] !== '') {
+            $endDate = Carbon::parse($options['endDate'])->startOfDay();
+        } elseif ($tournamentEnd instanceof Carbon) {
+            $endDate = $tournamentEnd->copy();
+        }
+
+        if ($endDate instanceof Carbon) {
+            if ($endDate->lt($startDate)) {
+                throw new InvalidArgumentException('The end date must be on or after the start date.');
+            }
+
+            if ($tournamentEnd instanceof Carbon && $endDate->gt($tournamentEnd)) {
+                throw new InvalidArgumentException('The end date must be on or before the tournament end date.');
+            }
+        }
+
+        $weekdays = isset($options['weekdays']) && is_array($options['weekdays'])
+            ? array_values(array_unique(array_map('intval', $options['weekdays'])))
+            : range(1, 7);
+
+        $weekdays = array_values(array_filter($weekdays, fn (int $day): bool => $day >= 1 && $day <= 7));
+
+        if ($weekdays === []) {
+            throw new InvalidArgumentException('Select at least one match day.');
+        }
 
         $slotMinutes = isset($options['slotMinutes']) && is_numeric($options['slotMinutes'])
             ? (int) $options['slotMinutes']
@@ -71,17 +110,27 @@ class SchedulingService
             ? (int) $options['restMinutes']
             : $this->restMinutes($tournament);
 
-        $rounds = $matches
-            ->groupBy(fn (MatchModel $match): string => $match->stage.'|'.$match->round_number)
-            ->map(function ($group, string $key): array {
+        if ($restMinutes < 0) {
+            throw new InvalidArgumentException('Rest minutes cannot be negative.');
+        }
+
+        $units = $this->seriesUnits($matches);
+
+        $rounds = $units
+            ->groupBy(fn (array $unit): string => $unit['stage'].'|'.$unit['round'])
+            ->map(function (\Illuminate\Support\Collection $group, string $key): array {
                 [$stage, $round] = explode('|', $key);
+
+                $format = $group->first()['anchor']->bracket?->format;
 
                 return [
                     'stage' => $stage,
                     'round' => (int) $round,
-                    'sequence' => $this->roundSequence($stage, (int) $round),
+                    'sequence' => $format === 'single_elim' && $stage === 'winners'
+                        ? -(int) $round
+                        : $this->roundSequence($stage, (int) $round),
                     'stage_rank' => $stage === 'winners' ? 0 : 1,
-                    'matches' => $group->sortBy('match_number')->values(),
+                    'units' => $group->sortBy(fn (array $unit): int => (int) $unit['anchor']->match_number)->values(),
                 ];
             })
             ->sort(function (array $a, array $b): int {
@@ -90,66 +139,219 @@ class SchedulingService
             })
             ->values();
 
-        $sequences = $rounds->pluck('sequence')->unique()->sort()->values();
-
-        $courtSlots = [];
-        $teamTimes = [];
+        $baseDate = $startDate->copy();
         $assignments = [];
-        $baseDate = Carbon::parse($startDate)->startOfDay();
-        $dateRoundCounts = [];
+        $laneSlots = [];
+        $teamTimes = [];
+        $previousSequenceLastDay = null;
 
         foreach ($rounds as $round) {
-            $roundMatches = $round['matches'];
-            $dateIndex = (int) $sequences->search($round['sequence']);
-            $dateRoundCounts[$dateIndex] = ($dateRoundCounts[$dateIndex] ?? 0) + 1;
-            $date = $baseDate->copy()->addDays($dateIndex);
-            $baseHour = $this->roundStartHour($roundMatches->count()) + (($dateRoundCounts[$dateIndex] - 1) * 3);
+            $earliestDay = $previousSequenceLastDay === null ? 0 : $previousSequenceLastDay + 1;
+            $sequenceStart = $this->nextEligibleDay($baseDate, $earliestDay, $weekdays);
+            $sequenceLastDay = null;
+            $baseHour = $this->roundStartHour($round['units']->count());
 
-            foreach ($roundMatches as $index => $match) {
-                $wave = intdiv($index, $courts->count());
-                $court = $courts[$index % $courts->count()];
-                $totalMinutes = $baseHour * 60 + $wave * $slotMinutes;
-                $start = $date->copy()->setTime(intdiv($totalMinutes, 60), $totalMinutes % 60);
-                $scheduledAt = $start->format('Y-m-d H:i:s');
-                $key = $court->id.'|'.$scheduledAt;
+            foreach ($round['units'] as $unit) {
+                $candidate = $sequenceStart->copy();
+                $placed = false;
 
-                if (isset($courtSlots[$key])) {
-                    throw new InvalidArgumentException($court->name.' is double-booked at '.$scheduledAt.'.');
-                }
+                while (! $placed) {
+                    $candidate = $this->nextEligibleDay($candidate, 0, $weekdays);
+                    $gameDays = $this->eligibleGameDays($candidate, count($unit['games']), $weekdays);
+                    $projectedLast = $gameDays[count($gameDays) - 1];
 
-                $courtSlots[$key] = true;
+                    if ($endDate instanceof Carbon && $projectedLast->gt($endDate)) {
+                        throw new InvalidArgumentException(sprintf(
+                            'The tournament ends %s, but this plan needs through %s. Add weekdays, shorten slots, or extend the end date.',
+                            $endDate->format('M j, Y'),
+                            $projectedLast->format('M j, Y'),
+                        ));
+                    }
 
-                foreach ([$match->home_team_id, $match->away_team_id] as $teamId) {
-                    if ($teamId === null) {
+                    $placement = $this->findLane($unit, $gameDays, $courts, $baseHour, $slotMinutes, $restMinutes, $laneSlots, $teamTimes);
+
+                    if ($placement === null) {
+                        $candidate->addDay();
+
                         continue;
                     }
 
-                    $startTimestamp = $start->getTimestamp();
+                    foreach ($unit['games'] as $index => $game) {
+                        $start = $gameDays[$index]->copy()->setTimeFromTimeString($placement['time']);
+                        $assignments[] = [
+                            'matchId' => (int) $game->id,
+                            'courtId' => (int) $placement['court']->id,
+                            'scheduledAt' => $start->format('Y-m-d H:i:s'),
+                        ];
 
-                    foreach ($teamTimes[$teamId] ?? [] as $otherTimestamp) {
-                        if (abs($otherTimestamp - $startTimestamp) < ($slotMinutes + $restMinutes) * 60) {
-                            throw new InvalidArgumentException('A team would play without the required rest.');
-                        }
+                        $laneSlots[$gameDays[$index]->format('Y-m-d')][$placement['court']->id][$placement['time']] = true;
                     }
 
-                    $teamTimes[$teamId][] = $startTimestamp;
+                    $sequenceLastDay = $sequenceLastDay === null
+                        ? $this->dayOffset($baseDate, $gameDays[count($gameDays) - 1])
+                        : max($sequenceLastDay, $this->dayOffset($baseDate, $gameDays[count($gameDays) - 1]));
+                    $placed = true;
                 }
-
-                $assignments[] = [
-                    'matchId' => (int) $match->id,
-                    'courtId' => (int) $court->id,
-                    'scheduledAt' => $scheduledAt,
-                ];
             }
+
+            $previousSequenceLastDay = $sequenceLastDay;
         }
+
+        $matchDays = collect($assignments)
+            ->map(fn (array $assignment): string => substr($assignment['scheduledAt'], 0, 10))
+            ->unique()
+            ->sort()
+            ->values();
 
         return [
             'assignments' => $assignments,
             'courts' => $courts,
             'slotMinutes' => $slotMinutes,
             'restMinutes' => $restMinutes,
-            'startDate' => $startDate,
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate?->format('Y-m-d'),
+            'weekdays' => $weekdays,
+            'summary' => [
+                'games' => count($assignments),
+                'matchDays' => $matchDays->count(),
+                'firstDate' => $matchDays->first(),
+                'lastDate' => $matchDays->last(),
+                'seriesCount' => $units->filter(fn (array $unit): bool => count($unit['games']) > 1)->count(),
+            ],
         ];
+    }
+
+    /**
+     * @param  Collection<int, MatchModel>  $matches
+     * @return \Illuminate\Support\Collection<int, array{anchor: MatchModel, stage: string, round: int, games: Collection<int, MatchModel>}>
+     */
+    protected function seriesUnits(Collection $matches): \Illuminate\Support\Collection
+    {
+        $anchors = $matches->whereNull('series_id')->filter(
+            fn (MatchModel $match): bool => $match->status !== 'conditional',
+        );
+        $children = $matches->whereNotNull('series_id')->groupBy('series_id');
+
+        return $anchors->map(function (MatchModel $anchor) use ($children): array {
+            $games = collect([$anchor])
+                ->merge($children->get($anchor->id, collect()))
+                ->sortBy('game_number')
+                ->values();
+
+            return [
+                'anchor' => $anchor,
+                'stage' => (string) $anchor->stage,
+                'round' => (int) $anchor->round_number,
+                'games' => $games,
+            ];
+        })->values();
+    }
+
+    /**
+     * @param  list<int>  $weekdays
+     */
+    protected function nextEligibleDay(Carbon $date, int $offset, array $weekdays): Carbon
+    {
+        $candidate = $date->copy()->startOfDay()->addDays($offset);
+
+        while (! in_array((int) $candidate->isoWeekday(), $weekdays, true)) {
+            $candidate->addDay();
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * @param  list<int>  $weekdays
+     * @return list<Carbon>
+     */
+    protected function eligibleGameDays(Carbon $start, int $count, array $weekdays): array
+    {
+        $days = [];
+        $candidate = $this->nextEligibleDay($start, 0, $weekdays);
+
+        while (count($days) < $count) {
+            $days[] = $candidate->copy();
+            $candidate = $this->nextEligibleDay($candidate, 1, $weekdays);
+        }
+
+        return $days;
+    }
+
+    /**
+     * @param  array{anchor: MatchModel, stage: string, round: int, games: Collection<int, MatchModel>}  $unit
+     * @param  list<Carbon>  $gameDays
+     * @param  Collection<int, Court>  $courts
+     * @param  array<string, array<int, array<string, bool>>>  $laneSlots
+     * @param  array<int, list<int>>  $teamTimes
+     * @return array{court: Court, time: string}|null
+     */
+    protected function findLane(
+        array $unit,
+        array $gameDays,
+        Collection $courts,
+        int $baseHour,
+        int $slotMinutes,
+        int $restMinutes,
+        array $laneSlots,
+        array &$teamTimes,
+    ): ?array {
+        $step = $slotMinutes + $restMinutes;
+        $minutes = $baseHour * 60;
+
+        while ($minutes + $slotMinutes <= 23 * 60 + 59) {
+            $time = sprintf('%02d:%02d:00', intdiv($minutes, 60), $minutes % 60);
+
+            foreach ($courts as $court) {
+                $free = true;
+
+                foreach ($gameDays as $day) {
+                    if (isset($laneSlots[$day->format('Y-m-d')][$court->id][$time])) {
+                        $free = false;
+                        break;
+                    }
+
+                    $start = $day->copy()->setTimeFromTimeString($time);
+                    $timestamp = $start->getTimestamp();
+
+                    foreach ([$unit['anchor']->home_team_id, $unit['anchor']->away_team_id] as $teamId) {
+                        if ($teamId === null) {
+                            continue;
+                        }
+
+                        foreach ($teamTimes[$teamId] ?? [] as $otherTimestamp) {
+                            if (abs($otherTimestamp - $timestamp) < ($slotMinutes + $restMinutes) * 60) {
+                                $free = false;
+                                break 3;
+                            }
+                        }
+                    }
+                }
+
+                if ($free) {
+                    foreach ($gameDays as $day) {
+                        $timestamp = $day->copy()->setTimeFromTimeString($time)->getTimestamp();
+
+                        foreach ([$unit['anchor']->home_team_id, $unit['anchor']->away_team_id] as $teamId) {
+                            if ($teamId !== null) {
+                                $teamTimes[$teamId][] = $timestamp;
+                            }
+                        }
+                    }
+
+                    return ['court' => $court, 'time' => $time];
+                }
+            }
+
+            $minutes += $step;
+        }
+
+        return null;
+    }
+
+    protected function dayOffset(Carbon $base, Carbon $date): int
+    {
+        return (int) $base->copy()->startOfDay()->diffInDays($date->copy()->startOfDay(), false);
     }
 
     protected function roundSequence(string $stage, int $round): int
