@@ -837,6 +837,8 @@ class BracketService
                 'winner_team_id' => $newGameWinnerId,
                 'reason' => $reason,
             ]);
+
+            $this->syncTournamentCompletion($anchor);
         });
     }
 
@@ -921,7 +923,7 @@ class BracketService
         $final = MatchModel::where('bracket_id', $bracket->id)
             ->whereNull('series_id')
             ->where('stage', 'winners')
-            ->orderByDesc('round_number')
+            ->orderBy('round_number')
             ->first();
 
         if (! $final instanceof MatchModel || ! in_array($final->status, ['final', 'forfeit'], true)) {
