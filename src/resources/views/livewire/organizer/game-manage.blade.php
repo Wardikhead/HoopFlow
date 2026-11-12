@@ -69,7 +69,14 @@
             <div>
                 <span class="hf-eyebrow">{{ $home?->name ?? 'TBD' }} vs {{ $away?->name ?? 'TBD' }}</span>
                 <h1 class="hf-page-title">In-game score &amp; player stats</h1>
-                <p class="hf-page-desc">{{ $match->roundLabel() }} · Slot {{ $match->match_number }} · {{ $match->status }}</p>
+                <p class="hf-page-desc">
+                    {{ $match->roundLabel() }} · Slot {{ $match->match_number }}
+                    @if ($match->best_of > 1)
+                        · {{ $match->seriesGameLabel() }} · {{ $this->seriesSummary }}
+                    @else
+                        · {{ $match->statusLabel() }}
+                    @endif
+                </p>
             </div>
             <div class="hf-page-actions">
                 <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) }}" data-testid="ingame-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
@@ -77,6 +84,57 @@
                 <a class="hf-btn" href="{{ route('gameManage') }}" data-testid="ingame-change-match"><i class="bi bi-arrow-left-right"></i> Change match</a>
             </div>
         </header>
+
+        @if ($this->seriesAnchor)
+            <section class="hf-card hf-card--flat hf-mb-3" data-testid="ingame-series-banner">
+                <div class="hf-between hf-wrap">
+                    <div>
+                        <span class="hf-eyebrow">Best of {{ $this->seriesAnchor->best_of }} · {{ $this->seriesGameLabel }}</span>
+                        <h2 class="hf-section-title hf-mb-0">{{ $this->seriesSummary }}</h2>
+                        <p class="hf-small hf-muted hf-mb-0"><i class="bi bi-calendar-event"></i> {{ $this->seriesScheduleLabel }}</p>
+                    </div>
+                    <span class="hf-chip hf-chip--{{ $match->status === 'forfeit' ? 'danger' : ($match->status === 'in_progress' ? 'gold' : ($match->status === 'final' ? 'success' : 'primary')) }}">{{ $match->statusLabel() }}</span>
+                </div>
+                <div class="hf-btn-row hf-mt-2" data-testid="ingame-series-games">
+                    @foreach ($this->seriesGames as $seriesGame)
+                        @php
+                            $seriesSlot = $seriesGame->matchSlots->first();
+                            $isCurrent = (int) $seriesGame->id === (int) $match->id;
+                            $tone = $this->seriesStatusTone($seriesGame);
+                            $seriesLabel = 'Game '.$seriesGame->game_number.' · '.$this->seriesStatusLabel($seriesGame);
+                            $seriesSchedule = $seriesSlot?->start_at !== null
+                                ? ($seriesSlot->court?->name ?? 'Court TBD').' '.$seriesSlot->start_at->format('M j, g:i A')
+                                : null;
+                        @endphp
+                        @if ($isCurrent)
+                            <span class="hf-chip hf-chip--{{ $tone }}" data-testid="ingame-series-game-{{ $seriesGame->id }}" aria-current="true">
+                                {{ $seriesLabel }}
+                                @if ($seriesSchedule)
+                                    <span class="hf-small">{{ $seriesSchedule }}</span>
+                                @endif
+                            </span>
+                        @elseif (in_array($seriesGame->status, ['scheduled', 'in_progress'], true))
+                            <a class="hf-chip hf-chip--{{ $tone }}" href="{{ route('gameManage', ['match' => $seriesGame->id]) }}" data-testid="ingame-series-game-{{ $seriesGame->id }}">
+                                {{ $seriesLabel }}
+                                @if ($seriesSchedule)
+                                    <span class="hf-small">{{ $seriesSchedule }}</span>
+                                @endif
+                            </a>
+                        @else
+                            <span class="hf-chip hf-chip--{{ $tone }}" data-testid="ingame-series-game-{{ $seriesGame->id }}">
+                                {{ $seriesLabel }}
+                                @if ($seriesSchedule)
+                                    <span class="hf-small">{{ $seriesSchedule }}</span>
+                                @endif
+                            </span>
+                        @endif
+                    @endforeach
+                </div>
+                @if ($this->nextSeriesSummary !== '')
+                    <p class="hf-small hf-mt-2 hf-mb-0" data-testid="ingame-series-next"><i class="bi bi-arrow-right-circle"></i> {{ $this->nextSeriesSummary }}</p>
+                @endif
+            </section>
+        @endif
 
         @if ($correctionMode)
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="ingame-correction-banner">
@@ -98,23 +156,74 @@
             <section class="hf-card" data-testid="ingame-locked">
                 <div class="hf-between hf-wrap">
                     <div>
-                        <span class="hf-eyebrow">Locked result</span>
+                        <span class="hf-eyebrow">{{ $this->lockedTitle }}</span>
                         <h2 class="hf-section-title hf-mb-0">{{ $match->home_score ?? '–' }}–{{ $match->away_score ?? '–' }}</h2>
-                        <p class="hf-small hf-muted hf-mb-0">Recorded as {{ $match->status }}. In-game edits are closed.</p>
+                        <p class="hf-small hf-muted hf-mb-0">
+                            @if ($this->seriesAnchor)
+                                {{ $this->seriesSummary }}. In-game edits for this game are closed.
+                            @else
+                                Recorded as {{ $match->statusLabel() }}. In-game edits are closed.
+                            @endif
+                        </p>
                     </div>
-                    <span class="hf-chip hf-chip--slate">{{ $match->status }}</span>
+                    <span class="hf-chip hf-chip--{{ $match->status === 'forfeit' ? 'danger' : ($match->status === 'in_progress' ? 'gold' : 'success') }}">{{ $match->statusLabel() }}</span>
                 </div>
+                @if ($this->seriesAnchor)
+                    <div class="hf-stat-strip hf-mt-2">
+                        <div><span>Series</span><strong>{{ $this->seriesSummary }}</strong></div>
+                        <div><span>Game</span><strong>{{ $match->seriesGameLabel() }}</strong></div>
+                        <div><span>Schedule</span><strong>{{ $this->seriesScheduleLabel() }}</strong></div>
+                    </div>
+                @endif
+                @if ($this->nextSeriesGame)
+                    <div class="hf-card hf-card--flat hf-mt-2" data-testid="ingame-next-game">
+                        <div class="hf-between hf-wrap">
+                            <div>
+                                <span class="hf-eyebrow">Next up</span>
+                                <strong>Game {{ $this->nextSeriesGame->game_number }}</strong>
+                                <p class="hf-small hf-muted hf-mb-0">{{ $this->nextSeriesSummary }}</p>
+                            </div>
+                            <a class="hf-btn hf-btn--primary" href="{{ route('gameManage', ['match' => $this->nextSeriesGame->id]) }}" data-testid="ingame-next-game-link">
+                                <i class="bi bi-arrow-right-circle"></i> Go to Game {{ $this->nextSeriesGame->game_number }}
+                            </a>
+                        </div>
+                    </div>
+                @endif
                 <div class="hf-btn-row hf-mt-2">
                     <a class="hf-btn hf-btn--primary" href="{{ route('gameStats', ['match' => $match->id]) }}" data-testid="ingame-view-stats">View box score</a>
-                    @if ($this->hasEditableBoxScore)
-                        <a class="hf-btn hf-btn--danger" href="{{ route('gameManage', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
-                    @else
-                        <a class="hf-btn hf-btn--danger" href="{{ route('gameStats', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                    @if (in_array($match->status, ['final', 'forfeit'], true))
+                        @if ($this->hasEditableBoxScore)
+                            <a class="hf-btn hf-btn--danger" href="{{ route('gameManage', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                        @else
+                            <a class="hf-btn hf-btn--danger" href="{{ route('gameStats', ['match' => $match->id, 'correct' => 1]) }}" data-testid="ingame-correct">Correct score</a>
+                        @endif
                     @endif
                     <a class="hf-btn" href="{{ route('gameManage') }}">Change match</a>
+                    @if ($this->seriesAnchor)
+                        <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id, 'match' => $this->seriesAnchor->id]) }}" data-testid="ingame-series-bracket">View series in bracket</a>
+                    @endif
                 </div>
             </section>
         @else
+            <section class="hf-card hf-card--flat hf-mb-3" data-testid="ingame-scoreboard">
+                <div class="hf-between hf-wrap">
+                    <div class="hf-flex hf-items-center hf-gap-2">
+                        <x-team-shield :team="$home" />
+                        <strong>{{ $home?->shortLabel() ?? 'TBD' }}</strong>
+                    </div>
+                    <div class="hf-score" style="font-size: clamp(28px, 5vw, 40px); line-height: 1" data-testid="ingame-live-score">
+                        {{ array_sum($this->quarters['team1']) }} – {{ array_sum($this->quarters['team2']) }}
+                    </div>
+                    <div class="hf-flex hf-items-center hf-gap-2">
+                        <strong>{{ $away?->shortLabel() ?? 'TBD' }}</strong>
+                        <x-team-shield :team="$away" />
+                    </div>
+                </div>
+                <p class="hf-small hf-muted hf-mb-0 hf-mt-1">
+                    Live total from quarter scores · {{ $match->seriesGameLabel() }} · {{ $this->seriesScheduleLabel }}
+                </p>
+            </section>
+
             <section class="hf-card hf-mb-3" data-testid="ingame-quarter-tabs">
                 <div class="hf-between hf-wrap hf-mb-2">
                     <div>
@@ -151,11 +260,12 @@
                         <p class="hf-small hf-mt-1 hf-mb-1">Running total: <strong>{{ array_sum($this->quarters[$panel['side']]) }}</strong></p>
                         <label class="hf-label" for="ingameFinal{{ $panel['side'] }}">Final score</label>
                         <input class="hf-input" id="ingameFinal{{ $panel['side'] }}" type="number" min="0" max="199" wire:model.live="finals.{{ $panel['side'] }}" data-testid="ingame-final-{{ $panel['side'] }}">
+                        @php
+                            $playerPoints = $this->statPointsForSide($panel['side']);
+                            $finalPoints = (int) $this->finals[$panel['side']];
+                            $pointsGap = $finalPoints - $playerPoints;
+                        @endphp
                         @if ($correctionMode)
-                            @php
-                                $playerPoints = $this->statPointsForSide($panel['side']);
-                                $finalPoints = (int) $this->finals[$panel['side']];
-                            @endphp
                             <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-mismatch-{{ $panel['side'] }}">
                                 @if ($playerPoints === $finalPoints)
                                     Player points match the final score
@@ -164,6 +274,20 @@
                                 @else
                                     Player points {{ $playerPoints }} · Final {{ $finalPoints }} · {{ $playerPoints - $finalPoints }} above the final score
                                 @endif
+                            </p>
+                        @elseif ($pointsGap !== 0)
+                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-points-check-{{ $panel['side'] }}">
+                                <span class="hf-chip hf-chip--{{ $pointsGap > 0 ? 'warning' : 'danger' }}">
+                                    @if ($pointsGap > 0)
+                                        {{ $pointsGap }} points unassigned
+                                    @else
+                                        {{ abs($pointsGap) }} points above the final score
+                                    @endif
+                                </span>
+                            </p>
+                        @else
+                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-points-check-{{ $panel['side'] }}">
+                                <span class="hf-chip hf-chip--success">Player points match the final score</span>
                             </p>
                         @endif
                     </section>
@@ -265,13 +389,22 @@
                         @enderror
                     </div>
                 @endif
+                @if (! $correctionMode && $this->seriesAnchor)
+                    <p class="hf-small hf-muted hf-mt-0 hf-mb-2" data-testid="ingame-series-hint">
+                        <i class="bi bi-info-circle"></i>
+                        Publishing {{ $match->seriesGameLabel() }} locks it and updates the series. The next game opens when you are ready.
+                    </p>
+                @endif
                 <div class="hf-btn-row">
                     @if ($correctionMode)
                         <button type="button" class="hf-btn hf-btn--primary" wire:click="requestSaveCorrection" wire:loading.attr="disabled" data-testid="ingame-save-correction"><i class="bi bi-check2-circle"></i> Save correction</button>
                         <button type="button" class="hf-btn" wire:click="cancelCorrection" data-testid="ingame-cancel-correction">Cancel correction</button>
                     @else
                         <button type="button" class="hf-btn" wire:click="saveDraft" wire:loading.attr="disabled" data-testid="ingame-save"><i class="bi bi-save"></i> Save</button>
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestPublish" wire:loading.attr="disabled" data-testid="ingame-publish"><i class="bi bi-check2-circle"></i> Publish result</button>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestPublish" wire:loading.attr="disabled" data-testid="ingame-publish">
+                            <i class="bi bi-check2-circle"></i>
+                            {{ $this->seriesAnchor ? 'Publish '.$match->seriesGameLabel() : 'Publish result' }}
+                        </button>
                         <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id]) }}" data-testid="ingame-cancel">Cancel</a>
                     @endif
                 </div>

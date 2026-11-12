@@ -1140,6 +1140,15 @@ textarea {
   border-left-color: var(--hf-alert);
 }
 
+.hf-bracket-match--in_progress {
+  border-left-color: var(--hf-warning);
+  background: color-mix(in srgb, var(--hf-warning) 7%, var(--hf-surface-2));
+}
+
+.hf-bracket-match--scheduled {
+  border-left-color: var(--hf-primary);
+}
+
 .hf-bracket-match__slot {
   color: var(--hf-muted);
   font-size: 9px;
@@ -1440,6 +1449,15 @@ textarea {
 
 .hf-table tbody tr:hover {
   background: color-mix(in srgb, var(--hf-primary) 4%, transparent);
+}
+
+.hf-table tbody tr.is-active {
+  background: color-mix(in srgb, var(--hf-primary) 8%, transparent);
+  box-shadow: inset 3px 0 0 var(--hf-primary);
+}
+
+.hf-table tbody tr.is-active:hover {
+  background: color-mix(in srgb, var(--hf-primary) 12%, transparent);
 }
 
 .hf-table .is-num {

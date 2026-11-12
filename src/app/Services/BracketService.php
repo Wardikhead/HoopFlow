@@ -1286,7 +1286,7 @@ class BracketService
             ->get();
 
         $next = $games->first(
-            fn (MatchModel $game): bool => ! in_array($game->status, ['final', 'forfeit'], true),
+            fn (MatchModel $game): bool => in_array($game->status, ['conditional', 'scheduled'], true),
         );
 
         if (! $next instanceof MatchModel) {
@@ -1297,6 +1297,8 @@ class BracketService
         $next->home_team_id = $anchor->home_team_id;
         $next->away_team_id = $anchor->away_team_id;
         $next->save();
+
+        app(SchedulingService::class)->scheduleSeriesGame($next, $anchor);
     }
 
     /**

@@ -2,10 +2,13 @@
 
 use App\Livewire\Organizer\GameManage;
 use App\Models\AuditLog;
+use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\PlayerStat;
 use App\Models\PlayerStatQuarter;
+use App\Models\Tournament;
 use App\Models\User;
+use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -395,4 +398,99 @@ it('ignores draft and publish actions in correction mode', function () {
         ->assertSet('showConfirm', false);
 
     expect(AuditLog::where('action', 'stats.save')->where('entity_id', $match->id)->exists())->toBeFalse();
+});
+
+function gmSeriesTournament(): Tournament
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+
+    return $tournament->fresh();
+}
+
+function gmSeriesFinal(Tournament $tournament): MatchModel
+{
+    $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))
+        ->where('format', 'single_elim')
+        ->firstOrFail();
+
+    return MatchModel::where('bracket_id', $bracket->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+}
+
+/**
+ * @return array{0: MatchModel, 1: MatchModel}
+ */
+function gmPrepareSeries(Tournament $tournament, BracketService $service): array
+{
+    $final = gmSeriesFinal($tournament);
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = $teams[0];
+    $final->away_team_id = $teams[1];
+    $final->save();
+    $service->syncSeriesTeams($final);
+
+    $game2 = MatchModel::where('series_id', $final->id)
+        ->where('game_number', 2)
+        ->firstOrFail();
+
+    return [$final->fresh(), $game2];
+}
+
+/**
+ * @return array{0: MatchModel, 1: MatchModel}
+ */
+function gmStartSeries(Tournament $tournament, BracketService $service): array
+{
+    [$final, $game2] = gmPrepareSeries($tournament, $service);
+    $service->recordScore($final->fresh(), 80, 70);
+
+    return [$final->fresh(), $game2->fresh()];
+}
+
+it('opens the active series game when the anchor is requested', function () {
+    $tournament = gmSeriesTournament();
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    [$final, $game2] = gmStartSeries($tournament, $service);
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $final->id])
+        ->assertSet('matchId', $game2->id)
+        ->assertSee('Game 2')
+        ->assertDontSee('Game 1 is already recorded');
+});
+
+it('locks a published series game and offers the next game', function () {
+    $tournament = gmSeriesTournament();
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    [$final, $game2] = gmPrepareSeries($tournament, $service);
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $final->id])
+        ->set('quarters.team1', [20, 20, 20, 20])
+        ->set('quarters.team2', [15, 15, 15, 15])
+        ->set('finals.team1', 80)
+        ->set('finals.team2', 60)
+        ->call('requestPublish')
+        ->assertSet('showConfirm', true)
+        ->call('confirmPublish')
+        ->assertSet('matchId', $final->id)
+        ->assertSeeHtml('data-testid="ingame-locked"')
+        ->assertDontSeeHtml('data-testid="ingame-publish"')
+        ->assertSeeHtml('data-testid="ingame-next-game"')
+        ->assertSee(route('gameManage', ['match' => $game2->id]));
+
+    expect($final->fresh()->status)->toBe('in_progress')
+        ->and($game2->fresh()->status)->toBe('scheduled');
 });

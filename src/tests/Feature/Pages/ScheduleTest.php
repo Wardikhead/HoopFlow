@@ -6,6 +6,7 @@ use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\BracketService;
 use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,4 +115,44 @@ it('plans a schedule across the tournament courts', function () {
     expect($plan['assignments'])->not->toBeEmpty();
     expect($plan['courts'])->toHaveCount(4);
     expect($plan['startDate'])->toBe('2026-05-15');
+});
+
+it('shows a newly activated series game on the schedule', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'single-elimination');
+    app(SchedulingService::class)->generate($tournament);
+
+    $final = MatchModel::where('tournament_id', $tournament->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = $teams[0];
+    $final->away_team_id = $teams[1];
+    $final->save();
+    $bracketService->syncSeriesTeams($final);
+    $bracketService->recordScore($final->fresh(), 80, 70);
+
+    $game2 = MatchModel::where('series_id', $final->id)
+        ->where('game_number', 2)
+        ->firstOrFail();
+    $slot = $game2->matchSlots()->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('selectDay', $slot->start_at->format('Y-m-d'))
+        ->assertSeeHtml('data-testid="schedule-match-'.$game2->id.'"');
 });

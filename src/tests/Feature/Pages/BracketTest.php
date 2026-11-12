@@ -8,6 +8,7 @@ use App\Models\MatchModel;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\BracketService;
+use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -225,6 +226,49 @@ it('shows the best-of length and series score on a playoff card', function () {
         ->test(BracketShow::class, ['id' => $tournament->id])
         ->assertSee('Best of 3')
         ->assertSee('Game 1');
+});
+
+it('points a series bracket at the active game and shows its state', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    (new SchedulingService)->generate($tournament);
+
+    $final = MatchModel::where('tournament_id', $tournament->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = $teams[0];
+    $final->away_team_id = $teams[1];
+    $final->save();
+    $service->syncSeriesTeams($final);
+    $service->recordScore($final->fresh(), 80, 70);
+
+    $game2 = MatchModel::where('series_id', $final->id)
+        ->where('game_number', 2)
+        ->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->withQueryParams(['match' => $final->id])
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertSet('selectedMatchId', $final->id)
+        ->assertSeeHtml('data-testid="bracket-series-active-'.$game2->id.'"')
+        ->assertSeeHtml('href="'.route('gameManage', ['match' => $game2->id]).'"')
+        ->assertSee('Next')
+        ->assertSee('In progress');
 });
 
 it('targets the seed order when editing slots', function () {
