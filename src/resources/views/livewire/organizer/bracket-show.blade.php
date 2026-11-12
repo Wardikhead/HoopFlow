@@ -35,6 +35,9 @@
         $courtCount = $tournament !== null
             ? $tournament->matchSlots->pluck('court_id')->filter()->unique()->count()
             : 0;
+        $sections = $bracket['sections'];
+        $mobileRounds = collect($sections)->flatMap(fn ($section) => $section['rounds'])->values();
+        $totalRounds = collect($sections)->sum(fn ($section) => count($section['rounds']));
     @endphp
 
     @if (! $tournament)
@@ -48,7 +51,7 @@
                 <h1 class="hf-page-title">{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
                 <p class="hf-page-desc">
                     @if ($bracket['hasBracket'])
-                        {{ $tournament->name }} · {{ $format }} · {{ count($bracket['rounds']) }} rounds
+                        {{ $tournament->name }} · {{ $format }} · {{ $totalRounds }} rounds
                     @else
                         {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournamentSlots }}-slot {{ $format }} bracket.
                     @endif
@@ -61,6 +64,11 @@
                 @if ($isOrganizer && $bracket['hasBracket'] && $kpis['matchesPlayed'] === 0)
                     <button type="button" class="hf-btn" wire:click="requestRegenerate" data-testid="bracket-regenerate">Regenerate bracket</button>
                     <button type="button" class="hf-btn" wire:click="openEditSlots" data-testid="bracket-edit-slots">Edit slots</button>
+                @endif
+                @if ($isOrganizer && $format === 'round-robin' && $this->canGeneratePlayoffs)
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGeneratePlayoffs" data-testid="bracket-generate-playoffs">
+                        Generate playoffs
+                    </button>
                 @endif
             </div>
         </header>
@@ -119,7 +127,7 @@
             @endif
 
             <div class="hf-grid hf-grid--4 hf-mb-3">
-                <x-kpi-tile label="Rounds" :value="count($bracket['rounds'])" :hint="$tournamentSlots.'-team bracket'" tone="primary" testid="bracket-kpi-rounds" />
+                <x-kpi-tile label="Rounds" :value="$totalRounds" :hint="$tournamentSlots.'-team bracket'" tone="primary" testid="bracket-kpi-rounds" />
                 <x-kpi-tile label="Played" :value="$kpis['matchesPlayed']" :hint="$kpis['matchesScheduled'].' scheduled'" tone="success" testid="bracket-kpi-played" />
                 <x-kpi-tile label="Champion" :value="$bracket['champion']?->shortLabel() ?? 'TBD'" :hint="$bracket['champion']?->name ?? 'Final not played'" tone="gold" testid="bracket-kpi-champion" />
                 <x-kpi-tile label="Corrections" :value="$kpis['corrections']" hint="Audited score changes" tone="alert" testid="bracket-kpi-corrections" />
@@ -132,21 +140,26 @@
                 <span>{{ $isOrganizer ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
             </div>
 
-            <div class="hf-bracket" data-testid="bracket-tree">
-                @foreach ($bracket['rounds'] as $round)
-                    <div class="hf-bracket-round">
-                        <div class="hf-bracket-round-title">{{ $round['label'] }} <span class="hf-small hf-muted">{{ $round['matches']->count() }}</span></div>
-                        @foreach ($round['matches'] as $match)
-                            <x-bracket-match :match="$match" :round-label="$round['label']" />
+            @foreach ($sections as $section)
+                <section class="hf-mb-3" data-testid="bracket-section-{{ $section['key'] }}">
+                    <h2 class="hf-section-title">{{ $section['title'] }}</h2>
+                    <div class="hf-bracket" data-testid="bracket-tree">
+                        @foreach ($section['rounds'] as $round)
+                            <div class="hf-bracket-round">
+                                <div class="hf-bracket-round-title">{{ $round['label'] }} <span class="hf-small hf-muted">{{ $round['matches']->count() }}</span></div>
+                                @foreach ($round['matches'] as $match)
+                                    <x-bracket-match :match="$match" :round-label="$round['label']" />
+                                @endforeach
+                            </div>
                         @endforeach
                     </div>
-                @endforeach
-            </div>
+                </section>
+            @endforeach
 
-            @php $roundCount = count($bracket['rounds']); @endphp
+            @php $roundCount = $mobileRounds->count(); @endphp
             <div class="hf-bracket-mobile" data-testid="bracket-mobile" x-cloak x-init="mobileRound = Math.min(mobileRound, {{ max(0, $roundCount - 1) }})">
                 <div class="hf-round-pager">
-                    @foreach ($bracket['rounds'] as $index => $round)
+                    @foreach ($mobileRounds as $index => $round)
                         <button
                             type="button"
                             x-bind:class="{ 'is-active': mobileRound === {{ $index }} }"
@@ -156,7 +169,7 @@
                     @endforeach
                 </div>
                 <div class="hf-round-progress"><span x-bind:style="'width: ' + (((mobileRound + 1) / {{ $roundCount }}) * 100) + '%'"></span></div>
-                @foreach ($bracket['rounds'] as $index => $round)
+                @foreach ($mobileRounds as $index => $round)
                     <div x-show="mobileRound === {{ $index }}" x-cloak>
                         @foreach ($round['matches'] as $match)
                             <x-bracket-match :match="$match" :round-label="$round['label']" />
@@ -181,10 +194,6 @@
     @endif
 
     @if ($showEditSlots)
-        @php
-            $slotMatchIds = collect($slotAssignments)->pluck('matchId');
-            $slotMatches = \App\Models\MatchModel::query()->whereIn('id', $slotMatchIds)->get()->keyBy('id');
-        @endphp
         <dialog
             class="hf-dialog hf-dialog--wide"
             x-data
@@ -201,7 +210,7 @@
                 </button>
             </div>
             <div class="hf-dialog__body">
-                <p class="hf-small hf-muted">Reassign approved teams to first-round slots. Save to apply.</p>
+                <p class="hf-small hf-muted">Reassign approved teams to seed positions. Save to rebuild the bracket.</p>
                 @error('slots')
                     <p class="hf-field-error hf-mb-2">{{ $message }}</p>
                 @enderror
@@ -209,25 +218,16 @@
                     <table class="hf-table">
                         <thead>
                             <tr>
-                                <th scope="col">Slot</th>
-                                <th scope="col">Team 1</th>
-                                <th scope="col">Team 2</th>
+                                <th scope="col">Seed</th>
+                                <th scope="col">Team</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($slotAssignments as $index => $assignment)
-                                <tr wire:key="bracket-slot-{{ $assignment['matchId'] }}">
-                                    <td>{{ $slotMatches->get($assignment['matchId'])?->match_number ?? $loop->iteration }}</td>
+                                <tr wire:key="bracket-slot-{{ $assignment['seed'] }}">
+                                    <td>Seed {{ $assignment['seed'] }}</td>
                                     <td>
-                                        <select class="hf-select" wire:model="slotAssignments.{{ $index }}.home" aria-label="Team 1 for slot {{ $loop->iteration }}">
-                                            <option value="">— bye —</option>
-                                            @foreach ($approved as $registration)
-                                                <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="hf-select" wire:model="slotAssignments.{{ $index }}.away" aria-label="Team 2 for slot {{ $loop->iteration }}">
+                                        <select class="hf-select" wire:model="slotAssignments.{{ $index }}.team_id" aria-label="Team for seed {{ $assignment['seed'] }}">
                                             <option value="">— bye —</option>
                                             @foreach ($approved as $registration)
                                                 <option value="{{ $registration->team_id }}">{{ $registration->team?->name ?? 'Team' }}</option>
@@ -302,6 +302,39 @@
                             <div><span>Tip-off</span><strong>{{ $detailStart?->format('g:i A') ?? 'TBD' }}</strong></div>
                         </div>
                     </div>
+                    @if ($this->selectedSeriesGames->isNotEmpty())
+                        <div class="hf-mt-2" data-testid="bracket-series-games">
+                            <h3 class="hf-section-title">Series games</h3>
+                            <div class="hf-table-wrap">
+                                <table class="hf-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Game</th>
+                                            <th scope="col">Score</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($this->selectedSeriesGames as $game)
+                                            <tr wire:key="series-game-{{ $game->id }}">
+                                                <td>Game {{ $game->game_number }}</td>
+                                                <td>{{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}</td>
+                                                <td>{{ $game->status }}</td>
+                                                <td>
+                                                    @if ($game->status === 'scheduled')
+                                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openScoreConsole({{ $game->id }})" data-testid="series-score-{{ $game->id }}">Score</button>
+                                                    @elseif (in_array($game->status, ['final', 'forfeit'], true))
+                                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openCorrection({{ $game->id }})" data-testid="series-correct-{{ $game->id }}">Correct</button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
                     @if ($detailCorrection)
                         <div class="hf-card hf-card--flat hf-mt-2">
                             <span class="hf-chip hf-chip--danger">Corrected</span>
