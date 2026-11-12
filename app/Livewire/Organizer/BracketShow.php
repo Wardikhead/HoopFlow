@@ -57,6 +57,10 @@ class BracketShow extends Component
 
     public bool $showConfirm = false;
 
+    public bool $showGameChooser = false;
+
+    public ?int $chooserMatchId = null;
+
     public ?int $score1 = null;
 
     public ?int $score2 = null;
@@ -394,6 +398,57 @@ class BracketShow extends Component
         return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
     }
 
+    #[Computed]
+    public function chooserMatch(): ?MatchModel
+    {
+        return $this->findTournamentMatch($this->chooserMatchId);
+    }
+
+    #[Computed]
+    public function chooserAnchor(): ?MatchModel
+    {
+        $match = $this->chooserMatch;
+
+        if (! $match instanceof MatchModel || $match->best_of <= 1) {
+            return null;
+        }
+
+        return $match->series_id !== null ? $match->seriesAnchor : $match;
+    }
+
+    /**
+     * @return Collection<int, MatchModel>
+     */
+    #[Computed]
+    public function chooserGames(): Collection
+    {
+        $anchor = $this->chooserAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return new Collection;
+        }
+
+        return MatchModel::query()
+            ->where(function ($query) use ($anchor): void {
+                $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
+            })
+            ->with(['homeTeam', 'awayTeam', 'matchSlots.court'])
+            ->orderBy('game_number')
+            ->get();
+    }
+
+    #[Computed]
+    public function chooserSummary(): string
+    {
+        $anchor = $this->chooserAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return '';
+        }
+
+        return ($anchor->homeTeam?->shortLabel() ?? 'Home').' vs '.($anchor->awayTeam?->shortLabel() ?? 'Away').' · '.$this->selectedSeriesSummary;
+    }
+
     public function isActiveSeriesGame(MatchModel $game): bool
     {
         $active = $this->selectedActiveGame;
@@ -401,9 +456,38 @@ class BracketShow extends Component
         return $active instanceof MatchModel && (int) $active->id === (int) $game->id;
     }
 
+    /**
+     * The series anchor doubles as Game 1 and stores the aggregate series state.
+     * Once Game 1 has a game winner, report it as a completed game even when the
+     * series itself is still in progress.
+     */
+    public function seriesGameStatus(MatchModel $game): string
+    {
+        if ($game->series_id === null && $game->best_of > 1 && $game->game_winner_team_id !== null) {
+            return $game->forfeit_reason !== null || $game->status === 'forfeit' ? 'forfeit' : 'final';
+        }
+
+        return $game->status;
+    }
+
+    public function gameCanBeCorrected(MatchModel $game): bool
+    {
+        return in_array($this->seriesGameStatus($game), ['final', 'forfeit'], true);
+    }
+
     public function seriesGameStatusLabel(MatchModel $game): string
     {
-        if ($this->isActiveSeriesGame($game) && $game->status === 'scheduled') {
+        $status = $this->seriesGameStatus($game);
+
+        if ($status !== $game->status) {
+            return match ($status) {
+                'final' => 'Final',
+                'forfeit' => 'Forfeit',
+                default => ucfirst(str_replace('_', ' ', $status)),
+            };
+        }
+
+        if ($this->isActiveSeriesGame($game) && $status === 'scheduled') {
             return 'Next';
         }
 
@@ -426,11 +510,13 @@ class BracketShow extends Component
 
     public function seriesGameStatusTone(MatchModel $game): string
     {
-        if ($this->isActiveSeriesGame($game) && $game->status === 'scheduled') {
+        $status = $this->seriesGameStatus($game);
+
+        if ($this->isActiveSeriesGame($game) && $status === 'scheduled') {
             return 'primary';
         }
 
-        return match ($game->status) {
+        return match ($status) {
             'final' => 'success',
             'forfeit' => 'danger',
             'in_progress' => 'gold',
@@ -529,8 +615,7 @@ class BracketShow extends Component
     {
         $match = $this->selectedMatch;
 
-        return $match instanceof MatchModel
-            && in_array($match->status, ['final', 'forfeit'], true);
+        return $match instanceof MatchModel && $this->gameCanBeCorrected($match);
     }
 
     public function requestGenerate(): void
@@ -576,8 +661,8 @@ class BracketShow extends Component
 
         $this->openConfirm(
             'Regenerate bracket?',
-            'This wipes the current bracket and rebuilds from approved teams. Recorded results will be lost.',
-            'Regenerate',
+            'This shuffles all approved teams, ignores seeding, and clears the published bracket and schedule.',
+            'Regenerate bracket',
             'danger',
             'regenerate',
         );
@@ -716,12 +801,45 @@ class BracketShow extends Component
         $this->showScoreConsole = false;
         $this->showCorrection = false;
         $this->showConfirm = false;
+        $this->showGameChooser = false;
         $this->resetValidation();
     }
 
     public function closeMatchDetail(): void
     {
         $this->showMatchDetail = false;
+        $this->showGameChooser = false;
+    }
+
+    public function openGameChooser(int|string|null $matchId): void
+    {
+        $match = $this->findTournamentMatch($matchId);
+
+        if (! $match instanceof MatchModel) {
+            return;
+        }
+
+        Gate::authorize('enterStats', $match);
+
+        if ($match->best_of <= 1) {
+            $this->redirect(route('gameManage', ['match' => $match->id]));
+
+            return;
+        }
+
+        $this->chooserMatchId = (int) $match->id;
+        $this->showGameChooser = true;
+        $this->showMatchDetail = false;
+        $this->showScoreConsole = false;
+        $this->showCorrection = false;
+        $this->showConfirm = false;
+        $this->resetValidation();
+    }
+
+    public function closeGameChooser(): void
+    {
+        $this->showGameChooser = false;
+        $this->chooserMatchId = null;
     }
 
     public function openScoreConsole(int|string|null $matchId): void
@@ -868,7 +986,7 @@ class BracketShow extends Component
 
         Gate::authorize('correctScore', $match);
 
-        if (! in_array($match->status, ['final', 'forfeit'], true)) {
+        if (! $this->gameCanBeCorrected($match)) {
             $this->toast('Only a recorded result can be corrected.', 'Not final yet', 'warning');
 
             return;
@@ -901,7 +1019,7 @@ class BracketShow extends Component
 
         Gate::authorize('correctScore', $match);
 
-        if (! in_array($match->status, ['final', 'forfeit'], true)) {
+        if (! $this->gameCanBeCorrected($match)) {
             $this->addError('reason', 'Only a recorded result can be corrected.');
 
             return;
@@ -991,7 +1109,7 @@ class BracketShow extends Component
 
         Gate::authorize('generateBracket', $tournament);
 
-        $result = $bracketService->generate($tournament, $this->format);
+        $result = $bracketService->generate($tournament, $this->format, $regenerate);
 
         if ($regenerate) {
             $this->toast($result['matches'].' matches regenerated.', 'Bracket regenerated');
@@ -1007,6 +1125,7 @@ class BracketShow extends Component
         $this->showMatchDetail = false;
         $this->showScoreConsole = false;
         $this->showCorrection = false;
+        $this->showGameChooser = false;
         $this->slotAssignments = [];
     }
 
@@ -1027,6 +1146,7 @@ class BracketShow extends Component
         $this->showMatchDetail = false;
         $this->showScoreConsole = false;
         $this->showCorrection = false;
+        $this->showGameChooser = false;
     }
 
     protected function performFinalize(BracketService $bracketService): void

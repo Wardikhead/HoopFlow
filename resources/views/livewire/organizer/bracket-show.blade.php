@@ -333,6 +333,7 @@
                                         @foreach ($this->selectedSeriesGames as $game)
                                             @php
                                                 $seriesActive = $this->isActiveSeriesGame($game);
+                                                $gameStatus = $this->seriesGameStatus($game);
                                             @endphp
                                             <tr
                                                 wire:key="series-game-{{ $game->id }}"
@@ -349,15 +350,55 @@
                                                     <span class="hf-chip hf-chip--{{ $this->seriesGameStatusTone($game) }}">{{ $this->seriesGameStatusLabel($game) }}</span>
                                                 </td>
                                                 <td>
-                                                    @if ($seriesActive && $game->status === 'scheduled')
-                                                        <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $game->id]) }}" data-testid="series-open-{{ $game->id }}">Open</a>
-                                                    @elseif ($game->status === 'scheduled')
-                                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openScoreConsole({{ $game->id }})" data-testid="series-score-{{ $game->id }}">Score</button>
-                                                    @elseif (in_array($game->status, ['final', 'forfeit'], true))
-                                                        <button type="button" class="hf-btn hf-btn--sm" wire:click="openCorrection({{ $game->id }})" data-testid="series-correct-{{ $game->id }}">Correct</button>
-                                                    @elseif ($game->status === 'in_progress')
-                                                        <a class="hf-btn hf-btn--sm" href="{{ route('gameStats', ['match' => $game->id]) }}" data-testid="series-stats-{{ $game->id }}">Box score</a>
-                                                    @endif
+                                                    <div class="hf-btn-row">
+                                                        @if ($isOrganizer)
+                                                            @if ($seriesActive && $gameStatus === 'scheduled')
+                                                                <a
+                                                                    class="hf-btn hf-btn--sm hf-btn--primary"
+                                                                    href="{{ route('gameManage', ['match' => $game->id]) }}"
+                                                                    data-testid="series-open-{{ $game->id }}"
+                                                                    aria-label="Open scoring for Game {{ $game->game_number }}"
+                                                                >Open scoring</a>
+                                                                <button
+                                                                    type="button"
+                                                                    class="hf-btn hf-btn--sm"
+                                                                    wire:click="openScoreConsole({{ $game->id }})"
+                                                                    data-testid="series-score-{{ $game->id }}"
+                                                                    aria-label="Enter final score for Game {{ $game->game_number }}"
+                                                                >Enter final score</button>
+                                                            @elseif ($gameStatus === 'scheduled')
+                                                                <button
+                                                                    type="button"
+                                                                    class="hf-btn hf-btn--sm"
+                                                                    wire:click="openScoreConsole({{ $game->id }})"
+                                                                    data-testid="series-score-{{ $game->id }}"
+                                                                    aria-label="Enter final score for Game {{ $game->game_number }}"
+                                                                >Enter final score</button>
+                                                            @elseif ($gameStatus === 'in_progress')
+                                                                <a
+                                                                    class="hf-btn hf-btn--sm hf-btn--primary"
+                                                                    href="{{ route('gameManage', ['match' => $game->id]) }}"
+                                                                    data-testid="series-resume-{{ $game->id }}"
+                                                                    aria-label="Resume scoring for Game {{ $game->game_number }}"
+                                                                >Resume scoring</a>
+                                                            @elseif (in_array($gameStatus, ['final', 'forfeit'], true))
+                                                                <button
+                                                                    type="button"
+                                                                    class="hf-btn hf-btn--sm hf-btn--danger"
+                                                                    wire:click="openCorrection({{ $game->id }})"
+                                                                    data-testid="series-correct-{{ $game->id }}"
+                                                                    aria-label="Correct score for Game {{ $game->game_number }}"
+                                                                >Correct score</button>
+                                                            @endif
+                                                        @endif
+
+                                                        <a
+                                                            class="hf-btn hf-btn--sm"
+                                                            href="{{ route('gameStats', ['match' => $game->id]) }}"
+                                                            data-testid="series-stats-{{ $game->id }}"
+                                                            aria-label="View box score for Game {{ $game->game_number }}"
+                                                        >View box score</a>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -375,9 +416,17 @@
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="closeMatchDetail" data-testid="bracket-match-close">Close</button>
-                    <a class="hf-btn" href="{{ route('gameStats', ['match' => $detailMatch->id]) }}" data-testid="bracket-match-stats">Game stats</a>
+                    <a class="hf-btn" href="{{ route('gameStats', ['match' => $detailMatch->id]) }}" data-testid="bracket-match-stats">View box score</a>
                     @if ($isOrganizer)
-                        <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailActiveGame?->id ?? $detailMatch->id]) }}" data-testid="bracket-in-game"><i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats</a>
+                        @if ($this->selectedSeriesGames->isNotEmpty())
+                            <button type="button" class="hf-btn" wire:click="openGameChooser({{ $detailMatch->id }})" data-testid="bracket-in-game">
+                                <i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats
+                            </button>
+                        @else
+                            <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailMatch->id]) }}" data-testid="bracket-in-game">
+                                <i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats
+                            </a>
+                        @endif
                     @endif
                     @if ($isOrganizer && $this->selectedCanScore && $detailActiveGame)
                         <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole({{ $detailActiveGame->id }})" data-testid="bracket-enter-score">Enter final score</button>
@@ -388,6 +437,63 @@
                 </div>
             </dialog>
         @endif
+    @endif
+
+    @if ($showGameChooser)
+        <dialog
+            class="hf-dialog hf-dialog--wide"
+            x-data
+            x-init="if (! $el.open) $el.showModal()"
+            x-on:cancel.prevent="$wire.closeGameChooser()"
+            x-on:click="if ($event.target === $el) $wire.closeGameChooser()"
+            wire:key="bracket-game-chooser"
+            data-testid="bracket-game-chooser"
+        >
+            <div class="hf-dialog__head">
+                <h2 class="hf-dialog__title">Choose game · {{ $this->chooserSummary }}</h2>
+                <button type="button" class="hf-icon-btn" wire:click="closeGameChooser" aria-label="Close dialog" data-testid="dialog-close">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="hf-dialog__body">
+                <div class="hf-stack hf-gap-2">
+                    @foreach ($this->chooserGames as $game)
+                        @php
+                            $activeGame = $this->chooserAnchor?->activeGame();
+                            $isActive = $activeGame instanceof \App\Models\MatchModel && (int) $activeGame->id === (int) $game->id;
+                            $gameStatus = $this->seriesGameStatus($game);
+                        @endphp
+                        <div class="hf-card hf-card--flat" data-testid="chooser-game-{{ $game->id }}">
+                            <div class="hf-between hf-wrap hf-gap-2">
+                                <div>
+                                    <strong>{{ $game->seriesGameLabel() }}</strong>
+                                    <p class="hf-small hf-muted hf-mb-0">
+                                        {{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}
+                                        · {{ $this->seriesGameSchedule($game) }}
+                                        · {{ $this->seriesGameStatusLabel($game) }}
+                                    </p>
+                                </div>
+                                <div class="hf-btn-row">
+                                    @if ($isActive && $gameStatus === 'scheduled')
+                                        <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $game->id]) }}">Open scoring</a>
+                                    @elseif ($gameStatus === 'in_progress')
+                                        <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $game->id]) }}">Resume scoring</a>
+                                    @elseif ($gameStatus === 'conditional')
+                                        <button type="button" class="hf-btn hf-btn--sm" disabled>Available after Game {{ $game->game_number - 1 }} is final</button>
+                                    @elseif ($gameStatus === 'cancelled')
+                                        <button type="button" class="hf-btn hf-btn--sm" disabled>Series ended. This game is not needed.</button>
+                                    @endif
+                                    <a class="hf-btn hf-btn--sm" href="{{ route('gameStats', ['match' => $game->id]) }}">View box score</a>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            <div class="hf-dialog__foot">
+                <button type="button" class="hf-btn" wire:click="closeGameChooser">Close</button>
+            </div>
+        </dialog>
     @endif
 
     @if ($showScoreConsole)

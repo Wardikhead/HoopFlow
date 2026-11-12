@@ -325,3 +325,102 @@ it('uses the bracket service champion resolution on the tournament page', functi
         ->test(TournamentShow::class, ['tournament' => $tournament->id])
         ->assertSet('champion', null);
 });
+
+function bracketSeriesFixture(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+
+    $final = MatchModel::where('tournament_id', $tournament->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->orderBy('seed')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = (int) $teams[0];
+    $final->away_team_id = (int) $teams[1];
+    $final->save();
+    $service->syncSeriesTeams($final);
+    $service->recordScore($final->fresh(), 80, 70);
+
+    $games = MatchModel::where(function ($query) use ($final): void {
+        $query->where('id', $final->id)->orWhere('series_id', $final->id);
+    })->orderBy('game_number')->get();
+
+    return [$tournament, $final->fresh(), $games, $service];
+}
+
+it('shows every series action to the organizer and only box scores to coach and fan', function () {
+    [$tournament, $final, $games] = bracketSeriesFixture();
+    $game2 = $games->firstWhere('game_number', 2);
+    $game1 = $games->firstWhere('game_number', 1);
+
+    Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->call('openMatchDetail', $final->id)
+        ->assertSee('Correct score')
+        ->assertSee('Open scoring')
+        ->assertSee('View box score')
+        ->assertSeeHtml('href="'.route('gameStats', ['match' => $game1->id]).'"')
+        ->assertSeeHtml('href="'.route('gameStats', ['match' => $game2->id]).'"')
+        ->assertSeeHtml('href="'.route('gameManage', ['match' => $game2->id]).'"');
+
+    foreach (['coach.marcus@hoopflow.ph', 'fan.juan@hoopflow.ph'] as $email) {
+        Livewire::actingAs(User::where('email', $email)->firstOrFail())
+            ->test(BracketShow::class, ['id' => $tournament->id])
+            ->call('openMatchDetail', $final->id)
+            ->assertSee('View box score')
+            ->assertDontSee('Correct score')
+            ->assertDontSee('Open scoring')
+            ->assertDontSee('Resume scoring')
+            ->assertDontSee('Enter final score')
+            ->assertDontSee('In-game score');
+    }
+});
+
+it('opens the game chooser for a series and explains unavailable games', function () {
+    [$tournament, $final, $games] = bracketSeriesFixture();
+    $game2 = $games->firstWhere('game_number', 2);
+    $game3 = $games->firstWhere('game_number', 3);
+
+    Livewire::actingAs(User::where('email', 'organizer@hoopflow.ph')->firstOrFail())
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->call('openMatchDetail', $final->id)
+        ->call('openGameChooser', $final->id)
+        ->assertSet('showGameChooser', true)
+        ->assertSee('Choose game')
+        ->assertSee('Game 1 of 3')
+        ->assertSee('Game 2 of 3')
+        ->assertSee('Available after Game 2 is final')
+        ->assertSeeHtml('href="'.route('gameManage', ['match' => $game2->id]).'"')
+        ->assertSeeHtml('href="'.route('gameStats', ['match' => $game3->id]).'"');
+});
+
+it('regenerates the bracket with shuffled teams from the confirmation dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    (new BracketService)->generate($tournament, 'double-elimination');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->call('requestRegenerate')
+        ->assertSet('confirmAction', 'regenerate')
+        ->assertSee('shuffles all approved teams')
+        ->call('confirm')
+        ->assertDispatched('hf-toast');
+
+    $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))->firstOrFail();
+
+    expect($bracket->seeding_method)->toBe('random');
+});
