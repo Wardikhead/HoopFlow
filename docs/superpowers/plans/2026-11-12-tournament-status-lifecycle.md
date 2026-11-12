@@ -456,6 +456,24 @@ it('completes a single-elimination tournament when the final is decided', functi
         ->and(AuditLog::where('action', 'tournament.complete')->count())->toBe(1);
 });
 
+it('does not complete a single-elimination tournament before the final', function () {
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+
+    $first = tlsPlayableMatch($tournament);
+
+    expect($first)->toBeInstanceOf(MatchModel::class);
+
+    $service->recordScore($first, 80, 70);
+
+    expect($tournament->fresh()->status)->toBe('active');
+
+    tlsPlayOut($service, $tournament);
+
+    expect($tournament->fresh()->status)->toBe('completed');
+});
+
 it('completes a double-elimination tournament when the grand final is decided', function () {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
     $tournament->update([
@@ -491,7 +509,7 @@ it('completes a best-of series final when the series is clinched', function () {
 php artisan test tests/Feature/Pages/TournamentLifecycleTest.php
 ```
 
-Expected: the three completion tests fail because the tournament stays `active`.
+Expected: the completion tests fail because the tournament stays `active`, and the premature-completion regression test fails once the champion query is corrected.
 
 ### Step 3: Call completion from the shared result path
 
@@ -527,6 +545,8 @@ Add the helper immediately after `applyGameResult()`:
 ```
 
 The champion is resolved by `BracketService::champion()` and passed into the lifecycle service. The lifecycle service never injects `BracketService`, so there is no circular dependency.
+
+**Required correction:** `singleEliminationChampion()` currently selects the final with `orderByDesc('round_number')`. Single elimination numbers rounds by bracket size (`16, 8, 4, 2`), so the final is the **lowest** round number. Change that query to `orderBy('round_number')` before wiring completion; otherwise the first-round winner is crowned and the tournament completes too early. The regression test above covers this.
 
 ### Step 4: Run the tests and confirm they pass
 
@@ -863,7 +883,7 @@ it('completes a legacy tournament when its recorded final is corrected', functio
     $final = MatchModel::where('tournament_id', $tournament->id)
         ->whereNull('series_id')
         ->where('stage', 'winners')
-        ->orderByDesc('round_number')
+        ->orderBy('round_number')
         ->firstOrFail();
 
     tlsPlayUntilFinal($service, $tournament, $final);
@@ -900,7 +920,7 @@ it('keeps a completed tournament completed when the final is corrected', functio
     $final = MatchModel::where('tournament_id', $tournament->id)
         ->whereNull('series_id')
         ->where('stage', 'winners')
-        ->orderByDesc('round_number')
+        ->orderBy('round_number')
         ->firstOrFail();
 
     $service->correctScore(
