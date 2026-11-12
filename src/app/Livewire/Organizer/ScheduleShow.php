@@ -519,7 +519,7 @@ class ScheduleShow extends Component
                 'round' => $match?->roundLabel() ?? 'Match',
                 'game' => $match?->best_of > 1 ? $match->seriesGameLabel() : null,
                 'match' => ($match?->homeTeam?->shortLabel() ?? 'TBD').' vs '.($match?->awayTeam?->shortLabel() ?? 'TBD'),
-                'court' => $court?->name ?? 'TBD',
+                'court' => $court->name ?? 'TBD',
                 'slot' => $start->format('M d, Y').' · '.$start->format('g:i A'),
                 'error' => $this->previewErrors[$matchId] ?? null,
                 'warning' => $this->previewWarnings[$matchId] ?? null,

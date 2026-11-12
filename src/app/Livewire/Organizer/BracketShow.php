@@ -38,6 +38,8 @@ use Livewire\Component;
  * @property-read array{reason: string, previous1: int|null, previous2: int|null}|null $selectedCorrection
  * @property-read bool $selectedCanScore
  * @property-read bool $selectedCanCorrect
+ * @property-read MatchModel|null $chooserMatch
+ * @property-read MatchModel|null $chooserAnchor
  */
 #[Layout('layouts.public')]
 #[Title('Bracket')]
