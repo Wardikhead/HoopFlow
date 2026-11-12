@@ -307,32 +307,76 @@ class GameManage extends Component
 
     public function seriesStatusLabel(MatchModel $game): string
     {
+        $status = $this->seriesGameStatus($game);
         $current = $this->match;
 
         if ($current instanceof MatchModel && (int) $game->id === (int) $current->id) {
-            return $game->status === 'in_progress' ? 'In progress' : 'Current';
+            return $status === 'in_progress' ? 'In progress' : 'Current';
         }
 
         if ($this->isActiveSeriesGame($game)) {
             return 'Next';
         }
 
+        if ($status !== $game->status) {
+            return match ($status) {
+                'final' => 'Final',
+                'forfeit' => 'Forfeit',
+                default => ucfirst(str_replace('_', ' ', $status)),
+            };
+        }
+
         return $game->statusLabel();
+    }
+
+    /**
+     * The series anchor doubles as Game 1 and stores the aggregate series state.
+     * Once Game 1 has a game winner, report it as a completed game even when the
+     * series itself is still in progress.
+     */
+    public function seriesGameStatus(MatchModel $game): string
+    {
+        if ($game->series_id === null && $game->best_of > 1 && $game->game_winner_team_id !== null) {
+            return $game->forfeit_reason !== null || $game->status === 'forfeit' ? 'forfeit' : 'final';
+        }
+
+        return $game->status;
     }
 
     public function seriesStatusTone(MatchModel $game): string
     {
+        $status = $this->seriesGameStatus($game);
+
         if ($this->isActiveSeriesGame($game)) {
             return 'primary';
         }
 
-        return match ($game->status) {
+        return match ($status) {
             'final' => 'success',
             'forfeit' => 'danger',
             'in_progress' => 'gold',
             'scheduled' => 'primary',
             default => 'slate',
         };
+    }
+
+    public function seriesGameUnavailableReason(MatchModel $game): ?string
+    {
+        if ($game->status === 'conditional') {
+            return 'Available after Game '.($game->game_number - 1).' is final.';
+        }
+
+        if ($game->status === 'cancelled') {
+            $anchor = $this->seriesAnchor;
+
+            if ($anchor instanceof MatchModel) {
+                return 'Series ended '.max((int) $anchor->series_home_wins, (int) $anchor->series_away_wins).'–'.min((int) $anchor->series_home_wins, (int) $anchor->series_away_wins).'. This game is not needed.';
+            }
+
+            return 'This game is not needed.';
+        }
+
+        return null;
     }
 
     #[Computed]
@@ -808,7 +852,7 @@ class GameManage extends Component
 
     protected function resolveActiveSeriesMatch(MatchModel $match): MatchModel
     {
-        if ($match->best_of <= 1 || ! in_array($match->status, ['scheduled', 'in_progress'], true)) {
+        if ($match->best_of <= 1) {
             return $match;
         }
 
@@ -818,6 +862,36 @@ class GameManage extends Component
 
         if (! $anchor instanceof MatchModel) {
             return $match;
+        }
+
+        $isAnchorRequest = (int) $match->id === (int) $anchor->id;
+
+        if (! $isAnchorRequest && in_array($match->status, ['scheduled', 'in_progress', 'final', 'forfeit'], true)) {
+            return $match;
+        }
+
+        if (in_array($match->status, ['conditional', 'cancelled'], true)) {
+            $active = $anchor->activeGame();
+
+            if ($active instanceof MatchModel) {
+                $message = $match->status === 'conditional'
+                    ? 'Game '.$match->game_number.' is available after Game '.($match->game_number - 1).' is final.'
+                    : 'The series ended '.max((int) $anchor->series_home_wins, (int) $anchor->series_away_wins).'–'.min((int) $anchor->series_home_wins, (int) $anchor->series_away_wins).'. Game '.$match->game_number.' is not needed.';
+
+                $this->toast($message, 'Game unavailable', 'warning');
+
+                return $active;
+            }
+
+            $this->toast(
+                $match->status === 'conditional'
+                    ? 'Game '.$match->game_number.' is available after Game '.($match->game_number - 1).' is final.'
+                    : 'The series ended. Game '.$match->game_number.' is not needed.',
+                'Game unavailable',
+                'warning',
+            );
+
+            return $anchor;
         }
 
         return $anchor->activeGame() ?? $match;
