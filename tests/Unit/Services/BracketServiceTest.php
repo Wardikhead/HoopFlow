@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\AuditLog;
+use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\Registration;
 use App\Models\Tournament;
 use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
@@ -45,7 +47,7 @@ it('generates a true 8-team double-elimination bracket', function () {
 
     $result = (new BracketService)->generate($tournament, 'double-elimination');
 
-    $bracket = \App\Models\Bracket::whereIn(
+    $bracket = Bracket::whereIn(
         'division_id',
         $tournament->divisions()->pluck('id'),
     )->where('format', 'double_elim')->firstOrFail();
@@ -69,7 +71,7 @@ it('resolves byes and cancellations in a 5-team double-elimination bracket', fun
     $division = $tournament->divisions()->firstOrFail();
 
     // Keep only five approved teams for this probe.
-    $approved = \App\Models\Registration::where('tournament_id', $tournament->id)
+    $approved = Registration::where('tournament_id', $tournament->id)
         ->where('status', 'approved')
         ->orderBy('seed')
         ->get();
@@ -82,7 +84,7 @@ it('resolves byes and cancellations in a 5-team double-elimination bracket', fun
 
     $result = (new BracketService)->generate($tournament, 'double-elimination');
 
-    $bracket = \App\Models\Bracket::where('division_id', $division->id)
+    $bracket = Bracket::where('division_id', $division->id)
         ->where('format', 'double_elim')
         ->firstOrFail();
 
@@ -120,7 +122,7 @@ it('routes double-elimination winners and losers through the correct stages', fu
     $service = new BracketService;
     $service->generate($tournament, 'double-elimination');
 
-    $bracket = \App\Models\Bracket::whereIn(
+    $bracket = Bracket::whereIn(
         'division_id',
         $tournament->divisions()->pluck('id'),
     )->where('format', 'double_elim')->firstOrFail();

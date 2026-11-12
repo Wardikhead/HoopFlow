@@ -186,7 +186,7 @@ class BracketService
                     throw new \InvalidArgumentException('Playoffs already have results; regenerate is not allowed.');
                 }
 
-                $this->deleteMatchesAndSlots(collect([$bracket->id]));
+                $this->deleteMatchesAndSlots(Bracket::whereKey($bracket->id)->pluck('id'));
                 $bracket->delete();
             }
 
@@ -681,7 +681,7 @@ class BracketService
                 default => null,
             };
 
-            $this->deleteMatchesAndSlots(collect([$bracket->id]));
+            $this->deleteMatchesAndSlots(Bracket::whereKey($bracket->id)->pluck('id'));
 
             $plan = match ($bracket->format) {
                 'single_elim' => (new SingleEliminationBuilder)->build(
@@ -700,7 +700,27 @@ class BracketService
                 ),
             };
 
-            return $this->persistPlan($tournament, $bracket, $plan);
+            $result = $this->persistPlan($tournament, $bracket, $plan);
+
+            $assignments = [];
+
+            foreach ($orderedTeamIds as $index => $teamId) {
+                $assignments[] = [
+                    'seed' => $index + 1,
+                    'team_id' => $teamId,
+                ];
+            }
+
+            app(AuditLogger::class)->log(
+                'bracket.slots',
+                'tournament',
+                $tournament->id,
+                null,
+                ['assignments' => $assignments],
+                $tournament->organization_id,
+            );
+
+            return $result;
         });
     }
 

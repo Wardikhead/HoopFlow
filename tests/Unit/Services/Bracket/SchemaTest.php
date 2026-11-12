@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 
@@ -21,8 +21,8 @@ it('adds bracket stage and series columns with safe defaults', function () {
 });
 
 it('exposes series relations and active game helpers', function () {
-    $home = \App\Models\Team::factory()->create();
-    $away = \App\Models\Team::factory()->create();
+    $home = Team::factory()->create();
+    $away = Team::factory()->create();
 
     $anchor = MatchModel::factory()->create([
         'best_of' => 3,
