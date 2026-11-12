@@ -31,6 +31,8 @@ class AuditLogIndex extends Component
     /** @var array<string, string> */
     public const ACTION_LABELS = [
         'tournament.create' => 'Tournament created',
+        'tournament.activate' => 'Tournament activated',
+        'tournament.complete' => 'Tournament completed',
         'team.register' => 'Team registered',
         'team.approve' => 'Team approved',
         'team.reject' => 'Team rejected',

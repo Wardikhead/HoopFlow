@@ -14,6 +14,7 @@
         'draft' => ['tone' => 'slate', 'label' => 'Draft', 'icon' => 'pencil'],
         'registration-open' => ['tone' => 'success', 'label' => 'Registration open', 'icon' => 'unlock'],
         'active' => ['tone' => 'primary', 'label' => 'Active', 'icon' => 'broadcast'],
+        'completed' => ['tone' => 'gold', 'label' => 'Completed', 'icon' => 'trophy-fill'],
         'upcoming' => ['tone' => 'slate', 'label' => 'Upcoming', 'icon' => 'calendar-event'],
         'verified' => ['tone' => 'success', 'label' => 'Verified', 'icon' => 'patch-check-fill'],
         'missing' => ['tone' => 'danger', 'label' => 'Missing', 'icon' => 'file-earmark-x'],
