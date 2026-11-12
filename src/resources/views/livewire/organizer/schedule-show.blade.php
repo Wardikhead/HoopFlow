@@ -50,11 +50,10 @@
                 <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
                 <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-matches"><i class="bi bi-list-ul"></i> Matchups</a>
                 @if ($this->isOrganizer && $this->hasScheduledGames && $this->resultsCount === 0)
-                    <button type="button" class="hf-btn" wire:click="requestRegenerate" data-testid="schedule-regenerate" wire:loading.attr="disabled">Regenerate schedule</button>
+                    <button type="button" class="hf-btn" wire:click="openRebuild" data-testid="schedule-rebuild" wire:loading.attr="disabled">Rebuild schedule</button>
                 @endif
                 @if ($this->isOrganizer && $this->hasScheduledGames)
                     <button type="button" class="hf-btn" wire:click="openReschedule" data-testid="schedule-reschedule" wire:loading.attr="disabled">Reschedule match</button>
-                    <button type="button" class="hf-btn" wire:click="manualManage" data-testid="schedule-manual-manage">Manual manage</button>
                 @endif
             </div>
         </header>
@@ -188,7 +187,10 @@
                         <p class="hf-small hf-muted hf-mt-1 hf-mb-0">Generate the bracket before assigning courts.</p>
                     @elseif ($this->canGenerate)
                         <p class="hf-small hf-muted hf-mt-1">The planner checks court double-bookings and team rest before publishing.</p>
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openPreview" data-testid="schedule-generate" wire:loading.attr="disabled">Preview schedule</button>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openPreview" data-testid="schedule-generate" wire:loading.attr="disabled">Build schedule preview</button>
+                    @elseif ($this->canRebuild)
+                        <p class="hf-small hf-muted hf-mt-1">Rebuild the published schedule from new dates, match days, and timing settings.</p>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openRebuild" data-testid="schedule-rebuild-preview">Rebuild schedule</button>
                     @else
                         <p class="hf-small hf-muted hf-mt-1 hf-mb-0">
                             {{ $this->locked ? 'Results exist, so the schedule is locked.' : 'The court schedule is already published.' }}
@@ -218,15 +220,69 @@
                 data-testid="schedule-preview-dialog"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Schedule preview</h2>
+                    <h2 class="hf-dialog__title">{{ $previewMode === 'rebuild' ? 'Rebuild schedule' : 'Schedule preview' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closePreview" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
                 </div>
                 <div class="hf-dialog__body">
-                    <p class="hf-small hf-muted">
-                        {{ count($previewPlan['assignments'] ?? []) }} games across {{ count($previewPlan['courts'] ?? []) }} courts. No court double-bookings; every team keeps at least {{ $previewPlan['restMinutes'] ?? $this->restMinutes }} minutes of rest.
+                    <div class="hf-form-grid">
+                        <div class="hf-field">
+                            <label class="hf-label" for="previewStart">Start date</label>
+                            <input id="previewStart" class="hf-input" type="date" wire:model.live="previewStartDate" data-testid="preview-start">
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="previewEnd">End date</label>
+                            <input id="previewEnd" class="hf-input" type="date" wire:model.live="previewEndDate" data-testid="preview-end">
+                            @if ($previewEndDate === '')
+                                <span class="hf-small hf-muted">No end date set.</span>
+                            @endif
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="previewSlot">Slot minutes</label>
+                            <input id="previewSlot" class="hf-input" type="number" min="10" max="240" wire:model.live="previewSlotMinutes" data-testid="preview-slot">
+                        </div>
+                        <div class="hf-field">
+                            <label class="hf-label" for="previewRest">Rest minutes</label>
+                            <input id="previewRest" class="hf-input" type="number" min="0" max="120" wire:model.live="previewRestMinutes" data-testid="preview-rest">
+                        </div>
+                    </div>
+
+                    <div class="hf-field hf-mt-2">
+                        <span class="hf-label">Preferred match days</span>
+                        <div class="hf-btn-row">
+                            @foreach ([1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'] as $day => $label)
+                                <button
+                                    type="button"
+                                    class="hf-chip hf-chip--{{ in_array($day, $previewWeekdays, true) ? 'primary' : 'slate' }}"
+                                    wire:click="togglePreviewWeekday({{ $day }})"
+                                    aria-pressed="{{ in_array($day, $previewWeekdays, true) ? 'true' : 'false' }}"
+                                    data-testid="preview-weekday-{{ $day }}"
+                                >{{ $label }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <p class="hf-small hf-muted hf-mt-2" data-testid="preview-summary">
+                        {{ count($previewPlan['assignments'] ?? []) }} games ·
+                        {{ $previewPlan['summary']['matchDays'] ?? 0 }} match days ·
+                        ends {{ $previewPlan['summary']['lastDate'] ?? 'TBD' }} ·
+                        {{ count($previewWarnings) }} warnings ·
+                        {{ count($previewErrors) }} conflicts
                     </p>
+
+                    @if ($previewDirty)
+                        <p class="hf-field-error" data-testid="preview-stale">Settings changed — rebuild the preview before publishing.</p>
+                    @endif
+
+                    @if ($previewErrors !== [])
+                        <div class="hf-card hf-card--flat hf-mb-2" data-testid="preview-errors">
+                            @foreach ($previewErrors as $message)
+                                <p class="hf-small hf-mb-0">{{ $message }}</p>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <div class="hf-table-wrap">
                         <table class="hf-table">
                             <thead>
@@ -235,15 +291,48 @@
                                     <th scope="col">Match</th>
                                     <th scope="col">Court</th>
                                     <th scope="col">Slot</th>
+                                    <th scope="col">Check</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($this->previewRows as $row)
-                                    <tr>
-                                        <td>{{ $row['round'] }}</td>
+                                    <tr data-testid="preview-row-{{ $row['matchId'] }}">
+                                        <td>
+                                            {{ $row['round'] }}
+                                            @if ($row['game'])
+                                                <span class="hf-small hf-muted">{{ $row['game'] }}</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $row['match'] }}</td>
-                                        <td>{{ $row['court'] }}</td>
-                                        <td>{{ $row['slot'] }}</td>
+                                        <td>
+                                            <select
+                                                class="hf-select"
+                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, $event.target.value, '{{ $row['scheduledAt'] }}')"
+                                                data-testid="preview-court-{{ $row['matchId'] }}"
+                                            >
+                                                @foreach ($courts as $courtOption)
+                                                    <option value="{{ $courtOption->id }}" @selected((int) $courtOption->id === $row['courtId'])>{{ $courtOption->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input
+                                                class="hf-input"
+                                                type="datetime-local"
+                                                value="{{ $row['scheduledAt'] }}"
+                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, {{ $row['courtId'] }}, $event.target.value)"
+                                                data-testid="preview-time-{{ $row['matchId'] }}"
+                                            >
+                                        </td>
+                                        <td>
+                                            @if ($row['error'])
+                                                <span class="hf-field-error">{{ $row['error'] }}</span>
+                                            @elseif ($row['warning'])
+                                                <span class="hf-chip hf-chip--gold">{{ $row['warning'] }}</span>
+                                            @else
+                                                <span class="hf-chip hf-chip--success">OK</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -252,7 +341,16 @@
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="closePreview" data-testid="schedule-preview-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="publishSchedule" data-testid="schedule-preview-publish" wire:loading.attr="disabled">Publish schedule</button>
+                    <button type="button" class="hf-btn" wire:click="resetPreview" data-testid="preview-reset">Reset</button>
+                    <button type="button" class="hf-btn" wire:click="buildPreview" data-testid="preview-build" wire:loading.attr="disabled">Build preview</button>
+                    <button
+                        type="button"
+                        class="hf-btn hf-btn--primary"
+                        wire:click="publishSchedule"
+                        data-testid="schedule-preview-publish"
+                        wire:loading.attr="disabled"
+                        @disabled($previewDirty || $previewErrors !== [])
+                    >Publish schedule</button>
                 </div>
             </dialog>
         @endif

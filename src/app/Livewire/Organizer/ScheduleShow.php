@@ -30,7 +30,7 @@ use Livewire\Component;
  * @property-read array<int, array{key: string, weekday: string, day: int, count: int}> $weekDays
  * @property-read array{games: int, courts: int, first: string} $daySummary
  * @property-read array<int, array{id: int, label: string, courtId: int, scheduledAt: string}> $scheduledMatchOptions
- * @property-read array<int, array{round: string, match: string, court: string, slot: string}> $previewRows
+ * @property-read array<int, array{matchId: int, courtId: int, scheduledAt: string, round: string, game: string|null, match: string, court: string, slot: string, error: string|null, warning: string|null}> $previewRows
  * @property-read string $venueName
  * @property-read string $selectedDayLabel
  * @property-read string $monthLabel
@@ -43,6 +43,7 @@ use Livewire\Component;
  * @property-read bool $hasScheduledGames
  * @property-read bool $isOrganizer
  * @property-read bool $canGenerate
+ * @property-read bool $canRebuild
  * @property-read bool $locked
  * @property-read int $slotMinutes
  * @property-read int $restMinutes
@@ -64,6 +65,30 @@ class ScheduleShow extends Component
 
     /** @var array<string, mixed> */
     public array $previewPlan = [];
+
+    public string $previewMode = 'generate';
+
+    public string $previewStartDate = '';
+
+    public string $previewEndDate = '';
+
+    /** @var list<int> */
+    public array $previewWeekdays = [1, 2, 3, 4, 5, 6, 7];
+
+    public int $previewSlotMinutes = 30;
+
+    public int $previewRestMinutes = 15;
+
+    public bool $previewDirty = false;
+
+    /** @var array<int, string> */
+    public array $previewErrors = [];
+
+    /** @var array<int, string> */
+    public array $previewWarnings = [];
+
+    /** @var array<string, mixed> */
+    public array $lastBuiltPlan = [];
 
     public bool $showReschedule = false;
 
@@ -179,6 +204,7 @@ class ScheduleShow extends Component
 
         return MatchModel::query()
             ->where('tournament_id', $this->tournament->id)
+            ->where('status', '!=', 'cancelled')
             ->with(['homeTeam', 'awayTeam', 'matchSlots.court'])
             ->get();
     }
@@ -195,6 +221,7 @@ class ScheduleShow extends Component
 
         return MatchSlot::query()
             ->where('tournament_id', $this->tournament->id)
+            ->whereHas('match', fn ($query) => $query->where('status', '!=', 'cancelled'))
             ->with(['match.homeTeam', 'match.awayTeam', 'court'])
             ->orderBy('start_at')
             ->orderBy('id')
@@ -365,7 +392,7 @@ class ScheduleShow extends Component
     public function resultsCount(): int
     {
         return $this->matches
-            ->filter(fn (MatchModel $match): bool => in_array($match->status, ['final', 'forfeit'], true))
+            ->filter(fn (MatchModel $match): bool => in_array($match->status, ['final', 'forfeit'], true) && ! $match->isByeGame())
             ->count();
     }
 
@@ -402,6 +429,15 @@ class ScheduleShow extends Component
             && $this->hasBracket
             && $this->resultsCount === 0
             && ! $this->hasScheduledGames;
+    }
+
+    #[Computed]
+    public function canRebuild(): bool
+    {
+        return $this->isOrganizer
+            && $this->hasBracket
+            && $this->resultsCount === 0
+            && $this->hasScheduledGames;
     }
 
     #[Computed]
@@ -451,7 +487,7 @@ class ScheduleShow extends Component
     }
 
     /**
-     * @return array<int, array{round: string, match: string, court: string, slot: string}>
+     * @return array<int, array{matchId: int, courtId: int, scheduledAt: string, round: string, game: string|null, match: string, court: string, slot: string, error: string|null, warning: string|null}>
      */
     #[Computed]
     public function previewRows(): array
@@ -473,16 +509,29 @@ class ScheduleShow extends Component
         return array_map(function (array $assignment) use ($matches, $courts): array {
             $match = $matches->get($assignment['matchId']);
             $court = $courts->get($assignment['courtId']);
-            $courtName = $court?->name;
             $start = Carbon::parse($assignment['scheduledAt']);
+            $matchId = (int) $assignment['matchId'];
 
             return [
+                'matchId' => $matchId,
+                'courtId' => (int) $assignment['courtId'],
+                'scheduledAt' => $start->format('Y-m-d\TH:i'),
                 'round' => $match?->roundLabel() ?? 'Match',
+                'game' => $match?->best_of > 1 ? $match->seriesGameLabel() : null,
                 'match' => ($match?->homeTeam?->shortLabel() ?? 'TBD').' vs '.($match?->awayTeam?->shortLabel() ?? 'TBD'),
-                'court' => $courtName ?? 'TBD',
+                'court' => $court?->name ?? 'TBD',
                 'slot' => $start->format('M d, Y').' · '.$start->format('g:i A'),
+                'error' => $this->previewErrors[$matchId] ?? null,
+                'warning' => $this->previewWarnings[$matchId] ?? null,
             ];
         }, $assignments);
+    }
+
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['previewStartDate', 'previewEndDate', 'previewWeekdays', 'previewSlotMinutes', 'previewRestMinutes'], true)) {
+            $this->previewDirty = true;
+        }
     }
 
     public function navigateMonth(int $delta): void
@@ -544,7 +593,17 @@ class ScheduleShow extends Component
             ->all();
     }
 
-    public function requestRegenerate(): void
+    public function openPreview(): void
+    {
+        $this->startPreview('generate');
+    }
+
+    public function openRebuild(): void
+    {
+        $this->startPreview('rebuild');
+    }
+
+    protected function startPreview(string $mode): void
     {
         $tournament = $this->tournament;
 
@@ -555,21 +614,49 @@ class ScheduleShow extends Component
         Gate::authorize('generateSchedule', $tournament);
 
         if ($this->resultsCount > 0) {
-            $this->toast('Cannot regenerate a schedule after results are recorded.', 'Schedule locked', 'warning');
+            $this->toast('Results already exist. Use Reschedule for individual games.', 'Schedule locked', 'warning');
 
             return;
         }
 
-        $this->openConfirm(
-            'Regenerate schedule?',
-            'This wipes the current schedule and rebuilds. Recorded results will be lost.',
-            'Regenerate',
-            'danger',
-            'regenerate',
-        );
+        if ($mode === 'rebuild' && ! $this->hasScheduledGames) {
+            $this->toast('There is no published schedule to rebuild.', 'Nothing to rebuild', 'warning');
+
+            return;
+        }
+
+        $service = app(SchedulingService::class);
+        $firstSlot = $this->scheduledSlots->sortBy('start_at')->first();
+
+        $this->previewMode = $mode;
+        $this->previewStartDate = $mode === 'rebuild' && $firstSlot?->start_at !== null
+            ? $firstSlot->start_at->format('Y-m-d')
+            : $service->startDate($tournament);
+        $this->previewEndDate = $tournament->end_date?->format('Y-m-d') ?? '';
+        $this->previewWeekdays = $mode === 'rebuild'
+            ? $this->scheduledSlots
+                ->filter(fn (MatchSlot $slot): bool => $slot->start_at !== null)
+                ->map(fn (MatchSlot $slot): int => (int) $slot->start_at->isoWeekday())
+                ->unique()
+                ->sort()
+                ->values()
+                ->all()
+            : range(1, 7);
+        $this->previewSlotMinutes = $service->slotMinutes($tournament);
+        $this->previewRestMinutes = $service->restMinutes($tournament);
+
+        if ($this->previewWeekdays === []) {
+            $this->previewWeekdays = range(1, 7);
+        }
+
+        $this->showPreview = true;
+        $this->showConfirm = false;
+        $this->showReschedule = false;
+        $this->resetValidation();
+        $this->buildPreview();
     }
 
-    public function openPreview(): void
+    public function buildPreview(): void
     {
         $tournament = $this->tournament;
 
@@ -580,14 +667,90 @@ class ScheduleShow extends Component
         Gate::authorize('generateSchedule', $tournament);
 
         try {
-            $this->previewPlan = app(SchedulingService::class)->plan($tournament);
+            $plan = app(SchedulingService::class)->plan($tournament, [
+                'startDate' => $this->previewStartDate,
+                'endDate' => $this->previewEndDate,
+                'weekdays' => $this->previewWeekdays,
+                'slotMinutes' => $this->previewSlotMinutes,
+                'restMinutes' => $this->previewRestMinutes,
+            ]);
+
+            $validation = app(SchedulingService::class)->validatePlan($tournament, $plan);
+
+            $this->previewPlan = $plan;
+            $this->lastBuiltPlan = $plan;
+            $this->previewErrors = $validation['errors'];
+            $this->previewWarnings = $validation['warnings'];
+            $this->previewDirty = false;
             $this->showPreview = true;
-            $this->showConfirm = false;
-            $this->showReschedule = false;
             $this->resetValidation();
         } catch (InvalidArgumentException $exception) {
-            $this->toast($exception->getMessage(), 'Could not plan schedule', 'danger');
+            $this->previewErrors = [0 => $exception->getMessage()];
+            $this->previewWarnings = [];
+            $this->previewDirty = true;
+            $this->toast($exception->getMessage(), 'Could not build preview', 'danger');
         }
+    }
+
+    public function togglePreviewWeekday(int $day): void
+    {
+        if ($day < 1 || $day > 7) {
+            return;
+        }
+
+        $this->previewWeekdays = in_array($day, $this->previewWeekdays, true)
+            ? array_values(array_filter($this->previewWeekdays, fn (int $selected): bool => $selected !== $day))
+            : [...$this->previewWeekdays, $day];
+
+        sort($this->previewWeekdays);
+        $this->previewDirty = true;
+    }
+
+    public function updatePreviewAssignment(int|string $matchId, int|string|null $courtId, ?string $scheduledAt): void
+    {
+        $found = false;
+
+        foreach ($this->previewPlan['assignments'] ?? [] as $index => $assignment) {
+            if ((int) $assignment['matchId'] !== (int) $matchId) {
+                continue;
+            }
+
+            if ($courtId !== null && is_numeric($courtId)) {
+                $this->previewPlan['assignments'][$index]['courtId'] = (int) $courtId;
+            }
+
+            if (is_string($scheduledAt) && trim($scheduledAt) !== '') {
+                $this->previewPlan['assignments'][$index]['scheduledAt'] = Carbon::parse($scheduledAt)->format('Y-m-d H:i:s');
+            }
+
+            $found = true;
+            break;
+        }
+
+        if (! $found || ! $this->tournament instanceof Tournament) {
+            return;
+        }
+
+        $validation = app(SchedulingService::class)->validatePlan($this->tournament, $this->previewPlan);
+        $this->previewErrors = $validation['errors'];
+        $this->previewWarnings = $validation['warnings'];
+    }
+
+    public function resetPreview(): void
+    {
+        if ($this->lastBuiltPlan === []) {
+            return;
+        }
+
+        $this->previewPlan = $this->lastBuiltPlan;
+
+        if ($this->tournament instanceof Tournament) {
+            $validation = app(SchedulingService::class)->validatePlan($this->tournament, $this->previewPlan);
+            $this->previewErrors = $validation['errors'];
+            $this->previewWarnings = $validation['warnings'];
+        }
+
+        $this->previewDirty = false;
     }
 
     public function closePreview(): void
@@ -606,24 +769,81 @@ class ScheduleShow extends Component
 
         Gate::authorize('generateSchedule', $tournament);
 
+        if (($this->previewPlan['assignments'] ?? []) === []) {
+            $this->toast('Build a preview before publishing.', 'No preview', 'warning');
+
+            return;
+        }
+
+        if ($this->previewDirty) {
+            $this->toast('Settings changed — rebuild the preview before publishing.', 'Preview is stale', 'warning');
+
+            return;
+        }
+
+        $validation = app(SchedulingService::class)->validatePlan($tournament, $this->previewPlan);
+        $this->previewErrors = $validation['errors'];
+        $this->previewWarnings = $validation['warnings'];
+
+        if (! $validation['valid']) {
+            $this->toast((string) reset($validation['errors']), 'Fix the schedule first', 'danger');
+
+            return;
+        }
+
+        if ($this->previewMode === 'rebuild') {
+            $this->openConfirm(
+                'Replace the current schedule?',
+                'This will delete the published schedule and replace the current schedule with the preview. Per-game moves are kept until you publish.',
+                'Replace schedule',
+                'danger',
+                'rebuild',
+            );
+
+            return;
+        }
+
+        $this->performPublish();
+    }
+
+    protected function performPublish(): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('generateSchedule', $tournament);
+
         try {
-            $count = app(SchedulingService::class)->generate($tournament);
-            $courtCount = count($this->previewPlan['courts'] ?? []);
-            $first = $this->previewPlan['assignments'][0]['scheduledAt'] ?? null;
+            $count = app(SchedulingService::class)->publish(
+                $tournament,
+                $this->previewPlan,
+                $this->previewMode === 'rebuild' ? 'schedule.rebuild' : 'schedule.publish',
+            );
+
+            $summary = $this->previewPlan['summary'] ?? [];
+            $first = is_string($summary['firstDate'] ?? null) ? $summary['firstDate'] : null;
 
             $this->showPreview = false;
             $this->previewPlan = [];
+            $this->lastBuiltPlan = [];
+            $this->previewErrors = [];
+            $this->previewWarnings = [];
+            $this->previewDirty = false;
 
-            if (is_string($first) && $first !== '') {
-                $this->selectedDay = substr($first, 0, 10);
+            if ($first !== null && $first !== '') {
+                $this->selectedDay = $first;
                 $this->currentMonth = substr($first, 0, 7);
             }
 
             $this->toast(
-                $count.' games scheduled across '.$courtCount.' courts.',
-                'Schedule published',
+                $count.' games · '.($summary['matchDays'] ?? 0).' match days · ends '.($summary['lastDate'] ?? 'TBD').'.',
+                $this->previewMode === 'rebuild' ? 'Schedule rebuilt' : 'Schedule published',
             );
         } catch (InvalidArgumentException $exception) {
+            $this->previewErrors = [0 => $exception->getMessage()];
             $this->toast($exception->getMessage(), 'Could not publish schedule', 'danger');
         }
     }
@@ -696,37 +916,13 @@ class ScheduleShow extends Component
         }
     }
 
-    public function manualManage(): void
-    {
-        $this->toast(
-            'Manual manage mode: edit courts/times per match (coming soon).',
-            'Manual manage',
-            'info',
-        );
-    }
-
     public function confirm(): void
     {
         $action = $this->confirmAction;
         $this->resetConfirm();
 
-        if ($action !== 'regenerate') {
-            return;
-        }
-
-        $tournament = $this->tournament;
-
-        if (! $tournament instanceof Tournament) {
-            return;
-        }
-
-        Gate::authorize('generateSchedule', $tournament);
-
-        try {
-            $count = app(SchedulingService::class)->generate($tournament);
-            $this->toast($count.' games scheduled.', 'Schedule regenerated');
-        } catch (InvalidArgumentException $exception) {
-            $this->toast($exception->getMessage(), 'Could not regenerate', 'danger');
+        if ($action === 'rebuild') {
+            $this->performPublish();
         }
     }
 
