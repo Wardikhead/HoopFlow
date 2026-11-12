@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Registration;
@@ -48,6 +49,14 @@ function schedulingSeriesGames(Tournament $tournament)
     return MatchModel::where(function ($query) use ($anchor): void {
         $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
     })->orderBy('game_number')->get();
+}
+
+function schedulingCourtForPlan(Tournament $tournament, int $excludeId): Court
+{
+    return app(SchedulingService::class)
+        ->courts($tournament)
+        ->first(fn (Court $court): bool => (int) $court->id !== $excludeId)
+        ?? throw new RuntimeException('This test needs two courts.');
 }
 
 it('pre-schedules every series game one per eligible day on one court and tip-off', function () {
@@ -164,4 +173,86 @@ it('orders round-robin matchdays ascending', function () {
         ->all();
 
     expect($rounds)->toBe(collect($rounds)->sort()->values()->all());
+});
+
+it('publishes the exact preview plan, including an edited court', function () {
+    $tournament = schedulingTwoTeamTournament('2026-07-10', '2026-07-24');
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $service = new SchedulingService;
+    $plan = $service->plan($tournament);
+    $edited = $plan['assignments'][1];
+    $otherCourt = schedulingCourtForPlan($tournament, (int) $edited['courtId']);
+    $plan['assignments'][1]['courtId'] = (int) $otherCourt->id;
+
+    $count = $service->publish($tournament, $plan);
+
+    $slot = MatchSlot::where('match_id', $edited['matchId'])->firstOrFail();
+
+    expect($count)->toBe(3)
+        ->and(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe(3)
+        ->and((int) $slot->court_id)->toBe((int) $otherCourt->id)
+        ->and($slot->start_at?->format('Y-m-d H:i:s'))->toBe($edited['scheduledAt']);
+});
+
+it('rejects a plan row outside the tournament window', function () {
+    $tournament = schedulingTwoTeamTournament('2026-07-10', '2026-07-24');
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $service = new SchedulingService;
+    $plan = $service->plan($tournament);
+    $matchId = (int) $plan['assignments'][0]['matchId'];
+    $plan['assignments'][0]['scheduledAt'] = '2026-07-25 10:00:00';
+
+    $result = $service->validatePlan($tournament, $plan);
+
+    expect($result['valid'])->toBeFalse()
+        ->and($result['errors'])->toHaveKey($matchId);
+});
+
+it('warns but does not block a manual weekday override', function () {
+    $tournament = schedulingTwoTeamTournament('2026-07-10', '2026-07-24');
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $service = new SchedulingService;
+    $plan = $service->plan($tournament, ['weekdays' => [5, 6]]);
+    $matchId = (int) $plan['assignments'][0]['matchId'];
+    $plan['assignments'][0]['scheduledAt'] = '2026-07-12 15:00:00';
+
+    $result = $service->validatePlan($tournament, $plan);
+
+    expect($result['warnings'])->toHaveKey($matchId)
+        ->and($result['errors'])->not->toHaveKey($matchId);
+});
+
+it('rejects a per-game move that breaks series order or the end date', function () {
+    $tournament = schedulingTwoTeamTournament('2026-07-10', '2026-07-18');
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $service = new SchedulingService;
+    $service->generate($tournament);
+    $games = schedulingSeriesGames($tournament);
+    $game1 = $games->firstWhere('game_number', 1);
+    $game2 = $games->firstWhere('game_number', 2);
+    $game3 = $games->firstWhere('game_number', 3);
+    $game1Start = $game1->matchSlots()->firstOrFail()->start_at;
+
+    expect(fn () => $service->reschedule($game2, null, $game1Start->format('Y-m-d H:i:s')))
+        ->toThrow(InvalidArgumentException::class, 'Game 2 must start after Game 1');
+
+    expect(fn () => $service->reschedule($game3, null, '2026-07-19 15:00:00'))
+        ->toThrow(InvalidArgumentException::class, 'The tournament ends Jul 18, 2026. Choose an earlier date.');
+});
+
+it('refuses to move a game that is already final', function () {
+    $tournament = schedulingTwoTeamTournament('2026-07-10', '2026-07-18');
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $service = new SchedulingService;
+    $service->generate($tournament);
+    $game1 = schedulingSeriesGames($tournament)->firstWhere('game_number', 1);
+    $game1->update(['status' => 'final']);
+
+    expect(fn () => $service->reschedule($game1, null, '2026-07-11 15:00:00'))
+        ->toThrow(InvalidArgumentException::class, 'Only scheduled or if-needed games can be moved.');
 });
