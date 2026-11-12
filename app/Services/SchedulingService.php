@@ -10,6 +10,7 @@ use App\Models\Tournament;
 use App\Models\Venue;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class SchedulingService
@@ -382,43 +383,229 @@ class SchedulingService
      */
     public function generate(Tournament $tournament, array $options = []): int
     {
-        $plan = $this->plan($tournament, $options);
-        $matchIds = $tournament->matches()->pluck('id');
+        return $this->publish($tournament, $this->plan($tournament, $options));
+    }
 
-        if ($matchIds->isNotEmpty()) {
-            MatchSlot::query()->whereIn('match_id', $matchIds)->delete();
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    public function publish(Tournament $tournament, array $plan, string $auditAction = 'schedule.publish'): int
+    {
+        $validation = $this->validatePlan($tournament, $plan);
+
+        if (! $validation['valid']) {
+            $message = $validation['errors'] === []
+                ? 'The schedule plan is invalid.'
+                : (string) reset($validation['errors']);
+
+            throw new InvalidArgumentException($message);
         }
+
+        return DB::transaction(function () use ($tournament, $plan, $auditAction): int {
+            MatchSlot::where('tournament_id', $tournament->id)->delete();
+
+            foreach ($plan['assignments'] as $assignment) {
+                $start = Carbon::parse($assignment['scheduledAt']);
+
+                MatchSlot::create([
+                    'match_id' => (int) $assignment['matchId'],
+                    'tournament_id' => $tournament->id,
+                    'court_id' => (int) $assignment['courtId'],
+                    'start_at' => $start,
+                    'end_at' => $start->copy()->addMinutes((int) $plan['slotMinutes']),
+                    'status' => 'published',
+                    'version' => 1,
+                    'published_at' => now(),
+                ]);
+            }
+
+            $assignments = collect($plan['assignments']);
+            $dates = $assignments->map(fn (array $row): string => substr($row['scheduledAt'], 0, 10))->sort()->values();
+
+            app(AuditLogger::class)->log(
+                $auditAction,
+                'tournament',
+                $tournament->id,
+                null,
+                [
+                    'courts' => count($plan['courts']),
+                    'slotMinutes' => (int) $plan['slotMinutes'],
+                    'restMinutes' => (int) $plan['restMinutes'],
+                    'matches' => $assignments->count(),
+                    'weekdays' => $plan['weekdays'] ?? range(1, 7),
+                    'endDate' => $plan['endDate'] ?? null,
+                    'firstDate' => $dates->first(),
+                    'lastDate' => $dates->last(),
+                ],
+                $tournament->organization_id,
+            );
+
+            return $assignments->count();
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @return array{errors: array<int, string>, warnings: array<int, string>, valid: bool}
+     */
+    public function validatePlan(Tournament $tournament, array $plan): array
+    {
+        $errors = [];
+        $warnings = [];
+
+        foreach (['assignments', 'courts', 'slotMinutes', 'restMinutes', 'startDate'] as $key) {
+            if (! array_key_exists($key, $plan)) {
+                $errors[0] = 'The schedule plan is missing its '.$key.'.';
+
+                return ['errors' => $errors, 'warnings' => $warnings, 'valid' => false];
+            }
+        }
+
+        if (! is_array($plan['assignments']) || (int) $plan['slotMinutes'] < 10 || (int) $plan['restMinutes'] < 0) {
+            $errors[0] = 'The schedule plan has invalid timing values.';
+
+            return ['errors' => $errors, 'warnings' => $warnings, 'valid' => false];
+        }
+
+        $courts = $this->courts($tournament)->keyBy('id');
+        $schedulable = MatchModel::query()
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('status', ['scheduled', 'conditional'])
+            ->get()
+            ->reject(fn (MatchModel $match): bool => $match->isByeGame())
+            ->filter(fn (MatchModel $match): bool => $match->status === 'scheduled' || $match->series_id !== null)
+            ->keyBy('id');
+
+        $startDate = Carbon::parse((string) $plan['startDate'])->startOfDay();
+        $tournamentStart = $tournament->start_date?->copy()->startOfDay();
+        $endDate = isset($plan['endDate']) && is_string($plan['endDate']) && $plan['endDate'] !== ''
+            ? Carbon::parse($plan['endDate'])->startOfDay()
+            : $tournament->end_date?->copy()->startOfDay();
+        $weekdays = is_array($plan['weekdays'] ?? null) ? array_map('intval', $plan['weekdays']) : range(1, 7);
+        $seen = [];
+        $rows = [];
 
         foreach ($plan['assignments'] as $assignment) {
-            $start = Carbon::parse($assignment['scheduledAt']);
+            $matchId = isset($assignment['matchId']) && is_numeric($assignment['matchId'])
+                ? (int) $assignment['matchId']
+                : 0;
 
-            MatchSlot::create([
-                'match_id' => $assignment['matchId'],
-                'tournament_id' => $tournament->id,
-                'court_id' => $assignment['courtId'],
-                'start_at' => $start,
-                'end_at' => $start->copy()->addMinutes($plan['slotMinutes']),
-                'status' => 'published',
-                'version' => 1,
-                'published_at' => now(),
-            ]);
+            if ($matchId === 0 || ! $schedulable->has($matchId)) {
+                $errors[$matchId] = 'This match does not belong to the tournament or cannot be scheduled.';
+
+                continue;
+            }
+
+            if (isset($seen[$matchId])) {
+                $errors[$matchId] = 'This match appears more than once in the plan.';
+
+                continue;
+            }
+
+            $seen[$matchId] = true;
+            $courtId = isset($assignment['courtId']) && is_numeric($assignment['courtId'])
+                ? (int) $assignment['courtId']
+                : 0;
+
+            if (! $courts->has($courtId)) {
+                $errors[$matchId] = 'Choose a valid court for this match.';
+
+                continue;
+            }
+
+            try {
+                $start = Carbon::parse((string) ($assignment['scheduledAt'] ?? ''));
+            } catch (\Exception) {
+                $errors[$matchId] = 'Enter a valid date and time for this match.';
+
+                continue;
+            }
+
+            if ($startDate->isAfter($start)) {
+                $errors[$matchId] = 'Start date must be within the tournament dates.';
+
+                continue;
+            }
+
+            if ($tournamentStart instanceof Carbon && $start->lt($tournamentStart)) {
+                $errors[$matchId] = 'Start date must be within the tournament dates.';
+
+                continue;
+            }
+
+            if ($endDate instanceof Carbon && $start->gt($endDate->copy()->endOfDay())) {
+                $errors[$matchId] = 'The tournament ends '.$endDate->format('M j, Y').'. Choose an earlier date.';
+
+                continue;
+            }
+
+            if (! in_array((int) $start->isoWeekday(), $weekdays, true)) {
+                $warnings[$matchId] = 'This game is outside the preferred match days.';
+            }
+
+            $rows[] = [
+                'matchId' => $matchId,
+                'courtId' => $courtId,
+                'start' => $start,
+                'match' => $schedulable->get($matchId),
+            ];
         }
 
-        app(AuditLogger::class)->log(
-            'schedule.generate',
-            'tournament',
-            $tournament->id,
-            null,
-            [
-                'courts' => $plan['courts']->count(),
-                'slotMinutes' => $plan['slotMinutes'],
-                'restMinutes' => $plan['restMinutes'],
-                'matches' => count($plan['assignments']),
-            ],
-            $tournament->organization_id,
-        );
+        foreach ($schedulable as $matchId => $match) {
+            if (! isset($seen[(int) $matchId])) {
+                $errors[(int) $matchId] = 'This match is missing from the plan.';
+            }
+        }
 
-        return count($plan['assignments']);
+        $slotMinutes = (int) $plan['slotMinutes'];
+        $restMinutes = (int) $plan['restMinutes'];
+
+        foreach ($rows as $index => $row) {
+            foreach (array_slice($rows, $index + 1) as $other) {
+                if ($row['courtId'] !== $other['courtId']) {
+                    continue;
+                }
+
+                $end = $row['start']->copy()->addMinutes($slotMinutes + $restMinutes);
+                $otherEnd = $other['start']->copy()->addMinutes($slotMinutes + $restMinutes);
+
+                if ($row['start']->lt($otherEnd) && $other['start']->lt($end)) {
+                    $court = $courts->get($row['courtId']);
+                    $message = ($court?->name ?? 'Court').' is already booked at '.$other['start']->format('M j, g:i A').'. Pick another court or time.';
+                    $errors[$row['matchId']] ??= $message;
+                    $errors[$other['matchId']] ??= $message;
+                }
+            }
+        }
+
+        foreach ($rows as $row) {
+            $teamIds = array_filter([
+                $row['match']?->home_team_id,
+                $row['match']?->away_team_id,
+            ]);
+
+            foreach ($rows as $other) {
+                if ($row['matchId'] === $other['matchId']) {
+                    continue;
+                }
+
+                $otherTeams = array_filter([
+                    $other['match']?->home_team_id,
+                    $other['match']?->away_team_id,
+                ]);
+
+                if (array_intersect($teamIds, $otherTeams) === []) {
+                    continue;
+                }
+
+                if (abs($row['start']->getTimestamp() - $other['start']->getTimestamp()) < ($slotMinutes + $restMinutes) * 60) {
+                    $team = $row['match']?->homeTeam?->name ?? 'A team';
+                    $errors[$row['matchId']] ??= $team.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.';
+                }
+            }
+        }
+
+        return ['errors' => $errors, 'warnings' => $warnings, 'valid' => $errors === []];
     }
 
     /**
@@ -522,6 +709,52 @@ class SchedulingService
         $slotMinutes = $this->slotMinutes($tournament);
         $restMinutes = $this->restMinutes($tournament);
 
+        if (! in_array($match->status, ['scheduled', 'conditional'], true)) {
+            throw new InvalidArgumentException('Only scheduled or if-needed games can be moved.');
+        }
+
+        $tournamentStart = $tournament->start_date?->copy()->startOfDay();
+        $tournamentEnd = $tournament->end_date?->copy()->startOfDay();
+
+        if ($tournamentStart instanceof Carbon && $start->lt($tournamentStart)) {
+            throw new InvalidArgumentException('Start date must be within the tournament dates.');
+        }
+
+        if ($tournamentEnd instanceof Carbon && $start->gt($tournamentEnd->copy()->endOfDay())) {
+            throw new InvalidArgumentException('The tournament ends '.$tournamentEnd->format('M j, Y').'. Choose an earlier date.');
+        }
+
+        if ($match->series_id !== null || $match->best_of > 1) {
+            $anchorId = $match->series_id !== null ? (int) $match->series_id : (int) $match->id;
+            $seriesGames = MatchModel::query()
+                ->where(function ($query) use ($anchorId): void {
+                    $query->where('id', $anchorId)->orWhere('series_id', $anchorId);
+                })
+                ->with('matchSlots')
+                ->orderBy('game_number')
+                ->get()
+                ->keyBy('game_number');
+
+            $previous = $seriesGames->get((int) $match->game_number - 1);
+            $next = $seriesGames->get((int) $match->game_number + 1);
+            $previousSlot = $previous?->matchSlots->first();
+            $nextSlot = $next?->matchSlots->first();
+
+            if ($previousSlot?->start_at instanceof Carbon && $start->lte($previousSlot->start_at)) {
+                throw new InvalidArgumentException('Game '.$match->game_number.' must start after Game '.$previous->game_number.' ('.$previousSlot->start_at->format('M j, g:i A').').');
+            }
+
+            if ($nextSlot?->start_at instanceof Carbon && $start->gte($nextSlot->start_at)) {
+                throw new InvalidArgumentException('Game '.$match->game_number.' must start before Game '.$next->game_number.' ('.$nextSlot->start_at->format('M j, g:i A').').');
+            }
+        }
+
+        $restConflict = $this->teamRestConflict($tournament, $match, $start, $slotMinutes, $restMinutes);
+
+        if ($restConflict !== null) {
+            throw new InvalidArgumentException($restConflict.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.');
+        }
+
         if ($this->courtHasConflict($tournament, $courtId, $start, $slotMinutes, $restMinutes, $match->id)) {
             throw new InvalidArgumentException('This court is already booked at that time.');
         }
@@ -601,6 +834,53 @@ class SchedulingService
 
                 return $start->lt($otherEnd) && $otherStart->lt($end);
             });
+    }
+
+    protected function teamRestConflict(
+        Tournament $tournament,
+        MatchModel $match,
+        Carbon $start,
+        int $slotMinutes,
+        int $restMinutes,
+    ): ?string {
+        $teamIds = array_values(array_filter([$match->home_team_id, $match->away_team_id]));
+
+        if ($teamIds === []) {
+            return null;
+        }
+
+        $conflict = MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('match_id', '!=', $match->id)
+            ->whereHas('match', function ($query) use ($teamIds): void {
+                $query->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
+            })
+            ->with('match.homeTeam', 'match.awayTeam')
+            ->get()
+            ->first(function (MatchSlot $slot) use ($start, $slotMinutes, $restMinutes): bool {
+                return $slot->start_at instanceof Carbon
+                    && abs($slot->start_at->getTimestamp() - $start->getTimestamp()) < ($slotMinutes + $restMinutes) * 60;
+            });
+
+        if ($conflict === null) {
+            return null;
+        }
+
+        $slot = $conflict;
+
+        $conflictingTeams = array_values(array_filter([
+            $slot->match?->home_team_id,
+            $slot->match?->away_team_id,
+        ]));
+        $teamId = array_values(array_intersect($teamIds, $conflictingTeams))[0] ?? null;
+
+        if ($teamId === null) {
+            return 'A team';
+        }
+
+        return $slot->match?->home_team_id === $teamId
+            ? ($slot->match?->homeTeam?->name ?? 'A team')
+            : ($slot->match?->awayTeam?->name ?? 'A team');
     }
 
     /**
