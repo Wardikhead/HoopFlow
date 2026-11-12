@@ -1472,6 +1472,73 @@ textarea {
   box-shadow: inset 3px 0 0 var(--hf-gold);
 }
 
+/* Stack action tables into labelled rows on phones so primary actions never
+   scroll offscreen. */
+@media (max-width: 575.98px) {
+  .hf-table--stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .hf-table--stack,
+  .hf-table--stack tbody,
+  .hf-table--stack tr,
+  .hf-table--stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .hf-table--stack tr {
+    padding: 12px;
+    border-top: 1px solid var(--hf-border);
+  }
+
+  .hf-table--stack tr:first-child {
+    border-top: 0;
+  }
+
+  .hf-table--stack td {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 8px;
+    padding: 5px 0;
+    border: 0;
+  }
+
+  .hf-table--stack td::before {
+    content: attr(data-label);
+    color: var(--hf-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .hf-table--stack td:last-child {
+    display: block;
+    padding-top: 10px;
+  }
+
+  .hf-table--stack td:last-child::before {
+    display: none;
+  }
+
+  .hf-table--stack td:last-child .hf-btn-row {
+    width: 100%;
+  }
+
+  .hf-table--stack td:last-child .hf-btn {
+    flex: 1 1 auto;
+  }
+}
+
 .hf-table .hf-qual-line td {
   height: 3px;
   padding: 0;

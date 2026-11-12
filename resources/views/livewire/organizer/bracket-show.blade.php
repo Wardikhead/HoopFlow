@@ -319,7 +319,7 @@
                         <div class="hf-mt-2" data-testid="bracket-series-games">
                             <h3 class="hf-section-title">Series games</h3>
                             <div class="hf-table-wrap">
-                                <table class="hf-table">
+                                <table class="hf-table hf-table--stack" data-testid="bracket-series-table">
                                     <thead>
                                         <tr>
                                             <th scope="col">Game</th>
@@ -340,14 +340,18 @@
                                                 class="{{ $seriesActive ? 'is-active' : '' }}"
                                                 @if ($seriesActive) data-testid="bracket-series-active-{{ $game->id }}" @endif
                                             >
-                                                <td>
-                                                    <strong>Game {{ $game->game_number }}</strong>
-                                                    <span class="hf-small hf-muted">of {{ $game->best_of }}</span>
+                                                <td data-label="Game">
+                                                    <span>
+                                                        <strong>Game {{ $game->game_number }}</strong>
+                                                        <span class="hf-small hf-muted">of {{ $game->best_of }}</span>
+                                                    </span>
                                                 </td>
-                                                <td>{{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}</td>
-                                                <td class="hf-small">{{ $this->seriesGameSchedule($game) }}</td>
-                                                <td>
-                                                    <span class="hf-chip hf-chip--{{ $this->seriesGameStatusTone($game) }}">{{ $this->seriesGameStatusLabel($game) }}</span>
+                                                <td data-label="Score">{{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}</td>
+                                                <td class="hf-small" data-label="Schedule">{{ $this->seriesGameSchedule($game) }}</td>
+                                                <td data-label="Status">
+                                                    <span>
+                                                        <span class="hf-chip hf-chip--{{ $this->seriesGameStatusTone($game) }}">{{ $this->seriesGameStatusLabel($game) }}</span>
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <div class="hf-btn-row">
