@@ -1203,7 +1203,23 @@ class BracketService
             $this->syncGrandFinalReset($game);
         }
 
+        $this->syncTournamentCompletion($game);
+
         return ['winnerId' => $winnerId, 'loserId' => $loserId];
+    }
+
+    protected function syncTournamentCompletion(MatchModel $match): void
+    {
+        $tournament = $match->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        app(TournamentLifecycleService::class)->syncCompletion(
+            $tournament,
+            $this->champion($tournament),
+        );
     }
 
     public function seriesWinsNeeded(int $bestOf): int
