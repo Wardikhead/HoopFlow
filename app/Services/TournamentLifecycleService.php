@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Bracket;
+use App\Models\MatchModel;
 use App\Models\Team;
 use App\Models\Tournament;
 
@@ -40,11 +42,45 @@ class TournamentLifecycleService
             return false;
         }
 
-        if (! $champion instanceof Team) {
+        if (! $champion instanceof Team && ! $this->roundRobinGroupStageFinished($tournament)) {
             return false;
         }
 
         return $this->complete($tournament, $champion);
+    }
+
+    protected function roundRobinGroupStageFinished(Tournament $tournament): bool
+    {
+        if ($tournament->format() !== 'round-robin') {
+            return false;
+        }
+
+        $playoffTeams = $tournament->ruleValue('playoff_teams', 0);
+
+        if (is_numeric($playoffTeams) && (int) $playoffTeams > 0) {
+            return false;
+        }
+
+        $divisionIds = $tournament->divisions()->pluck('id');
+
+        if ($divisionIds->isEmpty()) {
+            return false;
+        }
+
+        if (Bracket::whereIn('division_id', $divisionIds)->where('phase', 'playoffs')->exists()) {
+            return false;
+        }
+
+        $group = Bracket::whereIn('division_id', $divisionIds)->where('phase', 'group')->first();
+
+        if (! $group instanceof Bracket) {
+            return false;
+        }
+
+        $matches = MatchModel::where('bracket_id', $group->id)->get();
+
+        return $matches->isNotEmpty()
+            && $matches->every(fn (MatchModel $match): bool => in_array($match->status, ['final', 'forfeit'], true));
     }
 
     protected function complete(Tournament $tournament, ?Team $champion): bool

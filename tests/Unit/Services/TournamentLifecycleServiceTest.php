@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\AuditLog;
+use App\Models\Bracket;
+use App\Models\Division;
+use App\Models\MatchModel;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\TournamentLifecycleService;
@@ -13,6 +16,27 @@ function tlsUnitTournament(string $status = 'registration-open', array $rules = 
     return Tournament::factory()->create([
         'status' => $status,
         'rules_json' => array_merge(['format' => 'round-robin'], $rules),
+    ]);
+}
+
+function tlsUnitGroupBracket(Tournament $tournament, string $phase = 'group'): Bracket
+{
+    $division = Division::factory()->create(['tournament_id' => $tournament->id]);
+
+    return Bracket::factory()->create([
+        'division_id' => $division->id,
+        'format' => 'round_robin',
+        'phase' => $phase,
+    ]);
+}
+
+function tlsUnitMatch(Tournament $tournament, Bracket $bracket, string $status): MatchModel
+{
+    return MatchModel::factory()->create([
+        'bracket_id' => $bracket->id,
+        'tournament_id' => $tournament->id,
+        'stage' => 'round_robin',
+        'status' => $status,
     ]);
 }
 
@@ -77,4 +101,56 @@ it('does not duplicate the completion audit entry', function () {
     $service->syncCompletion($tournament->fresh(), $champion);
 
     expect(AuditLog::where('action', 'tournament.complete')->count())->toBe(1);
+});
+
+it('completes a round-robin tournament when every group game is resolved', function () {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 0]);
+    $group = tlsUnitGroupBracket($tournament);
+    tlsUnitMatch($tournament, $group, 'final');
+    tlsUnitMatch($tournament, $group, 'forfeit');
+
+    $changed = app(TournamentLifecycleService::class)->syncCompletion($tournament);
+
+    expect($changed)->toBeTrue()
+        ->and($tournament->fresh()->status)->toBe('completed');
+});
+
+it('waits for playoffs when playoff teams are configured', function () {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 4]);
+    $group = tlsUnitGroupBracket($tournament);
+    tlsUnitMatch($tournament, $group, 'final');
+
+    expect(app(TournamentLifecycleService::class)->syncCompletion($tournament))->toBeFalse()
+        ->and($tournament->fresh()->status)->toBe('active');
+});
+
+it('does not complete a round-robin while a group game is unresolved', function (string $status) {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 0]);
+    $group = tlsUnitGroupBracket($tournament);
+    tlsUnitMatch($tournament, $group, 'final');
+    tlsUnitMatch($tournament, $group, $status);
+
+    expect(app(TournamentLifecycleService::class)->syncCompletion($tournament))->toBeFalse();
+})->with(['scheduled', 'in_progress', 'cancelled']);
+
+it('waits when a playoff bracket already exists', function () {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 0]);
+    $group = tlsUnitGroupBracket($tournament);
+    tlsUnitMatch($tournament, $group, 'final');
+    tlsUnitGroupBracket($tournament, 'playoffs');
+
+    expect(app(TournamentLifecycleService::class)->syncCompletion($tournament))->toBeFalse();
+});
+
+it('does not complete a round-robin without a group bracket', function () {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 0]);
+
+    expect(app(TournamentLifecycleService::class)->syncCompletion($tournament))->toBeFalse();
+});
+
+it('does not complete a round-robin with an empty group bracket', function () {
+    $tournament = tlsUnitTournament('active', ['playoff_teams' => 0]);
+    tlsUnitGroupBracket($tournament);
+
+    expect(app(TournamentLifecycleService::class)->syncCompletion($tournament))->toBeFalse();
 });

@@ -100,3 +100,52 @@ it('completes a best-of series final when the series is clinched', function () {
 
     expect($tournament->fresh()->status)->toBe('completed');
 });
+
+it('completes a round-robin tournament without playoffs after the last group game', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 0,
+        ]),
+    ]);
+
+    $service = new BracketService;
+    $service->generate($tournament->fresh(), 'round-robin');
+
+    $matches = MatchModel::where('tournament_id', $tournament->id)->orderBy('id')->get();
+    $last = $matches->pop();
+
+    foreach ($matches as $match) {
+        $service->recordScore($match->fresh(), 80, 70);
+    }
+
+    expect($tournament->fresh()->status)->toBe('active');
+
+    $service->recordScore($last->fresh(), 80, 70);
+
+    expect($tournament->fresh()->status)->toBe('completed');
+});
+
+it('waits for the playoff final in a round-robin tournament with playoffs', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 4,
+        ]),
+    ]);
+
+    $service = new BracketService;
+    $service->generate($tournament->fresh(), 'round-robin');
+
+    tlsPlayOut($service, $tournament);
+
+    expect($tournament->fresh()->status)->toBe('active');
+
+    $service->generatePlayoffs($tournament->fresh());
+
+    tlsPlayOut($service, $tournament);
+
+    expect($tournament->fresh()->status)->toBe('completed');
+});
