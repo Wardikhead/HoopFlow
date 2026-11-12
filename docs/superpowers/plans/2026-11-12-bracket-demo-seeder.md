@@ -101,7 +101,7 @@ use Illuminate\Support\Facades\Hash;
 
 class BracketDemoSeeder extends Seeder
 {
-    /** @var list<array{name: string, short: string, coach: string, city: string, color: string}> */
+    /** @var list<array{0: string, 1: string, 2: string, 3: string, 4: string}> */
     protected array $demoTeams = [
         ['Pasig Pirates', 'PSG', 'Alvin Cruz', 'Pasig City', '#0e7490'],
         ['Kapitolyo Kings', 'KNG', 'Bong Reyes', 'Pasig City', '#1d4ed8'],
@@ -203,15 +203,15 @@ class BracketDemoSeeder extends Seeder
     {
         $teams = [];
 
-        foreach ($this->demoTeams as $index => $row) {
+        foreach ($this->demoTeams as $index => [$name, $short, $coach, $city, $color]) {
             $team = Team::create([
                 'organization_id' => $this->org->id,
-                'name' => $row['name'],
-                'short_name' => $row['short'],
-                'slug' => strtolower($row['short']).'-demo',
-                'avatar_color' => $row['color'],
-                'city' => $row['city'],
-                'coach_name' => $row['coach'],
+                'name' => $name,
+                'short_name' => $short,
+                'slug' => strtolower($short).'-demo',
+                'avatar_color' => $color,
+                'city' => $city,
+                'coach_name' => $coach,
                 'logo_url' => null,
                 'coach_user_id' => null,
             ]);
