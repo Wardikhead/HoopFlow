@@ -494,3 +494,43 @@ it('locks a published series game and offers the next game', function () {
     expect($final->fresh()->status)->toBe('in_progress')
         ->and($game2->fresh()->status)->toBe('scheduled');
 });
+
+it('keeps an explicit child game and redirects an unavailable game with a warning', function () {
+    $tournament = gmSeriesTournament();
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    [$final, $game2] = gmStartSeries($tournament, $service);
+
+    $game3 = MatchModel::where('series_id', $final->id)
+        ->where('game_number', 3)
+        ->firstOrFail();
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $game2->id])
+        ->assertSet('matchId', $game2->id)
+        ->assertSee('Game 2 of 3');
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $game3->id])
+        ->assertSet('matchId', $game2->id)
+        ->assertDispatched('hf-toast')
+        ->assertDontSee('Game 3 is available after Game 2 is final');
+});
+
+it('links finished games to the box score and explains unavailable switcher entries', function () {
+    $tournament = gmSeriesTournament();
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    [$final, $game2] = gmStartSeries($tournament, $service);
+
+    $game3 = MatchModel::where('series_id', $final->id)
+        ->where('game_number', 3)
+        ->firstOrFail();
+
+    Livewire::actingAs(gmUser('organizer@hoopflow.ph'))
+        ->test(GameManage::class, ['match' => $game2->id])
+        ->assertSeeHtml('href="'.route('gameStats', ['match' => $final->id]).'"')
+        ->assertSee('Available after Game 2 is final')
+        ->assertSeeHtml('aria-current="true"')
+        ->assertSeeHtml('data-testid="ingame-series-game-'.$game3->id.'"');
+});

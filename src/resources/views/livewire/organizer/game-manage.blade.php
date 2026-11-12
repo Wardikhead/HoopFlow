@@ -105,6 +105,8 @@
                             $seriesSchedule = $seriesSlot?->start_at !== null
                                 ? ($seriesSlot->court?->name ?? 'Court TBD').' '.$seriesSlot->start_at->format('M j, g:i A')
                                 : null;
+                            $unavailableReason = $this->seriesGameUnavailableReason($seriesGame);
+                            $gameStatus = $this->seriesGameStatus($seriesGame);
                         @endphp
                         @if ($isCurrent)
                             <span class="hf-chip hf-chip--{{ $tone }}" data-testid="ingame-series-game-{{ $seriesGame->id }}" aria-current="true">
@@ -113,16 +115,26 @@
                                     <span class="hf-small">{{ $seriesSchedule }}</span>
                                 @endif
                             </span>
-                        @elseif (in_array($seriesGame->status, ['scheduled', 'in_progress'], true))
+                        @elseif (in_array($gameStatus, ['scheduled', 'in_progress'], true))
                             <a class="hf-chip hf-chip--{{ $tone }}" href="{{ route('gameManage', ['match' => $seriesGame->id]) }}" data-testid="ingame-series-game-{{ $seriesGame->id }}">
                                 {{ $seriesLabel }}
                                 @if ($seriesSchedule)
                                     <span class="hf-small">{{ $seriesSchedule }}</span>
                                 @endif
                             </a>
-                        @else
-                            <span class="hf-chip hf-chip--{{ $tone }}" data-testid="ingame-series-game-{{ $seriesGame->id }}">
+                        @elseif (in_array($gameStatus, ['final', 'forfeit'], true))
+                            <a class="hf-chip hf-chip--{{ $tone }}" href="{{ route('gameStats', ['match' => $seriesGame->id]) }}" data-testid="ingame-series-game-{{ $seriesGame->id }}">
                                 {{ $seriesLabel }}
+                                @if ($seriesSchedule)
+                                    <span class="hf-small">{{ $seriesSchedule }}</span>
+                                @endif
+                            </a>
+                        @else
+                            <span class="hf-chip hf-chip--{{ $tone }}" data-testid="ingame-series-game-{{ $seriesGame->id }}" aria-disabled="true">
+                                {{ $seriesLabel }}
+                                @if ($unavailableReason)
+                                    <span class="hf-small">{{ $unavailableReason }}</span>
+                                @endif
                                 @if ($seriesSchedule)
                                     <span class="hf-small">{{ $seriesSchedule }}</span>
                                 @endif
