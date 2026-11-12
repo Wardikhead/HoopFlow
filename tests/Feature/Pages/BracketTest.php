@@ -1,9 +1,13 @@
 <?php
 
 use App\Livewire\Organizer\BracketShow;
+use App\Livewire\Organizer\TournamentShow;
 use App\Models\AuditLog;
+use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\Tournament;
 use App\Models\User;
+use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -138,12 +142,12 @@ it('records a forfeit through the confirmation dialog', function () {
 
 it('applies a correct score through the confirmation dialog', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
-    $match = MatchModel::findOrFail(2);
+    $match = MatchModel::findOrFail(5);
     $previousWinner = $match->winner_team_id;
 
     Livewire::actingAs($organizer)
         ->test(BracketShow::class)
-        ->call('openCorrection', 2)
+        ->call('openCorrection', 5)
         ->assertSet('showCorrection', true)
         ->set('score1', 61)
         ->set('score2', 66)
@@ -160,7 +164,7 @@ it('applies a correct score through the confirmation dialog', function () {
     expect($match->away_score)->toBe(66);
     expect($match->winner_team_id)->toBe($match->away_team_id);
     expect($match->winner_team_id)->not->toBe($previousWinner);
-    expect(AuditLog::where('action', 'score.correct')->where('entity_id', 2)->count())->toBe(1);
+    expect(AuditLog::where('action', 'score.correct')->where('entity_id', 5)->count())->toBe(1);
 });
 
 it('generates a bracket through the confirmation dialog', function () {
@@ -191,4 +195,89 @@ it('forbids non-organizers from generating or scoring', function () {
         ->test(BracketShow::class)
         ->call('openScoreConsole', 11)
         ->assertForbidden();
+});
+
+it('renders winners, losers, and grand final sections for double elimination', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    (new BracketService)->generate($tournament, 'double-elimination');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertSee('Winners bracket')
+        ->assertSee('Losers bracket')
+        ->assertSee('Grand final')
+        ->assertSee('Winners Quarterfinal')
+        ->assertSee('Losers Round 1')
+        ->assertDontSeeHtml('data-testid="bracket-champion"');
+});
+
+it('shows the best-of length and series score on a playoff card', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertSee('Best of 3')
+        ->assertSee('Game 1');
+});
+
+it('targets the seed order when editing slots', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    (new BracketService)->generate($tournament, 'double-elimination');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->call('openEditSlots')
+        ->assertSet('showEditSlots', true)
+        ->assertCount('slotAssignments', 8)
+        ->assertSet('slotAssignments.0.seed', 1)
+        ->assertSee('Seed 1');
+});
+
+it('shows the generate-playoffs action only when the round-robin group is complete', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 4,
+        ]),
+    ]);
+
+    $service = new BracketService;
+    $service->generate($tournament->fresh(), 'round-robin');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertDontSeeHtml('data-testid="bracket-generate-playoffs"');
+
+    $group = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))
+        ->where('phase', 'group')
+        ->firstOrFail();
+
+    foreach (MatchModel::where('bracket_id', $group->id)->get() as $match) {
+        if ($match->home_team_id !== null && $match->away_team_id !== null) {
+            $service->recordScore($match->fresh(), 80, 70);
+        }
+    }
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertSeeHtml('data-testid="bracket-generate-playoffs"');
+});
+
+it('uses the bracket service champion resolution on the tournament page', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentShow::class, ['tournament' => $tournament->id])
+        ->assertSet('champion', null);
 });

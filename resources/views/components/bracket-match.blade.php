@@ -28,6 +28,12 @@
     wire:keydown.space.prevent="openMatchDetail({{ $match->id }})"
 >
     <div class="hf-bracket-match__slot">{{ $roundLabel }} · Slot {{ $match->match_number }}</div>
+    @if ($match->best_of > 1)
+        <div class="hf-bracket-match__series hf-small hf-muted" data-testid="bracket-series-{{ $match->id }}">
+            Best of {{ $match->best_of }} · Game {{ $match->series_home_wins + $match->series_away_wins + 1 }}
+            <span>{{ $match->series_home_wins }}–{{ $match->series_away_wins }}</span>
+        </div>
+    @endif
     <div class="hf-match-team {{ $winner1 ? 'is-winner' : ($match->status !== 'scheduled' ? 'is-loser' : '') }}">
         <x-team-shield :team="$home" />
         <span class="hf-match-name">{{ $home?->name ?? 'TBD' }}</span>

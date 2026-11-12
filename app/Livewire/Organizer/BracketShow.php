@@ -3,12 +3,11 @@
 namespace App\Livewire\Organizer;
 
 use App\Models\AuditLog;
-use App\Models\BracketSlot;
+use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
-use App\Services\AuditLogger;
 use App\Services\BracketService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,11 +23,13 @@ use Livewire\Component;
  * @property-read Collection<int, Registration> $approvedTeams
  * @property-read array{
  *     hasBracket: bool,
- *     rounds: array<int, array{round: int, label: string, matches: Collection<int, MatchModel>}>,
+ *     sections: array<int, array{key: string, title: string, rounds: array<int, array{round: int, label: string, matches: Collection<int, MatchModel>}>}>,
  *     champion: Team|null
  * } $bracket
  * @property-read array{matchesPlayed: int, matchesScheduled: int, corrections: int} $kpis
  * @property-read MatchModel|null $selectedMatch
+ * @property-read Collection<int, MatchModel> $selectedSeriesGames
+ * @property-read bool $canGeneratePlayoffs
  * @property-read string $selectedRoundLabel
  * @property-read array{reason: string, previous1: int|null, previous2: int|null}|null $selectedCorrection
  * @property-read bool $selectedCanScore
@@ -146,7 +147,7 @@ class BracketShow extends Component
     /**
      * @return array{
      *     hasBracket: bool,
-     *     rounds: array<int, array{round: int, label: string, matches: Collection<int, MatchModel>}>,
+     *     sections: array<int, array{key: string, title: string, rounds: array<int, array{round: int, label: string, matches: Collection<int, MatchModel>}>}>,
      *     champion: Team|null
      * }
      */
@@ -154,61 +155,111 @@ class BracketShow extends Component
     public function bracket(): array
     {
         if (! $this->tournament instanceof Tournament) {
-            return ['hasBracket' => false, 'rounds' => [], 'champion' => null];
+            return ['hasBracket' => false, 'sections' => [], 'champion' => null];
         }
 
-        $matches = $this->tournament->matches()
-            ->with(['homeTeam', 'awayTeam', 'winnerTeam', 'matchSlots.court'])
+        $brackets = Bracket::whereIn('division_id', $this->tournament->divisions()->pluck('id'))
+            ->orderBy('phase')
             ->get();
 
-        if ($matches->isEmpty()) {
-            return ['hasBracket' => false, 'rounds' => [], 'champion' => null];
+        if ($brackets->isEmpty()) {
+            return ['hasBracket' => false, 'sections' => [], 'champion' => null];
         }
 
-        $roundNumbers = $matches
-            ->pluck('round_number')
-            ->filter(fn ($round): bool => $round !== null)
-            ->map(fn ($round): int => (int) $round)
-            ->unique()
+        $matches = MatchModel::whereIn('bracket_id', $brackets->pluck('id'))
+            ->with(['homeTeam', 'awayTeam', 'winnerTeam', 'matchSlots.court', 'bracket'])
+            ->whereNull('series_id')
+            ->get()
+            ->reject(fn (MatchModel $match): bool => $match->status === 'cancelled')
             ->values();
 
-        $roundNumbers = $this->format === 'round-robin'
-            ? $roundNumbers->sort()->values()
-            : $roundNumbers->sortDesc()->values();
+        $sections = [];
 
-        $rounds = $roundNumbers->map(function (int $roundNumber) use ($matches): array {
-            $roundMatches = $matches
-                ->where('round_number', $roundNumber)
-                ->sortBy('match_number')
-                ->values();
+        foreach ($brackets as $bracket) {
+            $bracketMatches = $matches->where('bracket_id', $bracket->id)->values();
 
-            $label = $this->format === 'round-robin'
-                ? 'Matchday '.$roundNumber
-                : $this->labelForRound($roundNumber);
+            if ($bracket->format === 'round_robin') {
+                $sections[] = $this->section('group', 'Group stage', $bracketMatches, 'round_robin', true);
 
-            return [
-                'round' => $roundNumber,
-                'label' => $label,
-                'matches' => $roundMatches,
-            ];
-        })->values()->all();
+                continue;
+            }
 
-        $finalMatch = $this->format === 'round-robin'
-            ? null
-            : $matches->firstWhere('round_number', 2);
+            if ($bracket->phase === 'playoffs') {
+                $sections[] = $this->section('playoffs', 'Playoffs', $bracketMatches, 'winners', false);
 
-        $champion = null;
-        if ($finalMatch instanceof MatchModel
-            && in_array($finalMatch->status, ['final', 'forfeit'], true)
-            && $finalMatch->winnerTeam instanceof Team) {
-            $champion = $finalMatch->winnerTeam;
+                continue;
+            }
+
+            if ($bracket->format === 'double_elim') {
+                $sections[] = $this->section('winners', 'Winners bracket', $bracketMatches, 'winners', true);
+                $sections[] = $this->section('losers', 'Losers bracket', $bracketMatches, 'losers', true);
+                $sections[] = $this->section('grand_final', 'Grand final', $bracketMatches, 'grand_final', true);
+
+                continue;
+            }
+
+            $sections[] = $this->section('main', 'Bracket', $bracketMatches, 'winners', false);
         }
+
+        $sections = array_values(array_filter(
+            $sections,
+            fn (array $section): bool => $section['rounds'] !== [],
+        ));
 
         return [
             'hasBracket' => true,
-            'rounds' => $rounds,
-            'champion' => $champion,
+            'sections' => $sections,
+            'champion' => app(BracketService::class)->champion($this->tournament),
         ];
+    }
+
+    /**
+     * @param  Collection<int, MatchModel>  $matches
+     * @return array{key: string, title: string, rounds: array<int, array{round: int, label: string, matches: Collection<int, MatchModel>}>}
+     */
+    protected function section(string $key, string $title, Collection $matches, string $stage, bool $ascending): array
+    {
+        if ($stage === 'grand_final') {
+            $matches = $matches
+                ->whereIn('stage', ['grand_final', 'reset'])
+                ->sortBy(fn (MatchModel $match): int => $match->stage === 'reset' ? 1 : 0)
+                ->values();
+
+            $rounds = $matches
+                ->map(fn (MatchModel $match): array => [
+                    'round' => (int) $match->round_number,
+                    'label' => $match->roundLabel(),
+                    'matches' => new Collection([$match]),
+                ])
+                ->values()
+                ->all();
+
+            return ['key' => $key, 'title' => $title, 'rounds' => $rounds];
+        }
+
+        $stageMatches = $matches
+            ->where('stage', $stage)
+            ->sortBy('round_number')
+            ->values();
+
+        $rounds = $stageMatches
+            ->groupBy('round_number')
+            ->map(function (Collection $group, $round): array {
+                $group = $group->sortBy('match_number')->values();
+
+                return [
+                    'round' => (int) $round,
+                    'label' => $group->first()?->roundLabel() ?? 'Round '.$round,
+                    'matches' => $group,
+                ];
+            })
+            ->values();
+
+        if (! $ascending) {
+            $rounds = $rounds->reverse()->values();
+        }
+
+        return ['key' => $key, 'title' => $title, 'rounds' => $rounds->all()];
     }
 
     /**
@@ -250,9 +301,63 @@ class BracketShow extends Component
     {
         $match = $this->selectedMatch;
 
-        return $match instanceof MatchModel
-            ? $this->labelForRound((int) $match->round_number)
-            : 'Match';
+        return $match instanceof MatchModel ? $match->roundLabel() : 'Match';
+    }
+
+    /**
+     * @return Collection<int, MatchModel>
+     */
+    #[Computed]
+    public function selectedSeriesGames(): Collection
+    {
+        $match = $this->selectedMatch;
+
+        if (! $match instanceof MatchModel || $match->best_of <= 1) {
+            return new Collection;
+        }
+
+        $anchorId = $match->series_id !== null ? (int) $match->series_id : (int) $match->id;
+
+        return MatchModel::query()
+            ->where(function ($query) use ($anchorId): void {
+                $query->where('id', $anchorId)->orWhere('series_id', $anchorId);
+            })
+            ->orderBy('game_number')
+            ->get();
+    }
+
+    #[Computed]
+    public function canGeneratePlayoffs(): bool
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament || $this->format !== 'round-robin') {
+            return false;
+        }
+
+        $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+        $playoffTeams = isset($rules['playoff_teams']) && is_numeric($rules['playoff_teams'])
+            ? (int) $rules['playoff_teams']
+            : 0;
+
+        if (! in_array($playoffTeams, [2, 4, 8, 16], true)) {
+            return false;
+        }
+
+        $divisionIds = $tournament->divisions()->pluck('id');
+        $group = Bracket::whereIn('division_id', $divisionIds)->where('phase', 'group')->first();
+
+        if (! $group instanceof Bracket) {
+            return false;
+        }
+
+        if (Bracket::whereIn('division_id', $divisionIds)->where('phase', 'playoffs')->exists()) {
+            return false;
+        }
+
+        return ! MatchModel::where('bracket_id', $group->id)
+            ->whereNotIn('status', ['final', 'forfeit', 'cancelled'])
+            ->exists();
     }
 
     /**
@@ -365,6 +470,31 @@ class BracketShow extends Component
         );
     }
 
+    public function requestGeneratePlayoffs(): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('generateBracket', $tournament);
+
+        if (! $this->canGeneratePlayoffs) {
+            $this->toast('Finish every group game before generating playoffs.', 'Playoffs unavailable', 'warning');
+
+            return;
+        }
+
+        $this->openConfirm(
+            'Generate playoffs?',
+            'The top ranked teams enter a single-elimination playoff bracket.',
+            'Generate playoffs',
+            'primary',
+            'playoffs',
+        );
+    }
+
     public function openEditSlots(): void
     {
         $tournament = $this->tournament;
@@ -381,13 +511,12 @@ class BracketShow extends Component
             return;
         }
 
-        $this->slotAssignments = $this->firstRoundMatches()
-            ->map(fn (MatchModel $match): array => [
-                'matchId' => (int) $match->id,
-                'home' => $match->home_team_id !== null ? (int) $match->home_team_id : null,
-                'away' => $match->away_team_id !== null ? (int) $match->away_team_id : null,
-            ])
+        $this->slotAssignments = $this->approvedTeams
             ->values()
+            ->map(fn (Registration $registration, int $index): array => [
+                'seed' => $index + 1,
+                'team_id' => $registration->team_id !== null ? (int) $registration->team_id : null,
+            ])
             ->all();
 
         $this->showEditSlots = true;
@@ -397,7 +526,7 @@ class BracketShow extends Component
         $this->showConfirm = false;
     }
 
-    public function saveSlots(): void
+    public function saveSlots(BracketService $bracketService): void
     {
         $tournament = $this->tournament;
 
@@ -418,72 +547,42 @@ class BracketShow extends Component
             ->map(fn ($id): int => (int) $id)
             ->all();
 
-        $firstRound = $this->firstRoundNumber();
-        $assignments = [];
-        $usedTeamIds = [];
+        $ordered = [];
+        $used = [];
 
         foreach ($this->slotAssignments as $assignment) {
-            $match = $this->findTournamentMatch($assignment['matchId']);
+            $teamId = $this->normalizeSlotTeam($assignment['team_id'] ?? null, $approvedIds);
 
-            if (! $match instanceof MatchModel || (int) $match->round_number !== $firstRound) {
-                continue;
-            }
-
-            $home = $this->normalizeSlotTeam($assignment['home'] ?? null, $approvedIds);
-            $away = $this->normalizeSlotTeam($assignment['away'] ?? null, $approvedIds);
-
-            foreach ([$home, $away] as $teamId) {
-                if ($teamId === null) {
-                    continue;
-                }
-
-                if (in_array($teamId, $usedTeamIds, true)) {
+            if ($teamId !== null) {
+                if (in_array($teamId, $used, true)) {
                     $this->addError('slots', 'A team cannot be assigned to two slots.');
 
                     return;
                 }
 
-                $usedTeamIds[] = $teamId;
+                $used[] = $teamId;
             }
 
-            $assignments[] = ['match' => $match, 'home' => $home, 'away' => $away];
+            $ordered[] = $teamId;
         }
 
-        foreach ($assignments as $assignment) {
-            $match = $assignment['match'];
-            $match->home_team_id = $assignment['home'];
-            $match->away_team_id = $assignment['away'];
-            $match->save();
+        $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))
+            ->whereIn('phase', ['main', 'group'])
+            ->first();
 
-            BracketSlot::query()
-                ->where('bracket_id', $match->bracket_id)
-                ->where('round_number', $match->round_number)
-                ->where('match_number', $match->match_number)
-                ->where('slot', 'home')
-                ->update(['team_id' => $assignment['home']]);
+        if (! $bracket instanceof Bracket) {
+            $this->addError('slots', 'Generate a bracket before editing slots.');
 
-            BracketSlot::query()
-                ->where('bracket_id', $match->bracket_id)
-                ->where('round_number', $match->round_number)
-                ->where('match_number', $match->match_number)
-                ->where('slot', 'away')
-                ->update(['team_id' => $assignment['away']]);
+            return;
         }
 
-        app(AuditLogger::class)->log(
-            'bracket.slots',
-            'tournament',
-            $tournament->id,
-            null,
-            [
-                'assignments' => array_map(fn (array $assignment): array => [
-                    'matchId' => (int) $assignment['match']->id,
-                    'home' => $assignment['home'],
-                    'away' => $assignment['away'],
-                ], $assignments),
-            ],
-            $tournament->organization_id,
-        );
+        try {
+            $bracketService->updateSlots($bracket, $ordered);
+        } catch (\InvalidArgumentException $exception) {
+            $this->addError('slots', $exception->getMessage());
+
+            return;
+        }
 
         $this->showEditSlots = false;
         $this->slotAssignments = [];
@@ -739,6 +838,8 @@ class BracketShow extends Component
                 $this->performForfeit($bracketService);
             } elseif ($action === 'correction') {
                 $this->performCorrection($bracketService);
+            } elseif ($action === 'playoffs') {
+                $this->performGeneratePlayoffs($bracketService);
             }
         } catch (\InvalidArgumentException $exception) {
             if ($action === 'correction') {
@@ -796,6 +897,25 @@ class BracketShow extends Component
         $this->slotAssignments = [];
     }
 
+    protected function performGeneratePlayoffs(BracketService $bracketService): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('generateBracket', $tournament);
+
+        $result = $bracketService->generatePlayoffs($tournament);
+
+        $this->toast($result['matches'].' playoff matchups created.', 'Playoffs generated');
+        $this->selectedMatchId = null;
+        $this->showMatchDetail = false;
+        $this->showScoreConsole = false;
+        $this->showCorrection = false;
+    }
+
     protected function performFinalize(BracketService $bracketService): void
     {
         $match = $this->selectedMatch;
@@ -815,10 +935,12 @@ class BracketShow extends Component
         $this->showScoreConsole = false;
         $this->scoreHistory = [];
         $this->resetValidation();
-        $this->toast(
-            ($winner?->shortLabel() ?? 'The winner').' advances to the next round.',
-            'Final score recorded',
-        );
+
+        $message = $match->series_id !== null || $match->best_of > 1
+            ? 'Game result recorded. The series updates automatically.'
+            : ($winner?->shortLabel() ?? 'The winner').' advances to the next round.';
+
+        $this->toast($message, 'Final score recorded');
     }
 
     protected function performForfeit(BracketService $bracketService): void
@@ -913,18 +1035,6 @@ class BracketShow extends Component
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
-    protected function labelForRound(int $round): string
-    {
-        return match ($round) {
-            2 => 'Championship Final',
-            4 => 'Semifinals',
-            8 => 'Quarterfinals',
-            16 => 'Round of 16',
-            32 => 'Round of 32',
-            default => 'Round '.$round,
-        };
-    }
-
     protected function isBye(MatchModel $match): bool
     {
         $hasHome = $match->home_team_id !== null;
@@ -947,33 +1057,6 @@ class BracketShow extends Component
             ->find((int) $matchId);
 
         return $match instanceof MatchModel ? $match : null;
-    }
-
-    /**
-     * @return Collection<int, MatchModel>
-     */
-    protected function firstRoundMatches(): Collection
-    {
-        $firstRound = $this->firstRoundNumber();
-
-        if ($firstRound <= 0) {
-            return new Collection;
-        }
-
-        return MatchModel::query()
-            ->where('tournament_id', $this->tournamentId)
-            ->where('round_number', $firstRound)
-            ->orderBy('match_number')
-            ->get();
-    }
-
-    protected function firstRoundNumber(): int
-    {
-        $round = MatchModel::query()
-            ->where('tournament_id', $this->tournamentId)
-            ->max('round_number');
-
-        return is_numeric($round) ? (int) $round : 0;
     }
 
     /**

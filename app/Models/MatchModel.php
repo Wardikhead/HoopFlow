@@ -127,22 +127,59 @@ class MatchModel extends Model
 
     public function roundLabel(): string
     {
-        $rules = $this->tournament?->rules_json;
-        $format = is_array($rules) && isset($rules['format']) && is_string($rules['format'])
-            ? $rules['format']
-            : 'single-elimination';
-
-        if ($format === 'round-robin') {
+        if ($this->stage === 'round_robin') {
             return 'Matchday '.$this->round_number;
         }
 
-        return match ((int) $this->round_number) {
-            2 => 'Championship Final',
-            4 => 'Semifinals',
-            8 => 'Quarterfinals',
-            16 => 'Round of 16',
-            32 => 'Round of 32',
-            default => 'Round '.$this->round_number,
+        if ($this->stage === 'grand_final') {
+            return 'Grand Final';
+        }
+
+        if ($this->stage === 'reset') {
+            return 'Grand Final Reset (if needed)';
+        }
+
+        $round = (int) $this->round_number;
+
+        $isDoubleElim = $this->bracket instanceof Bracket
+            ? $this->bracket->format === 'double_elim'
+            : $this->tournament?->format() === 'double-elimination';
+
+        if ($isDoubleElim) {
+            $stage = $this->stage === 'losers' ? 'losers' : 'winners';
+            $totalRounds = $this->bracket instanceof Bracket
+                ? $this->bracket->roundCount($stage)
+                : 0;
+            $fromEnd = $totalRounds > 0 ? $totalRounds - $round + 1 : 0;
+
+            if ($stage === 'losers') {
+                return match ($fromEnd) {
+                    1 => 'Losers Final',
+                    2 => 'Losers Semifinal',
+                    3 => 'Losers Quarterfinal',
+                    default => 'Losers Round '.$round,
+                };
+            }
+
+            return match ($fromEnd) {
+                1 => 'Winners Final',
+                2 => 'Winners Semifinal',
+                3 => 'Winners Quarterfinal',
+                default => 'Winners Round '.$round,
+            };
+        }
+
+        // Single elimination numbers rounds by bracket size (2, 4, 8, 16, 32),
+        // so log2(round_number) is the distance from the final.
+        $fromEnd = $round > 1 ? (int) round(log($round, 2)) : 0;
+
+        return match ($fromEnd) {
+            1 => 'Championship Final',
+            2 => 'Semifinals',
+            3 => 'Quarterfinals',
+            4 => 'Round of 16',
+            5 => 'Round of 32',
+            default => 'Round '.$round,
         };
     }
 

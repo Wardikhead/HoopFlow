@@ -220,8 +220,7 @@ class TournamentShow extends Component
     public function bracketRounds(): int
     {
         return $this->tournament?->matches
-            ->pluck('round_number')
-            ->filter()
+            ->map(fn (MatchModel $match): string => $match->stage.'|'.$match->round_number)
             ->unique()
             ->count() ?? 0;
     }
@@ -229,17 +228,11 @@ class TournamentShow extends Component
     #[Computed]
     public function champion(): ?Team
     {
-        if (! $this->hasBracket || $this->tournament?->format() === 'round-robin') {
+        if (! $this->hasBracket || ! $this->tournament instanceof Tournament) {
             return null;
         }
 
-        $final = $this->tournament?->matches->firstWhere('round_number', 2);
-
-        if (! $final instanceof MatchModel || ! in_array($final->status, ['final', 'forfeit'], true)) {
-            return null;
-        }
-
-        return $final->winnerTeam instanceof Team ? $final->winnerTeam : null;
+        return app(BracketService::class)->champion($this->tournament);
     }
 
     #[Computed]
