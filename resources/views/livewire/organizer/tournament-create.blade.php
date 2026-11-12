@@ -137,6 +137,58 @@
                     <p class="hf-small hf-muted hf-mb-0" data-testid="create-slots-hint">Single/double elimination: 2, 4, 8, 16, or 32. Round robin: 2 to 16.</p>
                     @error('bracketSlots') <p class="hf-field-error">{{ $message }}</p> @enderror
                 </div>
+
+                @if ($format === 'round-robin')
+                    <div class="hf-field">
+                        <label class="hf-label" for="createLegs">Meetings per pair</label>
+                        <input class="hf-input" id="createLegs" type="number" min="1" max="10" wire:model="roundRobinLegs"
+                               @error('roundRobinLegs') aria-invalid="true" @enderror data-testid="create-round-robin-legs">
+                        <p class="hf-small hf-muted hf-mb-0">Each pair meets 1–10 times. Even legs swap home and away.</p>
+                        @error('roundRobinLegs') <p class="hf-field-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="hf-field">
+                        <label class="hf-label" for="createPlayoffTeams">Playoff teams</label>
+                        <select class="hf-select" id="createPlayoffTeams" wire:model="playoffTeams"
+                                @error('playoffTeams') aria-invalid="true" @enderror data-testid="create-playoff-teams">
+                            <option value="0">No playoffs</option>
+                            @foreach ([2, 4, 8, 16] as $playoffOption)
+                                <option value="{{ $playoffOption }}">Top {{ $playoffOption }}</option>
+                            @endforeach
+                        </select>
+                        @error('playoffTeams') <p class="hf-field-error">{{ $message }}</p> @enderror
+                    </div>
+                @endif
+
+                <div class="hf-field">
+                    <label class="hf-label" for="createBestOfQuarterfinal">Quarterfinal series</label>
+                    <select class="hf-select" id="createBestOfQuarterfinal" wire:model="bestOfQuarterfinal"
+                            @error('bestOfQuarterfinal') aria-invalid="true" @enderror data-testid="create-best-of-quarterfinal">
+                        @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
+                            <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
+                        @endforeach
+                    </select>
+                    @error('bestOfQuarterfinal') <p class="hf-field-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label" for="createBestOfSemifinal">Semifinal series</label>
+                    <select class="hf-select" id="createBestOfSemifinal" wire:model="bestOfSemifinal"
+                            @error('bestOfSemifinal') aria-invalid="true" @enderror data-testid="create-best-of-semifinal">
+                        @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
+                            <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
+                        @endforeach
+                    </select>
+                    @error('bestOfSemifinal') <p class="hf-field-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label" for="createBestOfFinal">Final series</label>
+                    <select class="hf-select" id="createBestOfFinal" wire:model="bestOfFinal"
+                            @error('bestOfFinal') aria-invalid="true" @enderror data-testid="create-best-of-final">
+                        @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
+                            <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
+                        @endforeach
+                    </select>
+                    @error('bestOfFinal') <p class="hf-field-error">{{ $message }}</p> @enderror
+                </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createFee">Entry fee (PHP)</label>
                     <input class="hf-input" id="createFee" type="number" min="0" step="100" wire:model="fee"
