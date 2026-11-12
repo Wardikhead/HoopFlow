@@ -70,6 +70,17 @@ class SubmissionsIndex extends Component
 
     public function approve(int $registrationId): void
     {
+        if ($this->seedsLockedForRegistration($registrationId)) {
+            $this->dispatch(
+                'hf-toast',
+                title: 'Seeds are locked',
+                message: 'Approvals close when the bracket is generated. Reject the team with a reason instead.',
+                tone: 'warning',
+            );
+
+            return;
+        }
+
         $this->approvingId = $registrationId;
         $this->approveAnyway = false;
         $this->reviewingId = null;
@@ -80,6 +91,12 @@ class SubmissionsIndex extends Component
     public function confirmApprove(): void
     {
         if ($this->approvingId === null) {
+            return;
+        }
+
+        if ($this->seedsLockedForRegistration($this->approvingId)) {
+            $this->addError('approveAnyway', 'Seeds are locked. Reject the team with a reason instead.');
+
             return;
         }
 
@@ -295,6 +312,10 @@ class SubmissionsIndex extends Component
 
     protected function doApprove(int $registrationId): void
     {
+        if ($this->seedsLockedForRegistration($registrationId)) {
+            return;
+        }
+
         if ($this->ageIssues($registrationId) !== []) {
             return;
         }
@@ -418,6 +439,13 @@ class SubmissionsIndex extends Component
         return Registration::query()
             ->with(['team.players.eligibilityDocuments', 'tournament', 'division', 'payment'])
             ->find((int) $id);
+    }
+
+    protected function seedsLockedForRegistration(int $registrationId): bool
+    {
+        $registration = Registration::query()->with('tournament')->find($registrationId);
+
+        return $registration?->tournament?->seedsLocked() ?? false;
     }
 
     public function render(): View

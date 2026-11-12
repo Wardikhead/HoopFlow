@@ -131,7 +131,11 @@
                         <div class="hf-btn-row hf-mt-2">
                             <button type="button" class="hf-btn hf-btn--sm" wire:click="openReview({{ $registration->id }})" data-testid="submission-open-{{ $registration->id }}">Review detail</button>
                             @if ($status === 'submitted')
-                                <button type="button" class="hf-btn hf-btn--sm hf-btn--primary" wire:click="approve({{ $registration->id }})" data-testid="submission-approve-{{ $registration->id }}">Approve</button>
+                                @if ($tournament?->seedsLocked())
+                                    <span class="hf-chip hf-chip--gold" data-testid="submission-seeds-locked-{{ $registration->id }}"><i class="bi bi-lock-fill" aria-hidden="true"></i>Seeds locked</span>
+                                @else
+                                    <button type="button" class="hf-btn hf-btn--sm hf-btn--primary" wire:click="approve({{ $registration->id }})" data-testid="submission-approve-{{ $registration->id }}">Approve</button>
+                                @endif
                                 <button type="button" class="hf-btn hf-btn--sm hf-btn--danger" wire:click="reject({{ $registration->id }})" data-testid="submission-reject-{{ $registration->id }}">Reject</button>
                             @endif
                         </div>
@@ -272,7 +276,11 @@
                     <button type="button" class="hf-btn" wire:click="closeReview()" data-testid="submission-detail-close">Close</button>
                     @if ($review->status === 'submitted')
                         <button type="button" class="hf-btn hf-btn--danger" wire:click="reject({{ $review->id }})" data-testid="submission-detail-reject">Reject</button>
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="approve({{ $review->id }})" data-testid="submission-detail-approve">Approve team</button>
+                        @if ($review->tournament?->seedsLocked())
+                            <span class="hf-chip hf-chip--gold" data-testid="submission-detail-seeds-locked"><i class="bi bi-lock-fill" aria-hidden="true"></i>Seeds locked</span>
+                        @else
+                            <button type="button" class="hf-btn hf-btn--primary" wire:click="approve({{ $review->id }})" data-testid="submission-detail-approve">Approve team</button>
+                        @endif
                     @endif
                 </div>
             </dialog>
