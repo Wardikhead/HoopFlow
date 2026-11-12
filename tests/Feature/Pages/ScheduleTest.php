@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Organizer\ScheduleShow;
+use App\Models\AuditLog;
 use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
@@ -47,7 +48,7 @@ it('renders the prototype schedule controls', function () {
         ->assertSee('Court filters')
         ->assertSee('Matchups')
         ->assertSee('Reschedule match')
-        ->assertSee('Manual manage')
+        ->assertDontSee('Manual manage')
         ->assertSee('schedule-calendar', false);
 });
 
@@ -155,4 +156,155 @@ it('shows a newly activated series game on the schedule', function () {
         ->test(ScheduleShow::class, ['id' => $tournament->id])
         ->call('selectDay', $slot->start_at->format('Y-m-d'))
         ->assertSeeHtml('data-testid="schedule-match-'.$game2->id.'"');
+});
+
+function scheduleReadyTournament(): Tournament
+{
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    MatchSlot::where('tournament_id', $tournament->id)->delete();
+    MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereNotNull('home_team_id')
+        ->whereNotNull('away_team_id')
+        ->update([
+            'status' => 'scheduled',
+            'home_score' => null,
+            'away_score' => null,
+            'winner_team_id' => null,
+            'series_winner_team_id' => null,
+            'game_winner_team_id' => null,
+        ]);
+
+    return $tournament->fresh();
+}
+
+it('builds a preview from editable settings and publishes the exact edited row', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = scheduleReadyTournament();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openPreview')
+        ->assertSet('showPreview', true)
+        ->assertSet('previewMode', 'generate')
+        ->assertSet('previewStartDate', '2026-05-15')
+        ->assertSee('Build preview');
+
+    $plan = $component->get('previewPlan');
+    $edited = $plan['assignments'][count($plan['assignments']) - 1];
+    $court = app(SchedulingService::class)
+        ->courts($tournament)
+        ->first(fn (Court $option): bool => (int) $option->id !== (int) $edited['courtId'])
+        ?? throw new RuntimeException('This test needs another court.');
+
+    $component
+        ->call('updatePreviewAssignment', $edited['matchId'], (int) $court->id, $edited['scheduledAt'])
+        ->call('publishSchedule')
+        ->assertSet('showPreview', false)
+        ->assertDispatched('hf-toast');
+
+    expect((int) MatchSlot::where('match_id', $edited['matchId'])->value('court_id'))->toBe((int) $court->id)
+        ->and(AuditLog::where('action', 'schedule.publish')->count())->toBe(1);
+});
+
+it('marks the preview stale when settings change and refuses to publish it', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = scheduleReadyTournament();
+
+    Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openPreview')
+        ->set('previewStartDate', '2026-05-16')
+        ->assertSet('previewDirty', true)
+        ->assertSee('Settings changed — rebuild the preview before publishing.')
+        ->call('publishSchedule')
+        ->assertSet('showPreview', true)
+        ->assertDispatched('hf-toast');
+
+    expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe(0);
+});
+
+it('shows an actionable error when the preview window is impossible', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = scheduleReadyTournament();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openPreview')
+        ->set('previewStartDate', '2026-05-23')
+        ->call('buildPreview');
+
+    $errors = $component->get('previewErrors');
+
+    expect($errors)->not->toBeEmpty()
+        ->and(implode(' ', $errors))->toContain('end date must be on or after the start date');
+
+    $component->assertDispatched('hf-toast');
+});
+
+it('prefills rebuild from the published schedule and confirms replacement', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = scheduleReadyTournament();
+    app(SchedulingService::class)->generate($tournament);
+
+    $firstDate = substr((string) MatchSlot::where('tournament_id', $tournament->id)->min('start_at'), 0, 10);
+    $oldCount = MatchSlot::where('tournament_id', $tournament->id)->count();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openRebuild')
+        ->assertSet('showPreview', true)
+        ->assertSet('previewMode', 'rebuild')
+        ->assertSet('previewStartDate', $firstDate)
+        ->assertSee('Rebuild schedule');
+
+    $component->call('publishSchedule')
+        ->assertSet('showConfirm', true)
+        ->assertSet('confirmAction', 'rebuild')
+        ->assertSee('replace the current schedule');
+
+    $component->call('confirm')
+        ->assertSet('showPreview', false)
+        ->assertDispatched('hf-toast');
+
+    expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe($oldCount)
+        ->and(AuditLog::where('action', 'schedule.rebuild')->count())->toBe(1);
+});
+
+it('removes cancelled series games from the calendar', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 3]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'single-elimination');
+    app(SchedulingService::class)->generate($tournament);
+
+    $final = MatchModel::where('tournament_id', $tournament->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+    $teams = $tournament->registrations()->where('status', 'approved')->pluck('team_id')->take(2)->values();
+    $final->home_team_id = $teams[0];
+    $final->away_team_id = $teams[1];
+    $final->save();
+    $bracketService->syncSeriesTeams($final);
+
+    $game2 = MatchModel::where('series_id', $final->id)->where('game_number', 2)->firstOrFail();
+    $game3 = MatchModel::where('series_id', $final->id)->where('game_number', 3)->firstOrFail();
+    $game3Date = $game3->matchSlots()->firstOrFail()->start_at->format('Y-m-d');
+
+    $bracketService->recordScore($final->fresh(), 80, 70);
+    $bracketService->recordScore($game2->fresh(), 80, 70);
+
+    Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('selectDay', $game3Date)
+        ->assertDontSeeHtml('data-testid="schedule-match-'.$game3->id.'"');
+
+    expect(MatchSlot::where('match_id', $game3->id)->exists())->toBeFalse();
 });
