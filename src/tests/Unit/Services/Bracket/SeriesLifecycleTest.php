@@ -2,8 +2,10 @@
 
 use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\MatchSlot;
 use App\Models\Tournament;
 use App\Services\BracketService;
+use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -207,4 +209,49 @@ it('does not create a reset when the double-elimination grand final is a series'
 
     expect(MatchModel::where('bracket_id', $bracket->id)->where('stage', 'reset')->count())->toBe(0)
         ->and(MatchModel::where('bracket_id', $bracket->id)->where('stage', 'grand_final')->firstOrFail()->best_of)->toBe(3);
+});
+
+it('releases the unused game slot when a series ends 2-0 and revives it after a correction', function () {
+    $tournament = seriesTournament(['best_of_final' => 3]);
+    $service = new BracketService;
+    $service->generate($tournament, 'single-elimination');
+    $scheduler = new SchedulingService;
+    $scheduler->generate($tournament);
+
+    $bracket = seriesBracket($tournament);
+    $final = MatchModel::where('bracket_id', $bracket->id)
+        ->whereNull('series_id')
+        ->where('round_number', 2)
+        ->firstOrFail();
+    $teams = $tournament->registrations()
+        ->where('status', 'approved')
+        ->orderBy('seed')
+        ->pluck('team_id')
+        ->take(2)
+        ->values();
+
+    $final->home_team_id = (int) $teams[0];
+    $final->away_team_id = (int) $teams[1];
+    $final->save();
+    $service->syncSeriesTeams($final);
+
+    $game2 = MatchModel::where('series_id', $final->id)->where('game_number', 2)->firstOrFail();
+    $game3 = MatchModel::where('series_id', $final->id)->where('game_number', 3)->firstOrFail();
+    $game3Slot = $game3->matchSlots()->firstOrFail();
+
+    $service->recordScore($final->fresh(), 80, 70);
+    $service->recordScore($game2->fresh(), 80, 70);
+
+    expect($game3->fresh()->status)->toBe('cancelled')
+        ->and(MatchSlot::whereKey($game3Slot->id)->exists())->toBeFalse()
+        ->and($game2->fresh()->matchSlots()->exists())->toBeTrue();
+
+    $service->correctScore($game2->fresh(), 70, 80, 'Referee review changed the winner.');
+
+    $game3->refresh();
+
+    expect($game3->status)->toBe('scheduled')
+        ->and($game3->matchSlots()->first())->not->toBeNull()
+        ->and((int) $game3->matchSlots()->first()->court_id)->toBe((int) $game3Slot->court_id)
+        ->and($game3->matchSlots()->first()->start_at?->format('Y-m-d'))->toBe($game3Slot->start_at?->format('Y-m-d'));
 });

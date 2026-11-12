@@ -1098,6 +1098,23 @@ class BracketShow extends Component
 
         $this->showCorrection = false;
         $this->resetValidation();
+
+        $corrected = $match->fresh();
+        $anchor = $corrected instanceof MatchModel && $corrected->series_id !== null
+            ? $corrected->seriesAnchor
+            : $corrected;
+        $active = $anchor instanceof MatchModel && $anchor->best_of > 1
+            ? $anchor->activeGame()
+            : null;
+
+        if ($active instanceof MatchModel && $active->status === 'scheduled' && ! $active->matchSlots()->exists()) {
+            $this->toast(
+                'Game '.$active->game_number.' could not be rescheduled before the tournament end date. Add match days or extend the end date.',
+                'Series game needs a slot',
+                'warning',
+            );
+        }
+
         $this->toast('Correction saved and the bracket path was recalculated.', 'Score corrected');
     }
 

@@ -23,8 +23,11 @@ class BracketService
     /**
      * @return array{matches: int, games: int, byes: int}
      */
-    public function generate(Tournament $tournament, string $format = 'single-elimination'): array
-    {
+    public function generate(
+        Tournament $tournament,
+        string $format = 'single-elimination',
+        bool $shuffle = false,
+    ): array {
         if (! in_array($format, ['single-elimination', 'round-robin', 'double-elimination'], true)) {
             throw new \InvalidArgumentException('Invalid bracket format.');
         }
@@ -53,15 +56,17 @@ class BracketService
             ]);
         }
 
-        return DB::transaction(function () use ($tournament, $format, $registrations, $division, $rules, $slots): array {
+        return DB::transaction(function () use ($tournament, $format, $registrations, $division, $rules, $slots, $shuffle): array {
             $this->deleteBracketData($tournament, $format);
 
-            $ordered = $registrations
-                ->sortBy(fn (Registration $registration): int => $registration->seed ?? 999)
-                ->values()
-                ->pluck('team_id')
-                ->map(fn ($id): int => (int) $id)
-                ->all();
+            $ordered = $shuffle
+                ? $registrations->shuffle()->pluck('team_id')->map(fn ($id): int => (int) $id)->all()
+                : $registrations
+                    ->sortBy(fn (Registration $registration): int => $registration->seed ?? 999)
+                    ->values()
+                    ->pluck('team_id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->all();
 
             $bracket = Bracket::create([
                 'division_id' => $division->id,
@@ -72,7 +77,7 @@ class BracketService
                     default => 'round_robin',
                 },
                 'phase' => $format === 'round-robin' ? 'group' : 'main',
-                'seeding_method' => 'manual',
+                'seeding_method' => $shuffle ? 'random' : 'manual',
                 'status' => 'generated',
                 'generated_at' => now(),
             ]);
@@ -112,6 +117,8 @@ class BracketService
                     'byes' => $result['byes'],
                     'matches' => $result['matches'],
                     'games' => $result['games'],
+                    'shuffled' => $shuffle,
+                    'seedingMethod' => $shuffle ? 'random' : 'manual',
                 ],
                 $tournament->organization_id,
             );
@@ -563,9 +570,12 @@ class BracketService
     protected function applyBye(MatchModel $match, int $winnerId): void
     {
         if ($match->best_of > 1) {
-            MatchModel::where('series_id', $match->id)
+            $childIds = MatchModel::where('series_id', $match->id)
                 ->whereIn('status', ['conditional', 'scheduled'])
-                ->update(['status' => 'cancelled']);
+                ->pluck('id');
+
+            $this->releaseSlots($childIds);
+            MatchModel::whereIn('id', $childIds)->update(['status' => 'cancelled']);
             $match->best_of = 1;
         }
 
@@ -586,9 +596,12 @@ class BracketService
     protected function cancelMatch(MatchModel $match): void
     {
         if ($match->best_of > 1) {
-            MatchModel::where('series_id', $match->id)
+            $childIds = MatchModel::where('series_id', $match->id)
                 ->whereIn('status', ['conditional', 'scheduled'])
-                ->update(['status' => 'cancelled']);
+                ->pluck('id');
+
+            $this->releaseSlots($childIds);
+            MatchModel::whereIn('id', $childIds)->update(['status' => 'cancelled']);
             $match->best_of = 1;
         }
 
@@ -1274,9 +1287,28 @@ class BracketService
 
     public function cancelRemainingSeriesGames(MatchModel $anchor): void
     {
-        MatchModel::where('series_id', $anchor->id)
-            ->where('status', 'conditional')
-            ->update(['status' => 'cancelled']);
+        $childIds = MatchModel::where('series_id', $anchor->id)
+            ->whereIn('status', ['conditional', 'scheduled'])
+            ->pluck('id');
+
+        $this->releaseSlots($childIds);
+
+        MatchModel::whereIn('id', $childIds)->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * @param  iterable<int|string>  $matchIds
+     */
+    protected function releaseSlots(iterable $matchIds): void
+    {
+        $ids = collect($matchIds)
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            MatchSlot::whereIn('match_id', $ids)->delete();
+        }
     }
 
     protected function activateNextSeriesGame(MatchModel $anchor): void
@@ -1288,6 +1320,16 @@ class BracketService
         $next = $games->first(
             fn (MatchModel $game): bool => in_array($game->status, ['conditional', 'scheduled'], true),
         );
+
+        if (! $next instanceof MatchModel) {
+            $lastCompleted = $games
+                ->filter(fn (MatchModel $game): bool => in_array($game->status, ['final', 'forfeit'], true))
+                ->max('game_number') ?? 0;
+
+            $next = $games->first(
+                fn (MatchModel $game): bool => $game->status === 'cancelled' && (int) $game->game_number > (int) $lastCompleted,
+            );
+        }
 
         if (! $next instanceof MatchModel) {
             return;
