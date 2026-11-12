@@ -39,6 +39,16 @@ class TournamentCreate extends Component
 
     public int $bracketSlots = 8;
 
+    public int $roundRobinLegs = 1;
+
+    public int $playoffTeams = 0;
+
+    public int $bestOfQuarterfinal = 1;
+
+    public int $bestOfSemifinal = 1;
+
+    public int $bestOfFinal = 1;
+
     public float $fee = 1500;
 
     public string $paymentMethod = 'GCash';
@@ -97,6 +107,11 @@ class TournamentCreate extends Component
             'courts.*' => ['nullable', 'string', 'max:255'],
             'slotMinutes' => ['required', 'integer', 'min:10'],
             'restMinutes' => ['required', 'integer', 'min:0'],
+            'roundRobinLegs' => ['required', 'integer', 'min:1', 'max:10'],
+            'playoffTeams' => ['required', 'integer', 'in:0,2,4,8,16'],
+            'bestOfQuarterfinal' => ['required', 'integer', 'in:1,3,5,7,9'],
+            'bestOfSemifinal' => ['required', 'integer', 'in:1,3,5,7,9'],
+            'bestOfFinal' => ['required', 'integer', 'in:1,3,5,7,9'],
         ];
     }
 
@@ -126,11 +141,21 @@ class TournamentCreate extends Component
             'courts.required' => 'Add at least one court.',
             'slotMinutes.min' => 'Use at least 10 minutes.',
             'restMinutes.min' => 'Rest must be zero or more minutes.',
+            'roundRobinLegs.min' => 'Meetings per pair must be between 1 and 10.',
+            'roundRobinLegs.max' => 'Meetings per pair must be between 1 and 10.',
+            'playoffTeams.in' => 'Choose 0, 2, 4, 8, or 16 playoff teams.',
+            'bestOfQuarterfinal.in' => 'Choose a best-of length of 1, 3, 5, 7, or 9.',
+            'bestOfSemifinal.in' => 'Choose a best-of length of 1, 3, 5, 7, or 9.',
+            'bestOfFinal.in' => 'Choose a best-of length of 1, 3, 5, 7, or 9.',
         ];
     }
 
     public function updatedFormat(string $value): void
     {
+        if ($value !== 'round-robin') {
+            $this->playoffTeams = 0;
+        }
+
         if ($value === 'round-robin') {
             if ($this->bracketSlots < 2 || $this->bracketSlots > 16) {
                 $this->bracketSlots = 8;
@@ -254,6 +279,11 @@ class TournamentCreate extends Component
                     'format' => $this->format,
                     'slotMinutes' => $this->slotMinutes,
                     'restMinutes' => $this->restMinutes,
+                    'round_robin_legs' => $this->roundRobinLegs,
+                    'playoff_teams' => $this->format === 'round-robin' ? $this->playoffTeams : 0,
+                    'best_of_quarterfinal' => $this->bestOfQuarterfinal,
+                    'best_of_semifinal' => $this->bestOfSemifinal,
+                    'best_of_final' => $this->bestOfFinal,
                     'venue_id' => $venue->id,
                 ],
                 'created_by' => $user?->id,

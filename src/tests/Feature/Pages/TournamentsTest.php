@@ -189,3 +189,56 @@ it('organizer can preview and publish a court schedule from the tournament desk'
 
     expect($tournament->matchSlots()->count())->toBeGreaterThan(0);
 });
+
+it('stores round-robin legs and playoff team settings', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentCreate::class)
+        ->call('nextStep')
+        ->set('format', 'round-robin')
+        ->set('bracketSlots', 8)
+        ->set('roundRobinLegs', 3)
+        ->set('playoffTeams', 4)
+        ->call('nextStep')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $tournament = Tournament::where('name', 'HoopFlow Metro Invitational')->firstOrFail();
+
+    expect($tournament->rules_json['round_robin_legs'])->toBe(3)
+        ->and($tournament->rules_json['playoff_teams'])->toBe(4)
+        ->and($tournament->rules_json['format'])->toBe('round-robin');
+});
+
+it('stores best-of settings for playoff rounds', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentCreate::class)
+        ->call('nextStep')
+        ->set('bestOfQuarterfinal', 3)
+        ->set('bestOfSemifinal', 5)
+        ->set('bestOfFinal', 7)
+        ->call('nextStep')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $tournament = Tournament::where('name', 'HoopFlow Metro Invitational')->firstOrFail();
+
+    expect($tournament->rules_json['best_of_quarterfinal'])->toBe(3)
+        ->and($tournament->rules_json['best_of_semifinal'])->toBe(5)
+        ->and($tournament->rules_json['best_of_final'])->toBe(7);
+});
+
+it('rejects even best-of lengths and out-of-range legs', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentCreate::class)
+        ->call('nextStep')
+        ->set('bestOfFinal', 4)
+        ->set('roundRobinLegs', 11)
+        ->call('nextStep')
+        ->assertHasErrors(['bestOfFinal', 'roundRobinLegs']);
+});
