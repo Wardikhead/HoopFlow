@@ -87,7 +87,7 @@ For each tournament:
 Expected shapes:
 
 - Single elimination: 15 matches across 4 rounds.
-- Double elimination: 30 anchor matchups (15 winners, 14 losers, 1 grand final). With best-of-3 QF/SF/F/GF, child games are created upfront. No reset match is created because the grand final is a series. Conditional games stay `conditional` and unscheduled.
+- Double elimination: 30 anchor matchups (15 winners, 14 losers, 1 grand final). With best-of-3 QF/SF/F/GF, child games are created upfront. No reset match is created because the grand final is a series. All 30 anchors are scheduled; series child games stay `conditional` and unscheduled.
 - Round robin: 7 rounds and 28 games, with no byes and no phantom matches. The top-4 playoff bracket is not generated; the organizer can generate it from the UI once group play is complete.
 
 No scores, winners, forfeits, or completed timestamps are seeded. All matches remain `scheduled` or `conditional`.
@@ -111,6 +111,6 @@ Existing tests stay on `PrototypeSeeder` and must remain green. Run `composer qu
 1. `php artisan db:seed --class=BracketDemoSeeder` completes on a fresh database.
 2. The tournament list shows exactly the three demo tournaments.
 3. Each bracket page renders the correct format, stage sections, and series metadata.
-4. The double-elimination page shows winners, losers, and grand-final sections; only playable winners-round-one games have court slots.
+4. The double-elimination page shows winners, losers, and grand-final sections; all 30 anchor games have court slots, while series child games remain unscheduled.
 5. The round-robin page shows 7 rounds and 28 scheduled group games, with the Generate playoffs action gated until the group is complete.
 6. `composer quality` passes.
