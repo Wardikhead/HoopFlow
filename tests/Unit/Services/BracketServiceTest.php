@@ -3,9 +3,11 @@
 use App\Models\AuditLog;
 use App\Models\Bracket;
 use App\Models\MatchModel;
+use App\Models\MatchSlot;
 use App\Models\Registration;
 use App\Models\Tournament;
 use App\Services\BracketService;
+use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -279,4 +281,48 @@ it('clears the forfeit reason when a forfeit result is corrected', function () {
     expect($match->forfeit_reason)->toBeNull();
     expect($match->home_score)->toBe(70);
     expect($match->away_score)->toBe(60);
+});
+
+it('regenerates with shuffled teams, random seeding, and no published slots', function () {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $service = new BracketService;
+
+    $service->generate($tournament, 'single-elimination');
+    $firstBracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))->firstOrFail();
+    $before = MatchModel::where('bracket_id', $firstBracket->id)
+        ->where('round_number', 8)
+        ->orderBy('match_number')
+        ->get()
+        ->flatMap(fn (MatchModel $match): array => [$match->home_team_id, $match->away_team_id])
+        ->filter()
+        ->map(fn ($id): int => (int) $id)
+        ->values()
+        ->all();
+
+    (new SchedulingService)->generate($tournament);
+    expect(MatchSlot::where('tournament_id', $tournament->id)->count())->toBeGreaterThan(0);
+
+    $service->generate($tournament, 'single-elimination', true);
+
+    $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))->firstOrFail();
+    $after = MatchModel::where('bracket_id', $bracket->id)
+        ->where('round_number', 8)
+        ->orderBy('match_number')
+        ->get()
+        ->flatMap(fn (MatchModel $match): array => [$match->home_team_id, $match->away_team_id])
+        ->filter()
+        ->map(fn ($id): int => (int) $id)
+        ->sort()
+        ->values()
+        ->all();
+
+    sort($before);
+
+    $audit = AuditLog::where('action', 'bracket.generate')->orderByDesc('id')->firstOrFail();
+
+    expect($bracket->seeding_method)->toBe('random')
+        ->and($after)->toBe($before)
+        ->and(MatchSlot::where('tournament_id', $tournament->id)->count())->toBe(0)
+        ->and($audit->after_json['shuffled'] ?? null)->toBeTrue()
+        ->and($audit->after_json['seedingMethod'] ?? null)->toBe('random');
 });

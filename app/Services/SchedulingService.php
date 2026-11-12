@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Court;
 use App\Models\GameRule;
 use App\Models\MatchModel;
@@ -609,9 +610,9 @@ class SchedulingService
     }
 
     /**
-     * Put a newly activated series game on the same court as the previous game,
-     * after the tournament rest period. Returns null when there is no previous
-     * slot or no free time left on that court that day.
+     * Put a newly activated series game on the series' court and tip-off lane
+     * on the next eligible day after the previous game. Returns null when there
+     * is no reference slot or no free day before the tournament ends.
      */
     public function scheduleSeriesGame(MatchModel $game, MatchModel $anchor): ?MatchSlot
     {
@@ -628,58 +629,107 @@ class SchedulingService
         }
 
         $reference = $this->seriesReferenceSlot($anchor);
-        $courtId = $reference?->court_id !== null ? (int) $reference->court_id : null;
 
-        if (! $reference instanceof MatchSlot || $courtId === null) {
+        if (! $reference instanceof MatchSlot || $reference->start_at === null || $reference->court_id === null) {
             return null;
         }
 
+        $courtId = (int) $reference->court_id;
+        $time = $reference->start_at->format('H:i:s');
         $slotMinutes = $this->slotMinutes($tournament);
         $restMinutes = $this->restMinutes($tournament);
-        $referenceEnd = $reference->end_at?->copy()
-            ?? $reference->start_at?->copy()->addMinutes($slotMinutes);
+        $weekdays = $this->plannedWeekdays($tournament) ?? $this->seriesWeekdays($anchor);
 
-        if (! $referenceEnd instanceof Carbon) {
-            return null;
+        if ($weekdays === []) {
+            $weekdays = range(1, 7);
         }
 
-        $start = $referenceEnd->addMinutes($restMinutes);
-        $latestStart = $start->copy()->endOfDay()->subMinutes($slotMinutes);
+        $day = $reference->start_at->copy()->startOfDay()->addDay();
+        $endDate = $tournament->end_date?->copy()->startOfDay();
 
-        while ($start->lte($latestStart)) {
-            if (! $this->courtHasConflict($tournament, $courtId, $start, $slotMinutes, $restMinutes)) {
-                $slot = MatchSlot::create([
-                    'match_id' => $game->id,
-                    'tournament_id' => $tournament->id,
-                    'court_id' => $courtId,
-                    'start_at' => $start,
-                    'end_at' => $start->copy()->addMinutes($slotMinutes),
-                    'status' => 'published',
-                    'version' => 1,
-                    'published_at' => now(),
-                ]);
+        while ($endDate === null || $day->lte($endDate)) {
+            if (in_array((int) $day->isoWeekday(), $weekdays, true)) {
+                $start = $day->copy()->setTimeFromTimeString($time);
 
-                app(AuditLogger::class)->log(
-                    'schedule.series',
-                    'match',
-                    $game->id,
-                    null,
-                    [
-                        'courtId' => $courtId,
-                        'scheduledAt' => $start->toIso8601String(),
-                        'seriesId' => $anchor->id,
-                        'gameNumber' => $game->game_number,
-                    ],
-                    $tournament->organization_id,
-                );
+                if (! $this->courtHasConflict($tournament, $courtId, $start, $slotMinutes, $restMinutes, $game->id)) {
+                    $slot = MatchSlot::create([
+                        'match_id' => $game->id,
+                        'tournament_id' => $tournament->id,
+                        'court_id' => $courtId,
+                        'start_at' => $start,
+                        'end_at' => $start->copy()->addMinutes($slotMinutes),
+                        'status' => 'published',
+                        'version' => 1,
+                        'published_at' => now(),
+                    ]);
 
-                return $slot;
+                    app(AuditLogger::class)->log(
+                        'schedule.series',
+                        'match',
+                        $game->id,
+                        null,
+                        [
+                            'courtId' => $courtId,
+                            'scheduledAt' => $start->toIso8601String(),
+                            'seriesId' => $anchor->id,
+                            'gameNumber' => $game->game_number,
+                        ],
+                        $tournament->organization_id,
+                    );
+
+                    return $slot;
+                }
             }
 
-            $start->addMinutes($slotMinutes);
+            $day->addDay();
         }
 
         return null;
+    }
+
+    /**
+     * @return list<int>|null
+     */
+    protected function plannedWeekdays(Tournament $tournament): ?array
+    {
+        $log = AuditLog::query()
+            ->where('entity_type', 'tournament')
+            ->where('entity_id', $tournament->id)
+            ->whereIn('action', ['schedule.publish', 'schedule.rebuild', 'schedule.generate'])
+            ->orderByDesc('id')
+            ->first();
+
+        $after = $log?->after_json;
+
+        if (! is_array($after) || ! isset($after['weekdays']) || ! is_array($after['weekdays'])) {
+            return null;
+        }
+
+        $weekdays = array_values(array_filter(
+            array_map('intval', $after['weekdays']),
+            fn (int $day): bool => $day >= 1 && $day <= 7,
+        ));
+
+        return $weekdays === [] ? null : $weekdays;
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected function seriesWeekdays(MatchModel $anchor): array
+    {
+        return MatchModel::query()
+            ->where(function ($query) use ($anchor): void {
+                $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
+            })
+            ->with('matchSlots')
+            ->get()
+            ->flatMap(fn (MatchModel $seriesGame) => $seriesGame->matchSlots)
+            ->filter(fn (MatchSlot $slot): bool => $slot->start_at !== null)
+            ->map(fn (MatchSlot $slot): int => (int) $slot->start_at->isoWeekday())
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function reschedule(MatchModel $match, ?int $courtId, ?string $scheduledAt): MatchSlot
