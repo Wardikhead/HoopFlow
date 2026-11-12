@@ -1,12 +1,15 @@
 <?php
 
+use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\AuditLog;
 use App\Models\MatchModel;
+use App\Models\Registration;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -249,4 +252,54 @@ it('keeps a completed tournament completed when the final is corrected', functio
 
     expect($tournament->fresh()->status)->toBe('completed')
         ->and(AuditLog::where('action', 'tournament.complete')->count())->toBe(1);
+});
+
+it('blocks approvals after seeds lock but still allows rejection', function () {
+    $tournament = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    (new BracketService)->generate($tournament, 'single-elimination');
+
+    $registration = Registration::where('tournament_id', $tournament->id)
+        ->where('status', 'submitted')
+        ->firstOrFail();
+
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->assertSet('approvingId', null)
+        ->assertDispatched('hf-toast');
+
+    expect($registration->fresh()->status)->toBe('submitted');
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->set('approvingId', $registration->id)
+        ->set('approveAnyway', true)
+        ->call('confirmApprove')
+        ->assertHasErrors(['approveAnyway']);
+
+    expect($registration->fresh()->status)->toBe('submitted');
+
+    $this->actingAs($organizer)
+        ->get('/submissions')
+        ->assertOk()
+        ->assertSeeHtml('data-testid="submission-seeds-locked-'.$registration->id.'"')
+        ->assertDontSeeHtml('data-testid="submission-approve-'.$registration->id.'"')
+        ->assertSeeHtml('data-testid="submission-reject-'.$registration->id.'"');
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('openReview', $registration->id)
+        ->assertDontSeeHtml('data-testid="submission-detail-approve"')
+        ->assertSeeHtml('data-testid="submission-detail-reject"');
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('reject', $registration->id)
+        ->set('rejectReason', 'Seeds are locked for this tournament.')
+        ->call('confirmReject');
+
+    expect($registration->fresh()->status)->toBe('rejected')
+        ->and($registration->fresh()->rejection_reason)->toBe('Seeds are locked for this tournament.');
 });
