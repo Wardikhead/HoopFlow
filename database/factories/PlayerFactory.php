@@ -18,7 +18,7 @@ class PlayerFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'birthdate' => fake()->date(),
-            'jersey_number' => fake()->numberBetween(0, 99),
+            'jersey_number' => fake()->numberBetween(1, 99),
             'position' => fake()->randomElement(['PG', 'SG', 'SF', 'PF', 'C']),
             'photo_url' => null,
             'guardian_name' => fake()->name(),

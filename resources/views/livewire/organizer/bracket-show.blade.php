@@ -254,6 +254,8 @@
             $detailAway = $detailMatch?->awayTeam;
             $detailSlot = $detailMatch?->matchSlots->first();
             $detailStart = $detailSlot?->start_at;
+            $detailActiveGame = $this->selectedActiveGame;
+            $detailSeriesAnchor = $this->selectedSeriesAnchor;
             $detailCorrection = $this->selectedCorrection;
             $detailBye = $detailMatch !== null && $detailMatch->status === 'final'
                 && (($detailMatch->home_team_id !== null) !== ($detailMatch->away_team_id !== null))
@@ -296,11 +298,22 @@
                             <span class="hf-score">{{ $detailMatch->away_score !== null ? $detailMatch->away_score : '–' }}</span>
                         </div>
                         <div class="hf-stat-strip hf-mt-2">
-                            <div><span>Status</span><strong>{{ $detailMatch->status }}</strong></div>
+                            <div><span>Status</span><strong>{{ $detailMatch->statusLabel() }}</strong></div>
                             <div><span>Court</span><strong>{{ $detailSlot?->court?->name ?? 'TBD' }}</strong></div>
                             <div><span>Date</span><strong>{{ $detailStart?->format('M j, Y') ?? 'TBD' }}</strong></div>
                             <div><span>Tip-off</span><strong>{{ $detailStart?->format('g:i A') ?? 'TBD' }}</strong></div>
                         </div>
+                        @if ($detailSeriesAnchor)
+                            <div class="hf-flex hf-wrap hf-items-center hf-gap-2 hf-mt-2" data-testid="bracket-series-summary">
+                                <span class="hf-chip hf-chip--slate">Best of {{ $detailSeriesAnchor->best_of }}</span>
+                                <strong>{{ $this->selectedSeriesSummary }}</strong>
+                                @if ($detailActiveGame && (int) $detailActiveGame->id !== (int) $detailMatch->id)
+                                    <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $detailActiveGame->id]) }}" data-testid="bracket-active-game">
+                                        <i class="bi bi-arrow-right-circle"></i> Game {{ $detailActiveGame->game_number }} is next
+                                    </a>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                     @if ($this->selectedSeriesGames->isNotEmpty())
                         <div class="hf-mt-2" data-testid="bracket-series-games">
@@ -311,21 +324,39 @@
                                         <tr>
                                             <th scope="col">Game</th>
                                             <th scope="col">Score</th>
+                                            <th scope="col">Schedule</th>
                                             <th scope="col">Status</th>
                                             <th scope="col">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($this->selectedSeriesGames as $game)
-                                            <tr wire:key="series-game-{{ $game->id }}">
-                                                <td>Game {{ $game->game_number }}</td>
-                                                <td>{{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}</td>
-                                                <td>{{ $game->status }}</td>
+                                            @php
+                                                $seriesActive = $this->isActiveSeriesGame($game);
+                                            @endphp
+                                            <tr
+                                                wire:key="series-game-{{ $game->id }}"
+                                                class="{{ $seriesActive ? 'is-active' : '' }}"
+                                                @if ($seriesActive) data-testid="bracket-series-active-{{ $game->id }}" @endif
+                                            >
                                                 <td>
-                                                    @if ($game->status === 'scheduled')
+                                                    <strong>Game {{ $game->game_number }}</strong>
+                                                    <span class="hf-small hf-muted">of {{ $game->best_of }}</span>
+                                                </td>
+                                                <td>{{ $game->home_score ?? '–' }}–{{ $game->away_score ?? '–' }}</td>
+                                                <td class="hf-small">{{ $this->seriesGameSchedule($game) }}</td>
+                                                <td>
+                                                    <span class="hf-chip hf-chip--{{ $this->seriesGameStatusTone($game) }}">{{ $this->seriesGameStatusLabel($game) }}</span>
+                                                </td>
+                                                <td>
+                                                    @if ($seriesActive && $game->status === 'scheduled')
+                                                        <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $game->id]) }}" data-testid="series-open-{{ $game->id }}">Open</a>
+                                                    @elseif ($game->status === 'scheduled')
                                                         <button type="button" class="hf-btn hf-btn--sm" wire:click="openScoreConsole({{ $game->id }})" data-testid="series-score-{{ $game->id }}">Score</button>
                                                     @elseif (in_array($game->status, ['final', 'forfeit'], true))
                                                         <button type="button" class="hf-btn hf-btn--sm" wire:click="openCorrection({{ $game->id }})" data-testid="series-correct-{{ $game->id }}">Correct</button>
+                                                    @elseif ($game->status === 'in_progress')
+                                                        <a class="hf-btn hf-btn--sm" href="{{ route('gameStats', ['match' => $game->id]) }}" data-testid="series-stats-{{ $game->id }}">Box score</a>
                                                     @endif
                                                 </td>
                                             </tr>
@@ -346,10 +377,10 @@
                     <button type="button" class="hf-btn" wire:click="closeMatchDetail" data-testid="bracket-match-close">Close</button>
                     <a class="hf-btn" href="{{ route('gameStats', ['match' => $detailMatch->id]) }}" data-testid="bracket-match-stats">Game stats</a>
                     @if ($isOrganizer)
-                        <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailMatch->id]) }}" data-testid="bracket-in-game"><i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats</a>
+                        <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailActiveGame?->id ?? $detailMatch->id]) }}" data-testid="bracket-in-game"><i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats</a>
                     @endif
-                    @if ($isOrganizer && $this->selectedCanScore)
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole({{ $detailMatch->id }})" data-testid="bracket-enter-score">Enter final score</button>
+                    @if ($isOrganizer && $this->selectedCanScore && $detailActiveGame)
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole({{ $detailActiveGame->id }})" data-testid="bracket-enter-score">Enter final score</button>
                     @endif
                     @if ($isOrganizer && $this->selectedCanCorrect)
                         <button type="button" class="hf-btn hf-btn--danger" wire:click="openCorrection({{ $detailMatch->id }})" data-testid="bracket-correct-score">Correct score</button>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\Player;
 use App\Models\Team;
@@ -24,6 +25,14 @@ use Livewire\Component;
  * @property-read list<string> $quarterLabels
  * @property-read Collection<int, Tournament> $tournaments
  * @property-read Collection<int, MatchModel> $matches
+ * @property-read MatchModel|null $seriesAnchor
+ * @property-read Collection<int, MatchModel> $seriesGames
+ * @property-read string $seriesSummary
+ * @property-read string $seriesGameLabel
+ * @property-read string $seriesScheduleLabel
+ * @property-read MatchModel|null $nextSeriesGame
+ * @property-read string $nextSeriesSummary
+ * @property-read string $lockedTitle
  */
 #[Layout('layouts.public')]
 #[Title('In-game score & player stats')]
@@ -114,6 +123,9 @@ class GameManage extends Component
                 'matchSlots.court',
                 'playerStats',
                 'playerQuarterStats',
+                'seriesAnchor.homeTeam',
+                'seriesAnchor.awayTeam',
+                'seriesAnchor.matchSlots.court',
             ])
             ->find($this->matchId);
     }
@@ -134,7 +146,193 @@ class GameManage extends Component
     public function isLocked(): bool
     {
         return ! $this->correctionMode
-            && in_array($this->match?->status, ['final', 'forfeit'], true);
+            && in_array($this->match?->status, ['final', 'forfeit', 'in_progress'], true);
+    }
+
+    #[Computed]
+    public function seriesAnchor(): ?MatchModel
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel || $match->best_of <= 1) {
+            return null;
+        }
+
+        if ($match->series_id !== null) {
+            return $match->seriesAnchor;
+        }
+
+        return $match;
+    }
+
+    /**
+     * @return Collection<int, MatchModel>
+     */
+    #[Computed]
+    public function seriesGames(): Collection
+    {
+        $anchor = $this->seriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return new Collection;
+        }
+
+        return MatchModel::query()
+            ->where(function ($query) use ($anchor): void {
+                $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
+            })
+            ->with(['matchSlots.court', 'homeTeam', 'awayTeam'])
+            ->orderBy('game_number')
+            ->get();
+    }
+
+    #[Computed]
+    public function seriesSummary(): string
+    {
+        $anchor = $this->seriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return '';
+        }
+
+        $homeWins = (int) $anchor->series_home_wins;
+        $awayWins = (int) $anchor->series_away_wins;
+        $home = $anchor->homeTeam?->shortLabel() ?? 'Home';
+        $away = $anchor->awayTeam?->shortLabel() ?? 'Away';
+
+        if ($anchor->series_winner_team_id !== null) {
+            $winner = (int) $anchor->series_winner_team_id === (int) $anchor->home_team_id ? $home : $away;
+
+            return $winner.' wins the series '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+        }
+
+        if ($homeWins === 0 && $awayWins === 0) {
+            return 'Series not started';
+        }
+
+        if ($homeWins === $awayWins) {
+            return 'Series tied '.$homeWins.'–'.$awayWins;
+        }
+
+        $leader = $homeWins > $awayWins ? $home : $away;
+
+        return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+    }
+
+    #[Computed]
+    public function seriesGameLabel(): string
+    {
+        return $this->match?->seriesGameLabel() ?? '';
+    }
+
+    #[Computed]
+    public function seriesScheduleLabel(): string
+    {
+        $slot = $this->match?->matchSlots->first();
+
+        if ($slot === null || $slot->start_at === null) {
+            return 'Schedule TBD';
+        }
+
+        $court = $slot->court;
+        $courtName = $court instanceof Court ? $court->name : 'Court TBD';
+
+        return $courtName.' · '.$slot->start_at->format('M j, Y · g:i A');
+    }
+
+    #[Computed]
+    public function nextSeriesGame(): ?MatchModel
+    {
+        $anchor = $this->seriesAnchor;
+        $match = $this->match;
+
+        if (! $anchor instanceof MatchModel || ! $match instanceof MatchModel) {
+            return null;
+        }
+
+        $active = $anchor->activeGame();
+
+        if (! $active instanceof MatchModel || (int) $active->id === (int) $match->id) {
+            return null;
+        }
+
+        return $this->seriesGames->firstWhere('id', $active->id);
+    }
+
+    #[Computed]
+    public function nextSeriesSummary(): string
+    {
+        $next = $this->nextSeriesGame;
+
+        if (! $next instanceof MatchModel) {
+            return '';
+        }
+
+        $slot = $next->matchSlots->first();
+        $schedule = 'Schedule TBD';
+
+        if ($slot !== null && $slot->start_at !== null) {
+            $court = $slot->court;
+            $courtName = $court instanceof Court ? $court->name : 'Court TBD';
+            $schedule = $courtName.' · '.$slot->start_at->format('M j · g:i A');
+        }
+
+        return 'Game '.$next->game_number.' is next · '.$schedule;
+    }
+
+    #[Computed]
+    public function lockedTitle(): string
+    {
+        $match = $this->match;
+
+        if (! $match instanceof MatchModel) {
+            return 'Result';
+        }
+
+        return $match->best_of > 1 ? 'Game '.$match->game_number.' recorded' : 'Locked result';
+    }
+
+    public function isActiveSeriesGame(MatchModel $game): bool
+    {
+        $anchor = $this->seriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return false;
+        }
+
+        $active = $anchor->activeGame();
+
+        return $active instanceof MatchModel && (int) $active->id === (int) $game->id;
+    }
+
+    public function seriesStatusLabel(MatchModel $game): string
+    {
+        $current = $this->match;
+
+        if ($current instanceof MatchModel && (int) $game->id === (int) $current->id) {
+            return $game->status === 'in_progress' ? 'In progress' : 'Current';
+        }
+
+        if ($this->isActiveSeriesGame($game)) {
+            return 'Next';
+        }
+
+        return $game->statusLabel();
+    }
+
+    public function seriesStatusTone(MatchModel $game): string
+    {
+        if ($this->isActiveSeriesGame($game)) {
+            return 'primary';
+        }
+
+        return match ($game->status) {
+            'final' => 'success',
+            'forfeit' => 'danger',
+            'in_progress' => 'gold',
+            'scheduled' => 'primary',
+            default => 'slate',
+        };
     }
 
     #[Computed]
@@ -420,7 +618,10 @@ class GameManage extends Component
         }
 
         $this->errorMessage = '';
-        $this->toast('Draft saved. The game stays scheduled until you publish.', 'Saved');
+        $message = $match->best_of > 1
+            ? 'Draft saved for '.$match->seriesGameLabel().'. Publish to lock it and update the series.'
+            : 'Draft saved. The game stays scheduled until you publish.';
+        $this->toast($message, 'Saved');
     }
 
     public function requestPublish(): void
@@ -449,13 +650,28 @@ class GameManage extends Component
         }
 
         $this->errorMessage = '';
-        $this->openConfirm(
-            'Publish final result?',
-            'Publish '.$sum1.'–'.$sum2.'? The winner advances, standings update, and the game locks. Corrections will require a reason.',
-            'Publish result',
-            'primary',
-            'confirmPublish',
-        );
+        $match = $this->match;
+        $isSeries = $match instanceof MatchModel && $match->best_of > 1;
+        $title = $isSeries ? 'Publish Game '.$match->game_number.'?' : 'Publish final result?';
+        $label = $isSeries ? 'Publish Game '.$match->game_number : 'Publish result';
+        $message = $isSeries
+            ? 'Publish Game '.$match->game_number.', '.$sum1.'–'.$sum2.'? This locks the game and updates the series.'
+            : 'Publish '.$sum1.'–'.$sum2.'? The winner advances, standings update, and the game locks. Corrections will require a reason.';
+
+        $anchor = $this->seriesAnchor;
+
+        if ($isSeries && $anchor instanceof MatchModel) {
+            $currentWins = $sum1 > $sum2
+                ? (int) $anchor->series_home_wins
+                : (int) $anchor->series_away_wins;
+            $needed = intdiv($anchor->best_of, 2) + 1;
+
+            if ($currentWins + 1 >= $needed) {
+                $message .= ' A win here closes out the series.';
+            }
+        }
+
+        $this->openConfirm($title, $message, $label, 'primary', 'confirmPublish');
     }
 
     public function confirmPublish(): void
@@ -475,8 +691,24 @@ class GameManage extends Component
             return;
         }
 
-        $this->loadEditor($match->refresh());
+        $published = $match->refresh();
+        $this->loadEditor($published);
         $this->errorMessage = '';
+
+        if ($published->best_of > 1) {
+            $anchor = $published->series_id !== null
+                ? MatchModel::find($published->series_id)
+                : $published;
+
+            if ($anchor instanceof MatchModel) {
+                $anchor->refresh();
+                [$title, $message] = $this->seriesPublishToast($published, $anchor);
+                $this->toast($message, $title);
+
+                return;
+            }
+        }
+
         $this->toast('Result published. The winner advances to the next round.', 'Result published');
     }
 
@@ -567,9 +799,28 @@ class GameManage extends Component
 
     protected function selectMatch(MatchModel $match): void
     {
+        $match = $this->resolveActiveSeriesMatch($match);
+
         $this->matchId = (int) $match->id;
         $this->requestedMatchMissing = false;
         $this->loadEditor($match);
+    }
+
+    protected function resolveActiveSeriesMatch(MatchModel $match): MatchModel
+    {
+        if ($match->best_of <= 1 || ! in_array($match->status, ['scheduled', 'in_progress'], true)) {
+            return $match;
+        }
+
+        $anchor = $match->series_id !== null
+            ? MatchModel::find($match->series_id)
+            : $match;
+
+        if (! $anchor instanceof MatchModel) {
+            return $match;
+        }
+
+        return $anchor->activeGame() ?? $match;
     }
 
     protected function enterCorrectionMode(): void
@@ -649,6 +900,12 @@ class GameManage extends Component
 
         if (in_array($match->status, ['final', 'forfeit'], true)) {
             $this->fail('This result is already final. Use correction to change it.');
+
+            return null;
+        }
+
+        if ($match->best_of > 1 && $match->status === 'in_progress') {
+            $this->fail('This game is already recorded. Open the next active game to continue.');
 
             return null;
         }
@@ -742,6 +999,42 @@ class GameManage extends Component
         $this->confirmTone = $tone;
         $this->confirmAction = $action;
         $this->showConfirm = true;
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    protected function seriesPublishToast(MatchModel $game, MatchModel $anchor): array
+    {
+        $label = 'Game '.$game->game_number;
+        $home = $anchor->homeTeam?->shortLabel() ?? 'Home';
+        $away = $anchor->awayTeam?->shortLabel() ?? 'Away';
+        $homeWins = (int) $anchor->series_home_wins;
+        $awayWins = (int) $anchor->series_away_wins;
+
+        if ($anchor->series_winner_team_id !== null) {
+            $winner = (int) $anchor->series_winner_team_id === (int) $anchor->home_team_id ? $home : $away;
+
+            return ['Series complete', $winner.' wins the series '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins).'.'];
+        }
+
+        $active = $anchor->activeGame();
+        $nextLabel = $active instanceof MatchModel ? 'Game '.$active->game_number : 'The next game';
+        $slot = $active instanceof MatchModel
+            ? $active->matchSlots()->with('court')->first()
+            : null;
+        $schedule = '';
+
+        if ($slot !== null && $slot->start_at !== null) {
+            $court = $slot->court;
+            $courtName = $court instanceof Court ? $court->name : 'Court TBD';
+            $schedule = ' on '.$courtName.' at '.$slot->start_at->format('M j, g:i A');
+        }
+        $series = $homeWins === $awayWins
+            ? 'Series tied '.$homeWins.'–'.$awayWins
+            : (($homeWins > $awayWins ? $home : $away).' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins));
+
+        return [$label.' recorded', $series.'. '.$nextLabel.' is next'.$schedule.'.'];
     }
 
     protected function toast(string $message, string $title, string $tone = 'success'): void

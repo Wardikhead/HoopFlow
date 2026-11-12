@@ -4,6 +4,7 @@ namespace App\Livewire\Organizer;
 
 use App\Models\AuditLog;
 use App\Models\Bracket;
+use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\Registration;
 use App\Models\Team;
@@ -29,6 +30,9 @@ use Livewire\Component;
  * @property-read array{matchesPlayed: int, matchesScheduled: int, corrections: int} $kpis
  * @property-read MatchModel|null $selectedMatch
  * @property-read Collection<int, MatchModel> $selectedSeriesGames
+ * @property-read MatchModel|null $selectedSeriesAnchor
+ * @property-read MatchModel|null $selectedActiveGame
+ * @property-read string $selectedSeriesSummary
  * @property-read bool $canGeneratePlayoffs
  * @property-read string $selectedRoundLabel
  * @property-read array{reason: string, previous1: int|null, previous2: int|null}|null $selectedCorrection
@@ -322,8 +326,117 @@ class BracketShow extends Component
             ->where(function ($query) use ($anchorId): void {
                 $query->where('id', $anchorId)->orWhere('series_id', $anchorId);
             })
+            ->with(['matchSlots.court'])
             ->orderBy('game_number')
             ->get();
+    }
+
+    #[Computed]
+    public function selectedSeriesAnchor(): ?MatchModel
+    {
+        $match = $this->selectedMatch;
+
+        if (! $match instanceof MatchModel || $match->best_of <= 1) {
+            return null;
+        }
+
+        return $match->series_id !== null ? $match->seriesAnchor : $match;
+    }
+
+    #[Computed]
+    public function selectedActiveGame(): ?MatchModel
+    {
+        $match = $this->selectedMatch;
+
+        if (! $match instanceof MatchModel) {
+            return null;
+        }
+
+        if ($match->best_of <= 1) {
+            return $match;
+        }
+
+        $anchor = $this->selectedSeriesAnchor;
+
+        return $anchor?->activeGame() ?? $match;
+    }
+
+    #[Computed]
+    public function selectedSeriesSummary(): string
+    {
+        $anchor = $this->selectedSeriesAnchor;
+
+        if (! $anchor instanceof MatchModel) {
+            return '';
+        }
+
+        $homeWins = (int) $anchor->series_home_wins;
+        $awayWins = (int) $anchor->series_away_wins;
+        $home = $anchor->homeTeam?->shortLabel() ?? 'Home';
+        $away = $anchor->awayTeam?->shortLabel() ?? 'Away';
+
+        if ($anchor->series_winner_team_id !== null) {
+            $winner = (int) $anchor->series_winner_team_id === (int) $anchor->home_team_id ? $home : $away;
+
+            return $winner.' wins the series '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+        }
+
+        if ($homeWins === 0 && $awayWins === 0) {
+            return 'Series not started';
+        }
+
+        if ($homeWins === $awayWins) {
+            return 'Series tied '.$homeWins.'–'.$awayWins;
+        }
+
+        $leader = $homeWins > $awayWins ? $home : $away;
+
+        return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
+    }
+
+    public function isActiveSeriesGame(MatchModel $game): bool
+    {
+        $active = $this->selectedActiveGame;
+
+        return $active instanceof MatchModel && (int) $active->id === (int) $game->id;
+    }
+
+    public function seriesGameStatusLabel(MatchModel $game): string
+    {
+        if ($this->isActiveSeriesGame($game) && $game->status === 'scheduled') {
+            return 'Next';
+        }
+
+        return $game->statusLabel();
+    }
+
+    public function seriesGameSchedule(MatchModel $game): string
+    {
+        $slot = $game->matchSlots->first();
+
+        if ($slot === null || $slot->start_at === null) {
+            return 'Schedule TBD';
+        }
+
+        $court = $slot->court;
+        $courtName = $court instanceof Court ? $court->name : 'Court TBD';
+
+        return $courtName.' · '.$slot->start_at->format('M j · g:i A');
+    }
+
+    public function seriesGameStatusTone(MatchModel $game): string
+    {
+        if ($this->isActiveSeriesGame($game) && $game->status === 'scheduled') {
+            return 'primary';
+        }
+
+        return match ($game->status) {
+            'final' => 'success',
+            'forfeit' => 'danger',
+            'in_progress' => 'gold',
+            'scheduled' => 'primary',
+            default => 'slate',
+        };
     }
 
     #[Computed]
@@ -402,7 +515,7 @@ class BracketShow extends Component
     #[Computed]
     public function selectedCanScore(): bool
     {
-        $match = $this->selectedMatch;
+        $match = $this->selectedActiveGame;
 
         return $match instanceof MatchModel
             && $match->status === 'scheduled'

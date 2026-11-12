@@ -219,6 +219,80 @@ class SchedulingService
         return count($plan['assignments']);
     }
 
+    /**
+     * Put a newly activated series game on the same court as the previous game,
+     * after the tournament rest period. Returns null when there is no previous
+     * slot or no free time left on that court that day.
+     */
+    public function scheduleSeriesGame(MatchModel $game, MatchModel $anchor): ?MatchSlot
+    {
+        $existing = $game->matchSlots()->first();
+
+        if ($existing instanceof MatchSlot) {
+            return $existing;
+        }
+
+        $tournament = $game->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return null;
+        }
+
+        $reference = $this->seriesReferenceSlot($anchor);
+        $courtId = $reference?->court_id !== null ? (int) $reference->court_id : null;
+
+        if (! $reference instanceof MatchSlot || $courtId === null) {
+            return null;
+        }
+
+        $slotMinutes = $this->slotMinutes($tournament);
+        $restMinutes = $this->restMinutes($tournament);
+        $referenceEnd = $reference->end_at?->copy()
+            ?? $reference->start_at?->copy()->addMinutes($slotMinutes);
+
+        if (! $referenceEnd instanceof Carbon) {
+            return null;
+        }
+
+        $start = $referenceEnd->addMinutes($restMinutes);
+        $latestStart = $start->copy()->endOfDay()->subMinutes($slotMinutes);
+
+        while ($start->lte($latestStart)) {
+            if (! $this->courtHasConflict($tournament, $courtId, $start, $slotMinutes, $restMinutes)) {
+                $slot = MatchSlot::create([
+                    'match_id' => $game->id,
+                    'tournament_id' => $tournament->id,
+                    'court_id' => $courtId,
+                    'start_at' => $start,
+                    'end_at' => $start->copy()->addMinutes($slotMinutes),
+                    'status' => 'published',
+                    'version' => 1,
+                    'published_at' => now(),
+                ]);
+
+                app(AuditLogger::class)->log(
+                    'schedule.series',
+                    'match',
+                    $game->id,
+                    null,
+                    [
+                        'courtId' => $courtId,
+                        'scheduledAt' => $start->toIso8601String(),
+                        'seriesId' => $anchor->id,
+                        'gameNumber' => $game->game_number,
+                    ],
+                    $tournament->organization_id,
+                );
+
+                return $slot;
+            }
+
+            $start->addMinutes($slotMinutes);
+        }
+
+        return null;
+    }
+
     public function reschedule(MatchModel $match, ?int $courtId, ?string $scheduledAt): MatchSlot
     {
         $tournament = $match->tournament;
@@ -245,26 +319,8 @@ class SchedulingService
 
         $slotMinutes = $this->slotMinutes($tournament);
         $restMinutes = $this->restMinutes($tournament);
-        $newStart = $start->copy();
-        $newEnd = $start->copy()->addMinutes($slotMinutes + $restMinutes);
 
-        $conflict = MatchSlot::query()
-            ->where('tournament_id', $tournament->id)
-            ->where('court_id', $courtId)
-            ->where('match_id', '!=', $match->id)
-            ->get()
-            ->contains(function (MatchSlot $other) use ($newStart, $newEnd, $slotMinutes, $restMinutes): bool {
-                if ($other->start_at === null) {
-                    return false;
-                }
-
-                $otherStart = $other->start_at->copy();
-                $otherEnd = $otherStart->copy()->addMinutes($slotMinutes + $restMinutes);
-
-                return $newStart->lt($otherEnd) && $otherStart->lt($newEnd);
-            });
-
-        if ($conflict) {
+        if ($this->courtHasConflict($tournament, $courtId, $start, $slotMinutes, $restMinutes, $match->id)) {
             throw new InvalidArgumentException('This court is already booked at that time.');
         }
 
@@ -302,6 +358,47 @@ class SchedulingService
         );
 
         return $slot;
+    }
+
+    protected function seriesReferenceSlot(MatchModel $anchor): ?MatchSlot
+    {
+        return MatchModel::query()
+            ->where(function ($query) use ($anchor): void {
+                $query->where('id', $anchor->id)->orWhere('series_id', $anchor->id);
+            })
+            ->with(['matchSlots' => fn ($query) => $query->orderByDesc('start_at')])
+            ->get()
+            ->flatMap(fn (MatchModel $game) => $game->matchSlots)
+            ->filter(fn (MatchSlot $slot): bool => $slot->start_at !== null)
+            ->sortByDesc(fn (MatchSlot $slot): int => $slot->start_at->timestamp)
+            ->first();
+    }
+
+    protected function courtHasConflict(
+        Tournament $tournament,
+        int $courtId,
+        Carbon $start,
+        int $slotMinutes,
+        int $restMinutes,
+        ?int $ignoreMatchId = null,
+    ): bool {
+        $end = $start->copy()->addMinutes($slotMinutes + $restMinutes);
+
+        return MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('court_id', $courtId)
+            ->when($ignoreMatchId !== null, fn ($query) => $query->where('match_id', '!=', $ignoreMatchId))
+            ->get()
+            ->contains(function (MatchSlot $other) use ($start, $end, $slotMinutes, $restMinutes): bool {
+                if ($other->start_at === null) {
+                    return false;
+                }
+
+                $otherStart = $other->start_at->copy();
+                $otherEnd = $otherStart->copy()->addMinutes($slotMinutes + $restMinutes);
+
+                return $start->lt($otherEnd) && $otherStart->lt($end);
+            });
     }
 
     /**

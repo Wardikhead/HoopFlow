@@ -114,6 +114,28 @@ class MatchModel extends Model
             ->first();
     }
 
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'scheduled' => 'Scheduled',
+            'in_progress' => 'In progress',
+            'final' => 'Final',
+            'forfeit' => 'Forfeit',
+            'conditional' => 'If needed',
+            'cancelled' => 'Not needed',
+            default => ucfirst(str_replace('_', ' ', $this->status)),
+        };
+    }
+
+    public function seriesGameLabel(): string
+    {
+        if ($this->best_of <= 1) {
+            return 'Game 1';
+        }
+
+        return 'Game '.$this->game_number.' of '.$this->best_of;
+    }
+
     /**
      * A bye is a final game with one team, no opponent, and no recorded score.
      */
