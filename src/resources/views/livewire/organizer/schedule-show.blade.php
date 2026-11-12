@@ -307,7 +307,7 @@
                                         <td>
                                             <select
                                                 class="hf-select"
-                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, $event.target.value, '{{ $row['scheduledAt'] }}')"
+                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, $event.target.value, null)"
                                                 data-testid="preview-court-{{ $row['matchId'] }}"
                                             >
                                                 @foreach ($courts as $courtOption)
@@ -320,7 +320,7 @@
                                                 class="hf-input"
                                                 type="datetime-local"
                                                 value="{{ $row['scheduledAt'] }}"
-                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, {{ $row['courtId'] }}, $event.target.value)"
+                                                wire:change="updatePreviewAssignment({{ $row['matchId'] }}, null, $event.target.value)"
                                                 data-testid="preview-time-{{ $row['matchId'] }}"
                                             >
                                         </td>
