@@ -95,6 +95,18 @@ class Tournament extends Model
         };
     }
 
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'draft' => 'Draft',
+            'registration-open' => 'Registration open',
+            'active' => 'Active',
+            'upcoming' => 'Upcoming',
+            'completed' => 'Completed',
+            default => ucwords(str_replace('-', ' ', (string) $this->status)),
+        };
+    }
+
     public function slotMinutes(): int
     {
         $minutes = $this->ruleValue('slotMinutes');

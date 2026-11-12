@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Organizer\AuditLogIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\AuditLog;
 use App\Models\MatchModel;
@@ -302,4 +303,37 @@ it('blocks approvals after seeds lock but still allows rejection', function () {
 
     expect($registration->fresh()->status)->toBe('rejected')
         ->and($registration->fresh()->rejection_reason)->toBe('Seeds are locked for this tournament.');
+});
+
+it('shows the completed status in the index filter, chip, and hero', function () {
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $tournament->update(['status' => 'completed']);
+
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    $this->actingAs($organizer)
+        ->get('/tournaments')
+        ->assertOk()
+        ->assertSeeHtml('value="completed"')
+        ->assertSeeHtml('<i class="bi bi-trophy-fill" aria-hidden="true"></i>Completed');
+
+    $this->actingAs($organizer)
+        ->get('/tournaments/'.$tournament->id)
+        ->assertOk()
+        ->assertSee('Completed');
+});
+
+it('labels tournament lifecycle audit actions', function () {
+    expect(AuditLogIndex::ACTION_LABELS['tournament.activate'])->toBe('Tournament activated')
+        ->and(AuditLogIndex::ACTION_LABELS['tournament.complete'])->toBe('Tournament completed');
+});
+
+it('labels tournament statuses for display', function () {
+    $tournament = Tournament::factory()->create(['status' => 'registration-open']);
+
+    expect($tournament->statusLabel())->toBe('Registration open');
+
+    $tournament->update(['status' => 'legacy-status']);
+
+    expect($tournament->fresh()->statusLabel())->toBe('Legacy Status');
 });

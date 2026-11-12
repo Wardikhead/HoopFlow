@@ -40,6 +40,7 @@
             <select class="hf-select" id="tournamentStatus" wire:model.live="status" data-testid="tournament-status-filter">
                 <option value="">All statuses</option>
                 <option value="active">Active</option>
+                <option value="completed">Completed</option>
                 <option value="registration-open">Registration open</option>
                 <option value="upcoming">Upcoming</option>
                 <option value="draft">Draft</option>

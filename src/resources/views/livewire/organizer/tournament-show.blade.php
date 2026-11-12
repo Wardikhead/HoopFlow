@@ -71,7 +71,7 @@
         @endphp
 
         <section class="hf-hero hf-mb-3" data-testid="tournament-hero-{{ $tournament->id }}">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $division?->name ?? 'Division' }} · {{ $tournament->status }}</span>
+            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $division?->name ?? 'Division' }} · {{ $tournament->statusLabel() }}</span>
             <h1>{{ $tournament->name }}</h1>
             <p>{{ $tournament->description ?? 'Youth basketball tournament managed with HoopFlow.' }}</p>
             <div class="hf-stat-strip">
