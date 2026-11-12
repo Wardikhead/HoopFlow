@@ -338,7 +338,7 @@ class GameStatsShow extends Component
         $slot = $match->matchSlots->first();
         $date = $slot?->start_at?->format('M j, Y') ?? 'TBD';
         $time = $slot?->start_at?->format('g:i A') ?? 'TBD';
-        $court = $slot?->court?->name ?? 'Court TBD';
+        $court = $slot?->court->name ?? 'Court TBD';
 
         return match (true) {
             $match->status === 'scheduled' && $this->hasStats => 'Draft stats — not official until the game is published.',

@@ -235,10 +235,14 @@ class SchedulingService
         $children = $matches->whereNotNull('series_id')->groupBy('series_id');
 
         return $anchors->map(function (MatchModel $anchor) use ($children): array {
-            $games = collect([$anchor])
-                ->merge($children->get($anchor->id, collect()))
-                ->sortBy('game_number')
-                ->values();
+            $games = new Collection([$anchor]);
+            $seriesGames = $children->get($anchor->id);
+
+            if ($seriesGames instanceof Collection) {
+                $games = $games->merge($seriesGames);
+            }
+
+            $games = $games->sortBy('game_number')->values();
 
             return [
                 'anchor' => $anchor,
@@ -405,8 +409,13 @@ class SchedulingService
         return DB::transaction(function () use ($tournament, $plan, $auditAction): int {
             MatchSlot::where('tournament_id', $tournament->id)->delete();
 
+            $dates = [];
+            $matches = 0;
+
             foreach ($plan['assignments'] as $assignment) {
                 $start = Carbon::parse($assignment['scheduledAt']);
+                $dates[] = $start->format('Y-m-d');
+                $matches++;
 
                 MatchSlot::create([
                     'match_id' => (int) $assignment['matchId'],
@@ -420,8 +429,8 @@ class SchedulingService
                 ]);
             }
 
-            $assignments = collect($plan['assignments']);
-            $dates = $assignments->map(fn (array $row): string => substr($row['scheduledAt'], 0, 10))->sort()->values();
+            $dates = array_values(array_unique($dates));
+            sort($dates);
 
             app(AuditLogger::class)->log(
                 $auditAction,
@@ -432,16 +441,16 @@ class SchedulingService
                     'courts' => count($plan['courts']),
                     'slotMinutes' => (int) $plan['slotMinutes'],
                     'restMinutes' => (int) $plan['restMinutes'],
-                    'matches' => $assignments->count(),
+                    'matches' => $matches,
                     'weekdays' => $plan['weekdays'] ?? range(1, 7),
                     'endDate' => $plan['endDate'] ?? null,
-                    'firstDate' => $dates->first(),
-                    'lastDate' => $dates->last(),
+                    'firstDate' => $dates[0] ?? null,
+                    'lastDate' => $dates === [] ? null : $dates[array_key_last($dates)],
                 ],
                 $tournament->organization_id,
             );
 
-            return $assignments->count();
+            return $matches;
         });
     }
 
@@ -572,7 +581,7 @@ class SchedulingService
 
                 if ($row['start']->lt($otherEnd) && $other['start']->lt($end)) {
                     $court = $courts->get($row['courtId']);
-                    $message = ($court?->name ?? 'Court').' is already booked at '.$other['start']->format('M j, g:i A').'. Pick another court or time.';
+                    $message = ($court->name ?? 'Court').' is already booked at '.$other['start']->format('M j, g:i A').'. Pick another court or time.';
                     $errors[$row['matchId']] ??= $message;
                     $errors[$other['matchId']] ??= $message;
                 }
@@ -600,8 +609,12 @@ class SchedulingService
                 }
 
                 if (abs($row['start']->getTimestamp() - $other['start']->getTimestamp()) < ($slotMinutes + $restMinutes) * 60) {
-                    $team = $row['match']?->homeTeam?->name ?? 'A team';
-                    $errors[$row['matchId']] ??= $team.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.';
+                    $match = $row['match'];
+                    $team = $match instanceof MatchModel
+                        ? ($match->home_team_id !== null ? $match->homeTeam : $match->awayTeam)
+                        : null;
+                    $teamName = $team->name;
+                    $errors[$row['matchId']] ??= $teamName.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.';
                 }
             }
         }
@@ -630,7 +643,7 @@ class SchedulingService
 
         $reference = $this->seriesReferenceSlot($anchor);
 
-        if (! $reference instanceof MatchSlot || $reference->start_at === null || $reference->court_id === null) {
+        if (! $reference instanceof MatchSlot || $reference->start_at === null) {
             return null;
         }
 
@@ -928,9 +941,12 @@ class SchedulingService
             return 'A team';
         }
 
-        return $slot->match?->home_team_id === $teamId
-            ? ($slot->match?->homeTeam?->name ?? 'A team')
-            : ($slot->match?->awayTeam?->name ?? 'A team');
+        $match = $slot->match;
+        $team = $match instanceof MatchModel
+            ? ($match->home_team_id === $teamId ? $match->homeTeam : $match->awayTeam)
+            : null;
+
+        return $team->name;
     }
 
     /**
