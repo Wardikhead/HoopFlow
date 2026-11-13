@@ -48,6 +48,8 @@ use Livewire\Component;
  * @property-read bool $locked
  * @property-read int $slotMinutes
  * @property-read int $restMinutes
+ * @property-read array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null $previewPlayoffWindow
+ * @property-read list<string> $legacyPlayoffOverlap
  */
 #[Layout('layouts.public')]
 #[Title('Schedule')]
@@ -206,7 +208,7 @@ class ScheduleShow extends Component
         return MatchModel::query()
             ->where('tournament_id', $this->tournament->id)
             ->where('status', '!=', 'cancelled')
-            ->with(['homeTeam', 'awayTeam', 'matchSlots.court'])
+            ->with(['homeTeam', 'awayTeam', 'matchSlots.court', 'bracket:id,format,phase'])
             ->get();
     }
 
@@ -470,6 +472,61 @@ class ScheduleShow extends Component
         return $this->tournament instanceof Tournament
             ? app(SchedulingService::class)->restMinutes($this->tournament)
             : 15;
+    }
+
+    /**
+     * @return array{
+     *     startDate: string,
+     *     endDate: string,
+     *     groupEndDate: string|null,
+     *     dates: list<string>,
+     *     dayCount: int,
+     *     rounds: list<array{label: string, bestOf: int, days: int}>
+     * }|null
+     */
+    #[Computed]
+    public function previewPlayoffWindow(): ?array
+    {
+        if (! $this->tournament instanceof Tournament) {
+            return null;
+        }
+
+        $options = ['weekdays' => $this->previewWeekdays];
+
+        if ($this->previewEndDate !== '') {
+            $options['endDate'] = $this->previewEndDate;
+        }
+
+        return app(SchedulingService::class)->playoffWindow($this->tournament, $options);
+    }
+
+    /**
+     * @return list<string>
+     */
+    #[Computed]
+    public function legacyPlayoffOverlap(): array
+    {
+        if ($this->previewMode !== 'remaining' || ! $this->tournament instanceof Tournament) {
+            return [];
+        }
+
+        $hasUnscheduledPlayoff = $this->matches
+            ->filter(fn (MatchModel $match): bool => $match->matchSlots->isEmpty()
+                && ! $match->isByeGame()
+                && $match->bracket?->phase === 'playoffs')
+            ->isNotEmpty();
+
+        if (! $hasUnscheduledPlayoff) {
+            return [];
+        }
+
+        $window = $this->previewPlayoffWindow;
+
+        if ($window === null) {
+            return [];
+        }
+
+        return app(SchedulingService::class)->playoffWindowOverlap($this->tournament, $window);
     }
 
     /**

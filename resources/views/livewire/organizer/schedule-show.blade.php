@@ -274,6 +274,45 @@
                         {{ count($previewErrors) }} conflicts
                     </p>
 
+                    @php
+                        $playoffWindow = $this->previewPlayoffWindow;
+                    @endphp
+
+                    @if ($playoffWindow !== null)
+                        <div class="hf-card hf-card--flat hf-mt-2" data-testid="preview-playoff-window">
+                            <div class="hf-between">
+                                <strong>Playoffs reserved</strong>
+                                <span class="hf-small hf-muted">
+                                    {{ \Carbon\Carbon::parse($playoffWindow['startDate'])->format('M j, Y') }}–{{ \Carbon\Carbon::parse($playoffWindow['endDate'])->format('M j, Y') }}
+                                    · {{ $playoffWindow['dayCount'] }} {{ \Illuminate\Support\Str::plural('match day', $playoffWindow['dayCount']) }}
+                                </span>
+                            </div>
+                            <p class="hf-small hf-muted hf-mb-0 hf-mt-1">
+                                @if ($playoffWindow['groupEndDate'] !== null)
+                                    Group stage must finish by {{ \Carbon\Carbon::parse($playoffWindow['groupEndDate'])->format('M j, Y') }}.
+                                @else
+                                    The playoff window uses every remaining match day.
+                                @endif
+                                @foreach ($playoffWindow['rounds'] as $round)
+                                    {{ $round['label'] }}: {{ $round['days'] }} {{ \Illuminate\Support\Str::plural('day', $round['days']) }}@if (! $loop->last) · @endif
+                                @endforeach
+                            </p>
+                        </div>
+                    @endif
+
+                    @php
+                        $legacyOverlap = $this->legacyPlayoffOverlap;
+                    @endphp
+
+                    @if ($legacyOverlap !== [])
+                        <div class="hf-callout hf-callout--warning hf-mt-2" data-testid="preview-playoff-overlap">
+                            <strong><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Playoff window occupied</strong>
+                            <p class="hf-small hf-mb-0">
+                                Published group games still occupy {{ \Carbon\Carbon::parse($legacyOverlap[0])->format('M j') }}–{{ \Carbon\Carbon::parse($legacyOverlap[count($legacyOverlap) - 1])->format('M j, Y') }}, which is reserved for playoffs. Extend the end date or reschedule those group games; published slots are never moved automatically.
+                            </p>
+                        </div>
+                    @endif
+
                     @if ($previewDirty)
                         <p class="hf-field-error" data-testid="preview-stale">Settings changed — rebuild the preview before publishing.</p>
                     @endif
