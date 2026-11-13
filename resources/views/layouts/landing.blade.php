@@ -13,10 +13,13 @@
     <script>
         (function () {
             try {
-                var t = localStorage.getItem('hf-theme');
-                var next = (t === 'dark' || t === 'light') ? t : 'light';
-                document.documentElement.setAttribute('data-theme', next);
-                document.documentElement.style.colorScheme = next;
+                var theme = localStorage.getItem('hf-theme') || 'system';
+                var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+                document.documentElement.dataset.themePreference = theme;
+                document.documentElement.dataset.density = localStorage.getItem('hf-density') || 'comfortable';
+                document.documentElement.dataset.motion = localStorage.getItem('hf-motion') || 'system';
+                document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
             } catch (e) {
                 document.documentElement.setAttribute('data-theme', 'light');
             }

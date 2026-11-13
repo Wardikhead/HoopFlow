@@ -383,3 +383,19 @@
   font-weight: 700;
   letter-spacing: -0.02em;
 }
+
+.hf-shortcuts { display: grid; gap: 8px; margin: 10px 0 0; }
+.hf-shortcuts div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; }
+.hf-shortcuts dt { margin: 0; }
+.hf-shortcuts dd { margin: 0; color: var(--hf-muted); font-size: 13px; }
+.hf-shortcuts kbd {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--hf-border-strong);
+  border-radius: 5px;
+  background: var(--hf-surface-2);
+  font-family: var(--hf-font-body);
+  font-size: 11px;
+  text-align: center;
+}

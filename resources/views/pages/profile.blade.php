@@ -74,10 +74,41 @@
         </div>
     </section>
 
-    <section class="hf-card" data-testid="profile-appearance">
+    <section id="appearance" class="hf-card" data-testid="profile-appearance">
         <span class="hf-kpi-label">Appearance</span>
         <h2 class="hf-section-title hf-mt-1">Theme</h2>
-        <p class="hf-small hf-muted">The light paper theme is the demo default. The floodlit navy theme is easier to read in a dark room. Use the theme toggle in the top bar to switch.</p>
+        <p class="hf-small hf-muted">Choose how the workspace looks. System follows your device setting.</p>
+        <div class="hf-segmented" role="group" aria-label="Theme">
+            @foreach (['light' => 'Light', 'system' => 'System', 'dark' => 'Dark'] as $value => $label)
+                <button type="button" class="hf-segmented__item" data-hf-pref="theme" data-hf-value="{{ $value }}" aria-pressed="false">{{ $label }}</button>
+            @endforeach
+        </div>
+
+        <h2 class="hf-section-title hf-mt-3">Density</h2>
+        <div class="hf-segmented" role="group" aria-label="Density">
+            @foreach (['comfortable' => 'Comfortable', 'compact' => 'Compact'] as $value => $label)
+                <button type="button" class="hf-segmented__item" data-hf-pref="density" data-hf-value="{{ $value }}" aria-pressed="false">{{ $label }}</button>
+            @endforeach
+        </div>
+
+        <h2 class="hf-section-title hf-mt-3">Motion</h2>
+        <div class="hf-segmented" role="group" aria-label="Motion">
+            @foreach (['system' => 'System', 'reduced' => 'Reduced'] as $value => $label)
+                <button type="button" class="hf-segmented__item" data-hf-pref="motion" data-hf-value="{{ $value }}" aria-pressed="false">{{ $label }}</button>
+            @endforeach
+        </div>
     </section>
 </div>
+
+<section id="shortcuts" class="hf-card hf-mt-3">
+    <span class="hf-kpi-label">Keyboard</span>
+    <h2 class="hf-section-title hf-mt-1">Shortcuts</h2>
+    <dl class="hf-shortcuts">
+        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Add points to the active team in a score console</dd></div>
+        <div><dt><kbd>U</kbd></dt><dd>Undo the last score</dd></div>
+        <div><dt><kbd>Enter</kbd></dt><dd>Finalize the score dialog</dd></div>
+        <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Switch the active team in a score console</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Close a dialog or the More sheet</dd></div>
+    </dl>
+</section>
 @endsection
