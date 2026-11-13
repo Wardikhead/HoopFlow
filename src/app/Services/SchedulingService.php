@@ -1238,6 +1238,76 @@ class SchedulingService
         return $dayAfter->gt($start) ? $dayAfter : $start;
     }
 
+    /**
+     * @return array{
+     *     days: int,
+     *     rounds: list<array{label: string, bestOf: int, days: int}>
+     * }|null
+     */
+    public function playoffFootprint(Tournament $tournament): ?array
+    {
+        if ($tournament->format() !== 'round-robin') {
+            return null;
+        }
+
+        $rules = is_array($tournament->rules_json) ? $tournament->rules_json : [];
+        $teams = isset($rules['playoff_teams']) && is_numeric($rules['playoff_teams'])
+            ? (int) $rules['playoff_teams']
+            : 0;
+
+        if (! in_array($teams, [2, 4, 8, 16], true)) {
+            return null;
+        }
+
+        /** @var list<array{0: string, 1: string|null}> $ladder */
+        $ladder = match ($teams) {
+            2 => [['Final', 'best_of_final']],
+            4 => [['Semifinal', 'best_of_semifinal'], ['Final', 'best_of_final']],
+            8 => [
+                ['Quarterfinal', 'best_of_quarterfinal'],
+                ['Semifinal', 'best_of_semifinal'],
+                ['Final', 'best_of_final'],
+            ],
+            16 => [
+                ['Round of 16', null],
+                ['Quarterfinal', 'best_of_quarterfinal'],
+                ['Semifinal', 'best_of_semifinal'],
+                ['Final', 'best_of_final'],
+            ],
+            default => [],
+        };
+
+        if ($ladder === []) {
+            return null;
+        }
+
+        $rounds = [];
+        $days = 0;
+
+        foreach ($ladder as [$label, $key]) {
+            $bestOf = $key === null ? 1 : $this->bestOfValue($rules, $key);
+            $rounds[] = ['label' => $label, 'bestOf' => $bestOf, 'days' => $bestOf];
+            $days += $bestOf;
+        }
+
+        return [
+            'days' => $days,
+            'rounds' => $rounds,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $rules
+     */
+    protected function bestOfValue(array $rules, string $key): int
+    {
+        $value = $rules[$key] ?? 1;
+
+        return is_numeric($value) && in_array((int) $value, [1, 3, 5, 7, 9], true)
+            ? (int) $value
+            : 1;
+    }
+
     public function slotMinutes(Tournament $tournament): int
     {
         $rules = $tournament->rules_json;
