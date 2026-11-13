@@ -66,7 +66,10 @@
         </div>
     </div>
 
-    <div id="paymentList" data-testid="payment-list">
+    <div id="paymentList" data-testid="payment-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+        <div class="hf-updating-pill" wire:loading wire:target="status,tournament,search">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+        </div>
         @if ($this->payments->isEmpty())
             <div class="hf-empty" data-testid="payment-empty">
                 <i class="bi bi-cash-stack" aria-hidden="true"></i>
@@ -104,7 +107,7 @@
                             <span><span class="hf-kpi-label">Verified</span><strong style="display:block">{{ $payment->paid_at ? $payment->paid_at->format('M d, Y') : '—' }}</strong></span>
                         </div>
                         <div class="hf-btn-row hf-mt-2">
-                            <button type="button" class="hf-btn hf-btn--sm {{ $pstatus !== 'verified' ? 'hf-btn--primary' : '' }}" wire:click="openVerify({{ $payment->id }})" data-testid="payment-verify-{{ $payment->id }}">
+                            <button type="button" class="hf-btn hf-btn--sm {{ $pstatus !== 'verified' ? 'hf-btn--primary' : '' }}" wire:click="openVerify({{ $payment->id }})" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="payment-verify-{{ $payment->id }}">
                                 {{ $pstatus === 'verified' ? 'Review record' : 'Verify payment' }}
                             </button>
                             @if ($team)
@@ -165,7 +168,7 @@
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="closeVerify()" data-testid="payment-verify-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="saveVerify" data-testid="payment-verify-save">Save verification</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="saveVerify" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="payment-verify-save">Save verification</button>
                 </div>
             </dialog>
         @endif

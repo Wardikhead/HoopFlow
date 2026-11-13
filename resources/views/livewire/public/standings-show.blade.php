@@ -103,7 +103,10 @@
             </div>
         </div>
 
-        <div id="standingsBody" data-testid="standings-body">
+        <div id="standingsBody" data-testid="standings-body" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+            <div class="hf-updating-pill" wire:loading wire:target="search,filter">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+            </div>
             @if ($allRows->isEmpty())
                 <div class="hf-empty" data-testid="standings-empty">
                     <i class="bi bi-bar-chart" aria-hidden="true"></i>

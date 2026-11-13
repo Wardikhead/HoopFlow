@@ -30,6 +30,13 @@
     @livewireStyles
 </head>
 <body class="@yield('body-class')">
+    <div class="hf-progress" data-hf-progress aria-hidden="true"><span></span></div>
+
+    <div class="hf-offline" data-hf-offline role="status" hidden>
+        <i class="bi bi-wifi-off" aria-hidden="true"></i>
+        You're offline. Changes won't save until you reconnect.
+    </div>
+
     @php
         $flashToast = session('announcement_toast');
     @endphp

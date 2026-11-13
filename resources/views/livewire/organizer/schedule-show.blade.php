@@ -144,7 +144,10 @@
                     </div>
                 </div>
 
-                <div id="scheduleList" data-testid="schedule-list">
+                <div id="scheduleList" data-testid="schedule-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+                    <div class="hf-updating-pill" wire:loading wire:target="selectDay,shiftWeek,firstMatchday,allCourts,toggleCourt">
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+                    </div>
                     <div class="hf-section-head">
                         <h2 class="hf-section-title">{{ $daySlots->isNotEmpty() ? $this->selectedDayLabel : 'No games on this day' }}</h2>
                         <span class="hf-chip hf-chip--slate">{{ $daySlots->count() }} games</span>
@@ -391,6 +394,7 @@
                         wire:click="publishSchedule"
                         data-testid="schedule-preview-publish"
                         wire:loading.attr="disabled"
+                        wire:loading.class="is-loading"
                         @disabled($previewDirty || $previewErrors !== [])
                     >{{ $previewMode === 'remaining' ? 'Schedule remaining games' : 'Publish schedule' }}</button>
                 </div>

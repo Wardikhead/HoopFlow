@@ -60,7 +60,10 @@
             </div>
         </div>
 
-        <div id="matchList" data-testid="match-list">
+        <div id="matchList" data-testid="match-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+            <div class="hf-updating-pill" wire:loading wire:target="search,day,court,status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+            </div>
             @if ($matches->isEmpty())
                 <div class="hf-empty">
                     <i class="bi bi-search" aria-hidden="true"></i>

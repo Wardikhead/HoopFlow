@@ -53,7 +53,7 @@
                     <button type="button" class="hf-btn" wire:click="openEditSlots" data-testid="bracket-edit-slots">Edit slots</button>
                 @endif
                 @if ($isOrganizer && $format === 'round-robin' && $this->canGeneratePlayoffs)
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGeneratePlayoffs" data-testid="bracket-generate-playoffs">
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGeneratePlayoffs" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="bracket-generate-playoffs">
                         Generate playoffs
                     </button>
                 @endif
@@ -135,7 +135,10 @@
                             Best of {{ $tournament->grandFinalBestOf() }} — the series winner takes the title. No reset game is played.
                         </p>
                     @endif
-                    <div class="hf-bracket" data-testid="bracket-tree">
+                    <div class="hf-bracket" data-testid="bracket-tree" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+                <div class="hf-updating-pill" wire:loading wire:target="requestGenerate,requestGeneratePlayoffs,requestRegenerate,saveSlots,addScore,undoScore,requestFinalizeScore,requestCorrection,confirm">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+                </div>
                         @foreach ($section['rounds'] as $round)
                             <div class="hf-bracket-round">
                                 <div class="hf-bracket-round-title">{{ $round['label'] }} <span class="hf-small hf-muted">{{ $round['matches']->count() }}</span></div>
