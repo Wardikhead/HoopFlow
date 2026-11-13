@@ -290,6 +290,119 @@ it('returns no window when the tournament has no end date', function () {
     expect((new SchedulingService)->playoffWindow($tournament->fresh()))->toBeNull();
 });
 
+it('plans group rounds before the reserved playoff window', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    $plan = (new SchedulingService)->plan($tournament);
+    $dates = collect($plan['assignments'])
+        ->map(fn (array $assignment): string => substr($assignment['scheduledAt'], 0, 10));
+
+    expect($plan['playoffWindow'])->not->toBeNull()
+        ->and($plan['playoffWindow']['startDate'])->toBe('2026-07-28')
+        ->and($dates->max() <= '2026-07-27')->toBeTrue()
+        ->and($plan['endDate'])->toBe('2026-07-31');
+});
+
+it('keeps the remaining playoff plan inside the reserved window', function () {
+    [$tournament] = schedulingRoundRobinPlayoffTournament();
+
+    $service = new SchedulingService;
+    $window = $service->playoffWindow($tournament);
+    $plan = $service->planRemaining($tournament);
+    $lastDate = collect($plan['assignments'])
+        ->map(fn (array $assignment): string => substr($assignment['scheduledAt'], 0, 10))
+        ->max();
+
+    expect($window)->not->toBeNull()
+        ->and($lastDate <= $window['endDate'])->toBeTrue();
+});
+
+it('refuses a group plan when the tournament cannot hold the playoff window', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ], '2026-07-10', '2026-07-12');
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    expect(fn () => (new SchedulingService)->plan($tournament))
+        ->toThrow(
+            InvalidArgumentException::class,
+            'This schedule window has 3 eligible match days, but the playoffs need 4.',
+        );
+
+    expect(MatchSlot::query()->where('tournament_id', $tournament->id)->count())->toBe(0);
+});
+
+it('refuses a group plan when the playoff window consumes every match day', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ], '2026-07-10', '2026-07-13');
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    expect(fn () => (new SchedulingService)->plan($tournament))
+        ->toThrow(
+            InvalidArgumentException::class,
+            'leaves no match days for the group stage',
+        );
+});
+
+it('refuses a group plan that runs into the reserved playoff window', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ], '2026-07-10', '2026-07-17');
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    expect(fn () => (new SchedulingService)->plan($tournament))
+        ->toThrow(
+            InvalidArgumentException::class,
+            'The group stage must finish by Jul 13, 2026 to keep Jul 14, 2026–Jul 17, 2026 free for the playoffs',
+        );
+
+    expect(MatchSlot::query()->where('tournament_id', $tournament->id)->count())->toBe(0);
+});
+
+it('keeps the existing end date error when no playoff window applies', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 0,
+    ], '2026-07-10', '2026-07-12');
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    expect(fn () => (new SchedulingService)->plan($tournament))
+        ->toThrow(
+            InvalidArgumentException::class,
+            'The tournament ends Jul 12, 2026, but this plan needs through',
+        );
+});
+
+it('keeps planning without an end date when no reservation is possible', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+    ]);
+    $tournament->update(['end_date' => null]);
+    (new BracketService)->generate($tournament->fresh(), 'round-robin');
+
+    $plan = (new SchedulingService)->plan($tournament->fresh());
+
+    expect($plan['playoffWindow'])->toBeNull()
+        ->and($plan['assignments'])->not->toBeEmpty();
+});
+
 it('keeps full schedule generation locked once group results exist', function () {
     [$tournament] = schedulingRoundRobinPlayoffTournament();
 

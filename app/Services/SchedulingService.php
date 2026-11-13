@@ -28,6 +28,7 @@ class SchedulingService
      *     startDate: string,
      *     endDate: string|null,
      *     weekdays: list<int>,
+     *     playoffWindow: array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null,
      *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
      * }
      */
@@ -50,6 +51,7 @@ class SchedulingService
      *     startDate: string,
      *     endDate: string|null,
      *     weekdays: list<int>,
+     *     playoffWindow: array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null,
      *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
      * }
      */
@@ -68,6 +70,7 @@ class SchedulingService
      *     startDate: string,
      *     endDate: string|null,
      *     weekdays: list<int>,
+     *     playoffWindow: array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null,
      *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
      * }
      */
@@ -138,6 +141,19 @@ class SchedulingService
             $endDate = $tournamentEnd->copy();
         }
 
+        if ($remaining && $remainingStart instanceof Carbon && $endDate instanceof Carbon && $remainingStart->gt($endDate)) {
+            $lastSlot = MatchSlot::query()
+                ->where('tournament_id', $tournament->id)
+                ->whereNotNull('start_at')
+                ->max('start_at');
+
+            throw new InvalidArgumentException(sprintf(
+                'The published schedule leaves no room for the remaining games: the last match day is %s and the tournament ends %s. Extend the end date or reschedule group games.',
+                $lastSlot !== null ? Carbon::parse((string) $lastSlot)->format('M j, Y') : $remainingStart->format('M j, Y'),
+                $endDate->format('M j, Y'),
+            ));
+        }
+
         if ($endDate instanceof Carbon) {
             if ($endDate->lt($startDate)) {
                 throw new InvalidArgumentException('The end date must be on or after the start date.');
@@ -156,6 +172,41 @@ class SchedulingService
 
         if ($weekdays === []) {
             throw new InvalidArgumentException('Select at least one match day.');
+        }
+
+        $footprint = $this->playoffFootprint($tournament);
+        $playoffWindow = null;
+        $groupEndDate = null;
+
+        if ($footprint !== null && $endDate instanceof Carbon) {
+            $playoffWindow = $this->playoffWindow($tournament, [
+                'endDate' => $endDate->format('Y-m-d'),
+                'weekdays' => $weekdays,
+            ]);
+
+            if (! $remaining) {
+                if ($playoffWindow === null) {
+                    throw new InvalidArgumentException(sprintf(
+                        'This schedule window has %d eligible match days, but the playoffs need %d. Extend the end date or reduce the playoff field / best-of games.',
+                        $this->eligibleDayCount($startDate, $endDate, $weekdays),
+                        $footprint['days'],
+                    ));
+                }
+
+                $groupEnd = $playoffWindow['groupEndDate'] !== null
+                    ? Carbon::parse($playoffWindow['groupEndDate'])->startOfDay()
+                    : null;
+
+                if (! $groupEnd instanceof Carbon || $groupEnd->lt($startDate)) {
+                    throw new InvalidArgumentException(sprintf(
+                        'The playoff window (%s–%s) leaves no match days for the group stage. Extend the end date or reduce the playoff field / best-of games.',
+                        Carbon::parse($playoffWindow['startDate'])->format('M j, Y'),
+                        Carbon::parse($playoffWindow['endDate'])->format('M j, Y'),
+                    ));
+                }
+
+                $groupEndDate = $groupEnd;
+            }
         }
 
         $slotMinutes = isset($options['slotMinutes']) && is_numeric($options['slotMinutes'])
@@ -238,10 +289,30 @@ class SchedulingService
                     $gameDays = $this->eligibleGameDays($candidate, count($unit['games']), $weekdays);
                     $projectedLast = $gameDays[count($gameDays) - 1];
 
-                    if ($endDate instanceof Carbon && $projectedLast->gt($endDate)) {
+                    $cutoff = $groupEndDate ?? $endDate;
+
+                    if ($cutoff instanceof Carbon && $projectedLast->gt($cutoff)) {
+                        if ($remaining) {
+                            throw new InvalidArgumentException(sprintf(
+                                'The remaining games need through %s, but the tournament ends %s. Extend the end date or free a day in the playoff window by rescheduling group games.',
+                                $projectedLast->format('M j, Y'),
+                                $cutoff->format('M j, Y'),
+                            ));
+                        }
+
+                        if ($groupEndDate instanceof Carbon && $playoffWindow !== null) {
+                            throw new InvalidArgumentException(sprintf(
+                                'The group stage must finish by %s to keep %s–%s free for the playoffs, but this plan needs through %s. Extend the end date, add match days, or shorten slots/rest.',
+                                $groupEndDate->format('M j, Y'),
+                                Carbon::parse($playoffWindow['startDate'])->format('M j, Y'),
+                                Carbon::parse($playoffWindow['endDate'])->format('M j, Y'),
+                                $projectedLast->format('M j, Y'),
+                            ));
+                        }
+
                         throw new InvalidArgumentException(sprintf(
                             'The tournament ends %s, but this plan needs through %s. Add weekdays, shorten slots, or extend the end date.',
-                            $endDate->format('M j, Y'),
+                            $cutoff->format('M j, Y'),
                             $projectedLast->format('M j, Y'),
                         ));
                     }
@@ -289,6 +360,7 @@ class SchedulingService
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate?->format('Y-m-d'),
             'weekdays' => $weekdays,
+            'playoffWindow' => $playoffWindow,
             'summary' => [
                 'games' => count($assignments),
                 'matchDays' => $matchDays->count(),
