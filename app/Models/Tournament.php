@@ -86,10 +86,28 @@ class Tournament extends Model
             : 'single-elimination';
     }
 
+    public function grandFinalBestOf(): int
+    {
+        $bestOf = $this->ruleValue('best_of_final', 1);
+
+        return is_numeric($bestOf) ? max(1, (int) $bestOf) : 1;
+    }
+
+    /**
+     * A double-elimination grand final played as a series drops the bracket
+     * reset, so the format is no longer true double elimination.
+     */
+    public function isModifiedDoubleElimination(): bool
+    {
+        return $this->format() === 'double-elimination' && $this->grandFinalBestOf() > 1;
+    }
+
     public function formatLabel(): string
     {
         return match ($this->format()) {
-            'double-elimination' => 'Double elimination',
+            'double-elimination' => $this->isModifiedDoubleElimination()
+                ? 'Modified double elimination'
+                : 'Double elimination',
             'round-robin' => 'Round robin',
             default => 'Single elimination',
         };

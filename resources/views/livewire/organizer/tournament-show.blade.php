@@ -241,7 +241,16 @@
                     <h3 class="hf-section-title hf-mt-1">{{ $tournament->formatLabel() }}</h3>
                     <p class="hf-small hf-muted hf-mb-0">
                         {{ $tournament->slotCount() }}-team bracket.
-                        {{ $tournament->format() === 'round-robin' ? 'Every team plays every team; standings decide the champion.' : 'Winners advance automatically; empty slots become byes.' }}
+                        @if ($tournament->format() === 'round-robin')
+                            Every team plays every team; standings decide the champion.
+                        @elseif ($tournament->format() === 'double-elimination')
+                            Two losses eliminate a team.
+                            {{ $tournament->isModifiedDoubleElimination()
+                                ? 'A best-of-'.$tournament->grandFinalBestOf().' grand final decides the title; no reset game.'
+                                : 'If the losers-bracket team wins the grand final, a reset game decides the title.' }}
+                        @else
+                            Winners advance automatically; empty slots become byes.
+                        @endif
                     </p>
                 </div>
             </aside>
