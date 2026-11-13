@@ -1,25 +1,4 @@
-<div
-    x-data="{
-        toasts: [],
-        pushToast(detail) {
-            const toast = {
-                id: Date.now() + Math.random(),
-                title: (detail && detail.title) || '',
-                message: (detail && detail.message) || '',
-                tone: (detail && detail.tone) || 'primary'
-            };
-            this.toasts.push(toast);
-            setTimeout(() => this.dismissToast(toast.id), 4200);
-        },
-        dismissToast(id) {
-            this.toasts = this.toasts.filter((toast) => toast.id !== id);
-        },
-        toastIcon(tone) {
-            return tone === 'danger' ? 'x-circle-fill' : tone === 'warning' ? 'exclamation-triangle-fill' : tone === 'success' ? 'check-circle-fill' : 'info-circle-fill';
-        }
-    }"
-    x-on:hf-toast.window="pushToast($event.detail)"
->
+<div>
     @section('title', 'Submissions')
 
     <header class="hf-page-head hf-mb-3">
@@ -363,16 +342,4 @@
         @endif
     @endif
 
-    <div class="hf-toast-region" aria-live="polite" aria-atomic="false">
-        <template x-for="toast in toasts" :key="toast.id">
-            <div class="hf-toast" x-bind:class="'hf-toast--' + toast.tone" x-bind:role="toast.tone === 'danger' ? 'alert' : 'status'">
-                <i class="bi" x-bind:class="'bi-' + toastIcon(toast.tone)" aria-hidden="true"></i>
-                <div>
-                    <strong x-show="toast.title !== ''" x-text="toast.title"></strong>
-                    <p x-text="toast.message"></p>
-                </div>
-                <button type="button" aria-label="Dismiss notification" data-testid="toast-dismiss" x-on:click="dismissToast(toast.id)">&times;</button>
-            </div>
-        </template>
-    </div>
 </div>
