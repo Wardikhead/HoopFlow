@@ -21,6 +21,8 @@
         <form method="POST" action="{{ route('login.store') }}" novalidate>
             @csrf
 
+            <x-form-errors :targets="['email' => 'loginEmail', 'password' => 'loginPassword']" />
+
             <div class="hf-field">
                 <label class="hf-label" for="loginEmail">Email</label>
                 <input
