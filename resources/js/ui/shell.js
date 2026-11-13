@@ -14,3 +14,33 @@ export function initShell() {
         });
     });
 }
+
+export function initMoreSheet() {
+    const sheet = document.querySelector('[data-more-sheet]');
+    if (!sheet) return;
+
+    let trigger = null;
+
+    document.querySelectorAll('[data-more-sheet-open]').forEach((button) => {
+        button.addEventListener('click', () => {
+            trigger = button;
+            sheet.showModal();
+        });
+    });
+
+    document.querySelectorAll('[data-more-sheet-close]').forEach((button) => {
+        button.addEventListener('click', () => sheet.close());
+    });
+
+    sheet.addEventListener('click', (event) => {
+        if (event.target === sheet) sheet.close();
+    });
+
+    sheet.addEventListener('close', () => {
+        trigger?.focus({ preventScroll: true });
+    });
+
+    sheet.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => sheet.close());
+    });
+}

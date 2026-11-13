@@ -85,9 +85,6 @@
                 ['key' => 'schedule', 'label' => 'Schedule', 'icon' => 'calendar3', 'route' => 'schedule'],
                 ['key' => 'standings', 'label' => 'Standings', 'icon' => 'bar-chart', 'route' => 'standings'],
             ];
-            $roleTabs[] = $role === 'coach'
-                ? ['key' => 'myTeam', 'label' => 'My team', 'icon' => 'people', 'route' => 'myTeam']
-                : ['key' => 'profile', 'label' => 'Profile', 'icon' => 'person', 'route' => 'profile'];
 
             $currentRoute = request()->route()?->getName();
 
@@ -106,6 +103,11 @@
                 $routeName = $navItems[$key]['route'] ?? $key;
                 return $currentRoute === $routeName;
             };
+
+            $initials = collect(preg_split('/\s+/', $authUser->name))
+                ->map(fn ($part) => mb_substr($part, 0, 1))
+                ->slice(0, 2)
+                ->implode('');
         @endphp
 
         <div class="hf-app">
@@ -168,12 +170,77 @@
 
             <nav class="hf-bottom-nav" aria-label="Mobile navigation">
                 @foreach ($roleTabs as $tab)
-                    <a class="hf-nav-tab{{ $isActive($tab['key']) ? ' is-active' : '' }}" href="{{ route($tab['route']) }}" data-testid="mobile-nav-{{ $tab['key'] }}">
+                    <a class="hf-nav-tab{{ $isActive($tab['key']) ? ' is-active' : '' }}"
+                       href="{{ route($tab['route']) }}"
+                       data-testid="mobile-nav-{{ $tab['key'] }}"
+                       @if ($isActive($tab['key'])) aria-current="page" @endif>
                         <i class="bi bi-{{ $tab['icon'] }}" aria-hidden="true"></i>
                         <span>{{ $tab['label'] }}</span>
                     </a>
                 @endforeach
+                <button type="button" class="hf-nav-tab" data-more-sheet-open aria-haspopup="dialog" aria-controls="hf-more-sheet" data-testid="mobile-nav-more">
+                    <i class="bi bi-grid" aria-hidden="true"></i>
+                    <span>More</span>
+                </button>
             </nav>
+
+            <dialog id="hf-more-sheet" class="hf-sheet" data-more-sheet aria-labelledby="hf-more-title">
+                <div class="hf-sheet__handle" aria-hidden="true"></div>
+                <div class="hf-sheet__head">
+                    <h2 class="hf-dialog__title" id="hf-more-title">More</h2>
+                    <button type="button" class="hf-icon-btn" data-more-sheet-close aria-label="Close menu">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-sheet__body">
+                    <details class="hf-user-menu hf-sheet__account" open>
+                        <summary class="hf-user-chip" aria-label="Account menu for {{ $authUser->name }}">
+                            <span class="hf-avatar">{{ $initials }}</span>
+                            <span class="hf-user-meta">
+                                <strong>{{ $authUser->name }}</strong>
+                                <span>{{ $role }}</span>
+                            </span>
+                        </summary>
+                        <div class="hf-user-menu__panel">
+                            <a href="{{ route('profile') }}"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+                            <a href="{{ route('profile') }}#appearance"><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
+                            <a href="{{ route('profile') }}#shortcuts"><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button>
+                            </form>
+                        </div>
+                    </details>
+
+                    <div class="hf-sheet__group">
+                        <span class="hf-rail-label">Matchday</span>
+                        @foreach ($matchdayKeys as $key)
+                            @php $item = $navItems[$key]; @endphp
+                            <a href="{{ route($item['route']) }}" data-more-link="{{ $key }}">
+                                <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}
+                            </a>
+                        @endforeach
+                    </div>
+
+                    @if (count($roleTools))
+                        <div class="hf-sheet__group">
+                            <span class="hf-rail-label">Workspace</span>
+                            @foreach ($roleTools as $key)
+                                @php $item = $navItems[$key]; @endphp
+                                <a href="{{ route($item['route']) }}" data-more-link="{{ $key }}">
+                                    <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="hf-sheet__group">
+                        <span class="hf-rail-label">Account</span>
+                        <a href="{{ route('myTeam') }}" data-more-link="myTeam"><i class="bi bi-people" aria-hidden="true"></i> My team</a>
+                        <a href="{{ route('profile') }}" data-more-link="profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+                    </div>
+                </div>
+            </dialog>
 
             <main id="main" class="hf-main">
                 {{ $slot ?? '' }}
