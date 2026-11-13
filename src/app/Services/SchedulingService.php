@@ -361,6 +361,26 @@ class SchedulingService
     }
 
     /**
+     * @param  list<int>  $weekdays
+     */
+    protected function eligibleDayCount(Carbon $start, Carbon $end, array $weekdays): int
+    {
+        $count = 0;
+        $cursor = $start->copy()->startOfDay();
+        $limit = $end->copy()->startOfDay();
+
+        while ($cursor->lte($limit)) {
+            if (in_array((int) $cursor->isoWeekday(), $weekdays, true)) {
+                $count++;
+            }
+
+            $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    /**
      * @param  array{anchor: MatchModel, stage: string, round: int, games: Collection<int, MatchModel>}  $unit
      * @param  list<Carbon>  $gameDays
      * @param  Collection<int, Court>  $courts
@@ -1293,6 +1313,89 @@ class SchedulingService
         return [
             'days' => $days,
             'rounds' => $rounds,
+        ];
+    }
+
+    /**
+     * @param  array{endDate?: string, weekdays?: list<int>}  $options
+     * @return array{
+     *     startDate: string,
+     *     endDate: string,
+     *     groupEndDate: string|null,
+     *     dates: list<string>,
+     *     dayCount: int,
+     *     rounds: list<array{label: string, bestOf: int, days: int}>
+     * }|null
+     */
+    public function playoffWindow(Tournament $tournament, array $options = []): ?array
+    {
+        $footprint = $this->playoffFootprint($tournament);
+
+        if ($footprint === null) {
+            return null;
+        }
+
+        $tournamentStart = $tournament->start_date?->copy()->startOfDay();
+
+        if (! $tournamentStart instanceof Carbon) {
+            return null;
+        }
+
+        $tournamentEnd = $tournament->end_date?->copy()->startOfDay();
+        $hasRequestedEnd = isset($options['endDate']) && is_string($options['endDate']) && $options['endDate'] !== '';
+
+        if ($hasRequestedEnd) {
+            $endDate = Carbon::parse($options['endDate'])->startOfDay();
+        } elseif ($tournamentEnd instanceof Carbon) {
+            $endDate = $tournamentEnd->copy();
+        } else {
+            return null;
+        }
+
+        if ($endDate->lt($tournamentStart)) {
+            return null;
+        }
+
+        $weekdays = isset($options['weekdays']) && is_array($options['weekdays'])
+            ? array_values(array_unique(array_map('intval', $options['weekdays'])))
+            : range(1, 7);
+
+        $weekdays = array_values(array_filter($weekdays, fn (int $day): bool => $day >= 1 && $day <= 7));
+
+        if ($weekdays === []) {
+            $weekdays = range(1, 7);
+        }
+
+        $dates = [];
+        $cursor = $endDate->copy();
+
+        while ($cursor->gte($tournamentStart) && count($dates) < $footprint['days']) {
+            if (in_array((int) $cursor->isoWeekday(), $weekdays, true)) {
+                $dates[] = $cursor->format('Y-m-d');
+            }
+
+            $cursor->subDay();
+        }
+
+        if (count($dates) < $footprint['days']) {
+            return null;
+        }
+
+        $dates = array_reverse($dates);
+        $windowStart = Carbon::parse($dates[0])->startOfDay();
+        $groupEndDate = $windowStart->copy()->subDay();
+
+        while ($groupEndDate->gte($tournamentStart) && ! in_array((int) $groupEndDate->isoWeekday(), $weekdays, true)) {
+            $groupEndDate->subDay();
+        }
+
+        return [
+            'startDate' => $dates[0],
+            'endDate' => $dates[count($dates) - 1],
+            'groupEndDate' => $groupEndDate->gte($tournamentStart) ? $groupEndDate->format('Y-m-d') : null,
+            'dates' => $dates,
+            'dayCount' => count($dates),
+            'rounds' => $footprint['rounds'],
         ];
     }
 
