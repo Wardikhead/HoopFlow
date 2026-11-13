@@ -110,14 +110,18 @@
 
         <div class="hf-app">
             <aside class="hf-rail" aria-label="Primary navigation">
-                <a class="hf-rail-brand" href="{{ route('dashboard') }}">
+                <a class="hf-rail-brand" href="{{ route('dashboard') }}" aria-label="HoopFlow dashboard">
                     <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
 
                 <span class="hf-rail-label">Matchday</span>
                 @foreach ($matchdayKeys as $key)
                     @php $item = $navItems[$key]; @endphp
-                    <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}" href="{{ route($item['route']) }}" data-testid="nav-{{ $key }}">
+                    <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}"
+                       href="{{ route($item['route']) }}"
+                       data-testid="nav-{{ $key }}"
+                       data-label="{{ $item['label'] }}"
+                       @if ($isActive($key)) aria-current="page" @endif>
                         <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>
                         <span>{{ $item['label'] }}</span>
                     </a>
@@ -127,7 +131,11 @@
                     <span class="hf-rail-label">Workspace</span>
                     @foreach ($roleTools as $key)
                         @php $item = $navItems[$key]; @endphp
-                        <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}" href="{{ route($item['route']) }}" data-testid="nav-{{ $key }}">
+                        <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}"
+                           href="{{ route($item['route']) }}"
+                           data-testid="nav-{{ $key }}"
+                           data-label="{{ $item['label'] }}"
+                           @if ($isActive($key)) aria-current="page" @endif>
                             <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>
                             <span>{{ $item['label'] }}</span>
                         </a>

@@ -183,6 +183,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
   min-height: 64px;
   padding: 10px 24px;
   background: color-mix(in srgb, var(--hf-surface) 92%, transparent);
@@ -306,56 +307,6 @@
 }
 
 /* Demo menu */
-.hf-demo-menu {
-  position: relative;
-}
-
-.hf-topbar-actions > .hf-demo-menu {
-  display: none;
-}
-
-.hf-demo-menu summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--hf-border);
-  border-radius: 10px;
-  background: var(--hf-surface-2);
-  color: var(--hf-ink);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  list-style: none;
-  text-transform: uppercase;
-}
-
-.hf-demo-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.hf-demo-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 60;
-  width: min(290px, calc(100vw - 24px));
-  padding: 12px;
-  border: 1px solid var(--hf-border);
-  border-radius: 12px;
-  background: var(--hf-surface-2);
-  box-shadow: var(--hf-shadow);
-}
-
-.hf-demo-panel--up {
-  top: auto;
-  bottom: calc(100% + 8px);
-  right: auto;
-  left: 0;
-}
-
 .hf-demo-title {
   margin: 0 0 8px;
   color: var(--hf-muted);
@@ -363,51 +314,6 @@
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.hf-demo-roles {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.hf-demo-roles button {
-  min-height: 40px;
-  border: 1px solid var(--hf-border);
-  border-radius: 8px;
-  background: var(--hf-surface);
-  color: var(--hf-ink);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: capitalize;
-}
-
-.hf-demo-roles button.is-active {
-  border-color: var(--hf-primary);
-  background: var(--hf-primary);
-  color: #fff;
-}
-
-.hf-demo-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 0;
-  border-top: 1px solid var(--hf-border);
-  font-size: 12px;
-}
-
-.hf-demo-row .hf-btn {
-  min-height: 36px;
-}
-
-.hf-demo-seed {
-  color: var(--hf-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
 }
 
 /* Mobile navigation */
@@ -456,7 +362,78 @@
   content: '';
 }
 
-@media (max-width: 991.98px) {
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .hf-app {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .hf-rail {
+    align-items: center;
+    padding: 18px 8px;
+  }
+
+  .hf-rail-brand {
+    justify-content: center;
+    padding: 4px 0 14px;
+  }
+
+  .hf-rail-brand .hf-brand__text,
+  .hf-rail-label,
+  .hf-rail-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .hf-rail-link {
+    justify-content: center;
+    width: 52px;
+    padding: 10px 0;
+  }
+
+  .hf-rail-link::after {
+    position: absolute;
+    left: calc(100% + 10px);
+    z-index: 90;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--hf-ink);
+    color: var(--hf-ground);
+    content: attr(data-label);
+    font-size: 11px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--hf-dur-micro) linear;
+    white-space: nowrap;
+  }
+
+  .hf-rail-link:hover::after,
+  .hf-rail-link:focus-visible::after {
+    opacity: 1;
+  }
+
+  .hf-rail-footer {
+    width: 100%;
+  }
+
+  .hf-rail-footer .hf-user-chip {
+    justify-content: center;
+    width: 52px;
+    padding: 4px;
+  }
+
+  .hf-rail-footer .hf-user-meta,
+  .hf-rail-footer .hf-user-chip > .bi {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
   .hf-app {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
@@ -472,10 +449,6 @@
     padding: 8px 14px;
   }
 
-  .hf-topbar-actions > .hf-demo-menu {
-    display: block;
-  }
-
   .hf-main {
     grid-column: 1;
     padding: 16px 14px 92px;
@@ -483,14 +456,6 @@
 
   .hf-bottom-nav {
     display: grid;
-  }
-
-  .hf-topbar-title {
-    font-size: 16px;
-  }
-
-  .hf-demo-menu summary span {
-    display: none;
   }
 }
 

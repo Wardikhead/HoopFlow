@@ -4,9 +4,11 @@
 // Bootstrap's JavaScript is intentionally not imported (ADR-0001).
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
+import { initShell } from './ui/shell';
 
 initPreferences();
 document.addEventListener('hf:theme-changed', syncPreferenceButtons);
+initShell();
 
 // Native <dialog> elements keep their open state outside the DOM attributes that
 // Livewire morphs. Re-open any server-rendered modal after a morph so score
