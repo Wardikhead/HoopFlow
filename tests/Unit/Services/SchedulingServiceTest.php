@@ -120,6 +120,47 @@ function schedulingConfiguredTournament(
     return $tournament->fresh();
 }
 
+/**
+ * @return array{Tournament, Collection<int, MatchModel>}
+ */
+function schedulingLegacyRoundRobinPlayoffTournament(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'start_date' => '2026-07-10',
+        'end_date' => '2026-07-16',
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 0,
+        ]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'round-robin');
+    app(SchedulingService::class)->generate($tournament);
+
+    $groupMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'group'))
+        ->orderBy('id')
+        ->get();
+
+    foreach ($groupMatches as $match) {
+        $bracketService->recordScore($match->fresh(), 80, 70);
+    }
+
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'playoff_teams' => 4,
+        ]),
+    ]);
+
+    $bracketService->generatePlayoffs($tournament->fresh());
+
+    return [$tournament->fresh(), $groupMatches];
+}
+
 it('reserves a four-day footprint for four playoff teams and a best-of-three final', function () {
     $tournament = schedulingConfiguredTournament([
         'format' => 'round-robin',
@@ -401,6 +442,54 @@ it('keeps planning without an end date when no reservation is possible', functio
 
     expect($plan['playoffWindow'])->toBeNull()
         ->and($plan['assignments'])->not->toBeEmpty();
+});
+
+it('reports no room when a legacy group schedule fills the tournament dates', function () {
+    [$tournament] = schedulingLegacyRoundRobinPlayoffTournament();
+
+    expect(fn () => (new SchedulingService)->planRemaining($tournament))
+        ->toThrow(
+            InvalidArgumentException::class,
+            'The published schedule leaves no room for the remaining games',
+        );
+});
+
+it('finds published group days inside the playoff window', function () {
+    [$tournament] = schedulingLegacyRoundRobinPlayoffTournament();
+
+    $service = new SchedulingService;
+    $window = $service->playoffWindow($tournament);
+
+    expect($window)->not->toBeNull()
+        ->and($window['startDate'])->toBe('2026-07-15')
+        ->and($window['endDate'])->toBe('2026-07-16')
+        ->and($service->playoffWindowOverlap($tournament, $window))
+        ->toBe(['2026-07-15', '2026-07-16']);
+});
+
+it('ignores playoff slots when finding group days in the window', function () {
+    [$tournament] = schedulingRoundRobinPlayoffTournament();
+
+    $playoffMatch = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'playoffs'))
+        ->firstOrFail();
+    $court = app(SchedulingService::class)->courts($tournament)->firstOrFail();
+
+    MatchSlot::create([
+        'match_id' => $playoffMatch->id,
+        'tournament_id' => $tournament->id,
+        'court_id' => $court->id,
+        'start_at' => '2026-07-18 15:00:00',
+        'end_at' => '2026-07-18 15:30:00',
+        'status' => 'published',
+        'version' => 1,
+        'published_at' => now(),
+    ]);
+
+    $window = ['startDate' => '2026-07-18', 'endDate' => '2026-07-18'];
+
+    expect((new SchedulingService)->playoffWindowOverlap($tournament, $window))->toBe([]);
 });
 
 it('keeps full schedule generation locked once group results exist', function () {

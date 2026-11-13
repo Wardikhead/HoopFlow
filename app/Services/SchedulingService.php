@@ -1472,6 +1472,37 @@ class SchedulingService
     }
 
     /**
+     * @param  array<string, mixed>  $window
+     * @return list<string>
+     */
+    public function playoffWindowOverlap(Tournament $tournament, array $window): array
+    {
+        $start = isset($window['startDate']) && is_string($window['startDate'])
+            ? Carbon::parse($window['startDate'])->startOfDay()
+            : null;
+        $end = isset($window['endDate']) && is_string($window['endDate'])
+            ? Carbon::parse($window['endDate'])->startOfDay()
+            : null;
+
+        if (! $start instanceof Carbon || ! $end instanceof Carbon) {
+            return [];
+        }
+
+        return MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('status', 'published')
+            ->whereNotNull('start_at')
+            ->whereHas('match.bracket', fn ($query) => $query->where('phase', 'group'))
+            ->pluck('start_at')
+            ->map(fn ($startAt): string => Carbon::parse((string) $startAt)->format('Y-m-d'))
+            ->filter(fn (string $date): bool => $date >= $start->format('Y-m-d') && $date <= $end->format('Y-m-d'))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  array<string, mixed>  $rules
      */
     protected function bestOfValue(array $rules, string $key): int
