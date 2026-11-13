@@ -210,6 +210,86 @@ it('does not reserve a footprint without a round-robin playoff field', function 
         ->and($service->playoffFootprint($odd))->toBeNull();
 });
 
+it('reserves the last eligible days before the tournament ends', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+
+    $window = (new SchedulingService)->playoffWindow($tournament);
+
+    expect($window)->not->toBeNull()
+        ->and($window['startDate'])->toBe('2026-07-28')
+        ->and($window['endDate'])->toBe('2026-07-31')
+        ->and($window['groupEndDate'])->toBe('2026-07-27')
+        ->and($window['dates'])->toBe([
+            '2026-07-28',
+            '2026-07-29',
+            '2026-07-30',
+            '2026-07-31',
+        ])
+        ->and($window['dayCount'])->toBe(4)
+        ->and($window['rounds'])->toBe([
+            ['label' => 'Semifinal', 'bestOf' => 1, 'days' => 1],
+            ['label' => 'Final', 'bestOf' => 3, 'days' => 3],
+        ]);
+});
+
+it('reserves only selected weekdays when walking backwards', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 2,
+        'best_of_final' => 3,
+    ]);
+
+    $window = (new SchedulingService)->playoffWindow($tournament, ['weekdays' => [5, 6]]);
+
+    expect($window)->not->toBeNull()
+        ->and($window['dates'])->toBe(['2026-07-24', '2026-07-25', '2026-07-31'])
+        ->and($window['groupEndDate'])->toBe('2026-07-18');
+});
+
+it('moves the window when the end date is overridden', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+
+    $window = (new SchedulingService)->playoffWindow($tournament, ['endDate' => '2026-07-17']);
+
+    expect($window['dates'])->toBe([
+        '2026-07-14',
+        '2026-07-15',
+        '2026-07-16',
+        '2026-07-17',
+    ])->and($window['groupEndDate'])->toBe('2026-07-13');
+});
+
+it('returns no window when the tournament is too short for the playoffs', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ], '2026-07-10', '2026-07-12');
+
+    expect((new SchedulingService)->playoffWindow($tournament))->toBeNull();
+});
+
+it('returns no window when the tournament has no end date', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+    ]);
+    $tournament->update(['end_date' => null]);
+
+    expect((new SchedulingService)->playoffWindow($tournament->fresh()))->toBeNull();
+});
+
 it('keeps full schedule generation locked once group results exist', function () {
     [$tournament] = schedulingRoundRobinPlayoffTournament();
 
