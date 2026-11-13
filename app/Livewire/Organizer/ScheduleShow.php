@@ -26,8 +26,9 @@ use Livewire\Component;
  * @property-read Collection<int, MatchSlot> $visibleSlots
  * @property-read Collection<int, MatchSlot> $daySlots
  * @property-read array<int, string> $matchDays
- * @property-read array<int, array{key: string, day: int, count: int, outside: bool}> $monthCells
- * @property-read array<int, array{key: string, weekday: string, day: int, count: int}> $weekDays
+ * @property-read array<int, array{key: string, day: int, count: int, outside: bool, reserved: bool}> $monthCells
+ * @property-read array<int, array{key: string, weekday: string, day: int, count: int, reserved: bool}> $weekDays
+ * @property-read array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null $calendarPlayoffWindow
  * @property-read array{games: int, courts: int, first: string} $daySummary
  * @property-read array<int, array{id: int, label: string, courtId: int, scheduledAt: string}> $scheduledMatchOptions
  * @property-read array<int, array{matchId: int, courtId: int, scheduledAt: string, round: string, game: string|null, match: string, court: string, slot: string, error: string|null, warning: string|null}> $previewRows
@@ -302,7 +303,7 @@ class ScheduleShow extends Component
     }
 
     /**
-     * @return array<int, array{key: string, day: int, count: int, outside: bool}>
+     * @return array<int, array{key: string, day: int, count: int, outside: bool, reserved: bool}>
      */
     #[Computed]
     public function monthCells(): array
@@ -312,6 +313,8 @@ class ScheduleShow extends Component
         $start = $monthDate->copy()->startOfWeek(Carbon::SUNDAY);
         $monthKey = $monthDate->format('Y-m');
         $selected = $this->selectedDay ?? '';
+        $playoffWindow = $this->calendarPlayoffWindow;
+        $reservedDays = $playoffWindow['dates'] ?? [];
         $cells = [];
 
         for ($index = 0; $index < 42; $index++) {
@@ -325,6 +328,7 @@ class ScheduleShow extends Component
                     ->filter(fn (MatchSlot $slot): bool => $slot->start_at?->format('Y-m-d') === $key)
                     ->count(),
                 'outside' => $date->format('Y-m') !== $monthKey,
+                'reserved' => in_array($key, $reservedDays, true),
             ];
         }
 
@@ -332,13 +336,15 @@ class ScheduleShow extends Component
     }
 
     /**
-     * @return array<int, array{key: string, weekday: string, day: int, count: int}>
+     * @return array<int, array{key: string, weekday: string, day: int, count: int, reserved: bool}>
      */
     #[Computed]
     public function weekDays(): array
     {
         $selected = Carbon::parse($this->selectedDay ?? now());
         $start = $selected->copy()->subDays(3);
+        $playoffWindow = $this->calendarPlayoffWindow;
+        $reservedDays = $playoffWindow['dates'] ?? [];
         $days = [];
 
         for ($index = 0; $index < 7; $index++) {
@@ -352,6 +358,7 @@ class ScheduleShow extends Component
                 'count' => $this->visibleSlots
                     ->filter(fn (MatchSlot $slot): bool => $slot->start_at?->format('Y-m-d') === $key)
                     ->count(),
+                'reserved' => in_array($key, $reservedDays, true),
             ];
         }
 
@@ -527,6 +534,36 @@ class ScheduleShow extends Component
         }
 
         return app(SchedulingService::class)->playoffWindowOverlap($this->tournament, $window);
+    }
+
+    /**
+     * @return array{
+     *     startDate: string,
+     *     endDate: string,
+     *     groupEndDate: string|null,
+     *     dates: list<string>,
+     *     dayCount: int,
+     *     rounds: list<array{label: string, bestOf: int, days: int}>
+     * }|null
+     */
+    #[Computed]
+    public function calendarPlayoffWindow(): ?array
+    {
+        if (! $this->tournament instanceof Tournament) {
+            return null;
+        }
+
+        $weekdays = $this->scheduledSlots
+            ->filter(fn (MatchSlot $slot): bool => $slot->start_at !== null)
+            ->map(fn (MatchSlot $slot): int => (int) $slot->start_at->isoWeekday())
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return app(SchedulingService::class)->playoffWindow($this->tournament, [
+            'weekdays' => array_values($weekdays === [] ? range(1, 7) : $weekdays),
+        ]);
     }
 
     /**
