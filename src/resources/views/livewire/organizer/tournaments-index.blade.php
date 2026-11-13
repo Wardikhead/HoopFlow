@@ -58,7 +58,10 @@
     </div>
 </div>
 
-<div id="tournamentList" data-testid="tournament-list">
+<div id="tournamentList" data-testid="tournament-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+    <div class="hf-updating-pill" wire:loading wire:target="search,status,division">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+    </div>
     @forelse ($this->tournaments as $tournament)
         @php
             $division = $tournament->divisions->first();

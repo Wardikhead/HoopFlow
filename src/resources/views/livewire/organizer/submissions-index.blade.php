@@ -54,7 +54,10 @@
         </div>
     </div>
 
-    <div id="submissionList" data-testid="submission-list">
+    <div id="submissionList" data-testid="submission-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+        <div class="hf-updating-pill" wire:loading wire:target="status,tournament,search">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+        </div>
         @if ($this->registrations->isEmpty())
             <div class="hf-empty" data-testid="submission-empty">
                 <i class="bi bi-clipboard-check" aria-hidden="true"></i>
@@ -113,7 +116,7 @@
                                 @if ($tournament?->seedsLocked())
                                     <span class="hf-chip hf-chip--gold" data-testid="submission-seeds-locked-{{ $registration->id }}"><i class="bi bi-lock-fill" aria-hidden="true"></i>Seeds locked</span>
                                 @else
-                                    <button type="button" class="hf-btn hf-btn--sm hf-btn--primary" wire:click="approve({{ $registration->id }})" data-testid="submission-approve-{{ $registration->id }}">Approve</button>
+                                    <button type="button" class="hf-btn hf-btn--sm hf-btn--primary" wire:click="approve({{ $registration->id }})" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="submission-approve-{{ $registration->id }}">Approve</button>
                                 @endif
                                 <button type="button" class="hf-btn hf-btn--sm hf-btn--danger" wire:click="reject({{ $registration->id }})" data-testid="submission-reject-{{ $registration->id }}">Reject</button>
                             @endif
@@ -310,7 +313,7 @@
                 </div>
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="cancelApprove()" data-testid="submission-approve-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" data-testid="submission-approve-confirm" @disabled($ageBlockers->isNotEmpty() || ($overrideIssues->isNotEmpty() && ! $approveAnyway))>Approve team</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="submission-approve-confirm" @disabled($ageBlockers->isNotEmpty() || ($overrideIssues->isNotEmpty() && ! $approveAnyway))>Approve team</button>
                 </div>
             </dialog>
         @endif
