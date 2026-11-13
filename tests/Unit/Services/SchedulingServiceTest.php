@@ -524,6 +524,26 @@ it('allows remaining playoff games inside the reserved window', function () {
     expect($validation['valid'])->toBeTrue();
 });
 
+it('records the reserved playoff window in the publish audit entry', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+    (new BracketService)->generate($tournament, 'round-robin');
+    app(SchedulingService::class)->generate($tournament);
+
+    $log = AuditLog::query()
+        ->where('action', 'schedule.publish')
+        ->latest('id')
+        ->firstOrFail();
+
+    expect($log->after_json['playoffWindowStart'])->toBe('2026-07-28')
+        ->and($log->after_json['playoffWindowEnd'])->toBe('2026-07-31')
+        ->and($log->after_json['playoffReservedDays'])->toBe(4);
+});
+
 it('keeps full schedule generation locked once group results exist', function () {
     [$tournament] = schedulingRoundRobinPlayoffTournament();
 
