@@ -216,7 +216,7 @@
     @else
         <section class="hf-hero hf-mb-3" data-testid="coach-hero">
             <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $coachTournament?->name ?? 'Tournament' }} · {{ $registrationLabel }}</span>
-            <h1>{{ $team->name }}</h1>
+            <h2 class="hf-hero__name">{{ $team->name }}</h2>
             <p>{{ $team->coachUser?->name ?? $team->coach_name ?? 'Coach' }} · {{ $team->city }} · {{ $divisionName ?? '' }}</p>
             <div class="hf-stat-strip">
                 <div><span>Record</span><strong>{{ $coachRecord['wins'] }}-{{ $coachRecord['losses'] }}</strong></div>
@@ -308,7 +308,7 @@
 
     <section class="hf-hero hf-mb-3" data-testid="fan-hero">
         <span class="hf-eyebrow" style="color: var(--hf-gold)">Courtside pass · {{ $statusLabel($tournament?->status) }}</span>
-        <h1>{{ $tournament?->name ?? 'HoopFlow' }}</h1>
+        <h2 class="hf-hero__name">{{ $tournament?->name ?? 'HoopFlow' }}</h2>
         <p>{{ $tournament?->divisions?->first()?->name ?? '' }} · {{ $tournament?->venueName() ?? '' }} · {{ $tournament?->start_date?->format('M d, Y') ?? 'TBD' }} to {{ $tournament?->end_date?->format('M d, Y') ?? 'TBD' }}</p>
         <div class="hf-btn-row hf-mt-3">
             <a class="hf-btn hf-btn--primary" href="{{ route('bracket', $tournament ? ['id' => $tournament->id] : []) }}">Bracket</a>

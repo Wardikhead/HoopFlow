@@ -2,6 +2,14 @@
 
 @section('title', $tournament->name)
 
+@section('breadcrumbs')
+    <x-breadcrumbs :items="[
+        ['label' => 'Home', 'href' => route('dashboard')],
+        ['label' => 'Tournaments', 'href' => route('tournaments')],
+        ['label' => $tournament->name],
+    ]" />
+@endsection
+
 @section('content')
 <div class="hf-page">
     <section class="hf-hero hf-mb-3">

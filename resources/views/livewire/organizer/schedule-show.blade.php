@@ -37,6 +37,15 @@
             $daySlots = $this->daySlots;
         @endphp
 
+        @section('breadcrumbs')
+            <x-breadcrumbs :items="[
+                ['label' => 'Home', 'href' => route('dashboard')],
+                ['label' => 'Tournaments', 'href' => route('tournaments')],
+                ['label' => $tournament->name, 'href' => route('tournamentShow', ['tournament' => $tournament->id])],
+                ['label' => 'Schedule'],
+            ]" />
+        @endsection
+
         <header class="hf-page-head hf-mb-3">
             <div>
                 <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? 'Tournament' }} · {{ $this->venueName }}</span>

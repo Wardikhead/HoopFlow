@@ -103,11 +103,6 @@
                 $routeName = $navItems[$key]['route'] ?? $key;
                 return $currentRoute === $routeName;
             };
-
-            $initials = collect(preg_split('/\s+/', $authUser->name))
-                ->map(fn ($part) => mb_substr($part, 0, 1))
-                ->slice(0, 2)
-                ->implode('');
         @endphp
 
         <div class="hf-app">
@@ -137,21 +132,18 @@
                 @endif
 
                 <div class="hf-rail-footer">
-                    <div class="hf-demo-row" style="border: 0; color: var(--hf-rail-muted);">
-                        <span>{{ $authUser->name }}</span>
-                        <span style="text-transform: capitalize;">{{ $role }}</span>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-2">
-                        @csrf
-                        <button type="submit" class="hf-btn hf-btn--sm hf-btn--danger w-100" data-testid="logout">Logout</button>
-                    </form>
+                    <x-user-menu />
                 </div>
             </aside>
 
             <header class="hf-topbar">
                 <div class="hf-topbar-context">
-                    <h1 class="hf-topbar-title">@yield('title', $title ?? 'HoopFlow')</h1>
-                    <div class="hf-topbar-sub">{{ $activeTournament?->name ?? 'No active tournament' }} · {{ $role }}</div>
+                    @hasSection('breadcrumbs')
+                        @yield('breadcrumbs')
+                    @else
+                        <p class="hf-topbar-title">@yield('title', $title ?? 'HoopFlow')</p>
+                        <div class="hf-topbar-sub">{{ $activeTournament?->name ?? 'No active tournament' }} · {{ $role }}</div>
+                    @endif
                 </div>
                 <div class="hf-topbar-actions">
                     <button type="button" class="hf-icon-btn" data-theme-toggle aria-label="Toggle color theme" data-testid="theme-toggle">
@@ -159,13 +151,6 @@
                     </button>
                     <a class="hf-icon-btn" href="{{ route('announcements') }}" aria-label="Announcements" data-testid="topbar-announcements">
                         <i class="bi bi-bell" aria-hidden="true"></i>
-                    </a>
-                    <a class="hf-user-chip" href="{{ route('profile') }}" data-testid="topbar-profile">
-                        <span class="hf-avatar">{{ $initials }}</span>
-                        <span class="hf-user-meta">
-                            <strong>{{ $authUser->name }}</strong>
-                            <span>{{ $role }}</span>
-                        </span>
                     </a>
                 </div>
             </header>
