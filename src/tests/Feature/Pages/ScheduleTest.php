@@ -512,3 +512,20 @@ it('warns when a legacy group schedule occupies the playoff window', function ()
         ->assertSee('Published group games still occupy')
         ->assertSee('Jul 15–Jul 16, 2026');
 });
+
+it('shades the reserved playoff days on the calendar', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament] = scheduleRoundRobinPlayoffTournament();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->assertSeeHtml('data-testid="schedule-playoff-window"')
+        ->assertSee('reserved for playoffs')
+        ->assertSeeHtml('hf-calendar-cell is-reserved');
+
+    $cells = collect($component->instance()->monthCells)->keyBy('key');
+
+    expect($cells['2026-07-30']['reserved'])->toBeTrue()
+        ->and($cells['2026-07-31']['reserved'])->toBeTrue()
+        ->and($cells['2026-07-29']['reserved'])->toBeFalse();
+});

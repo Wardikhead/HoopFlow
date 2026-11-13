@@ -84,10 +84,11 @@
                         @endforeach
                         @foreach ($this->monthCells as $cell)
                             <button type="button"
-                                    class="hf-calendar-cell {{ $cell['count'] ? 'has-events' : '' }} {{ $cell['key'] === $this->selectedDay ? 'is-selected' : '' }}"
+                                    class="hf-calendar-cell{{ $cell['count'] ? ' has-events' : '' }}{{ $cell['reserved'] ? ' is-reserved' : '' }}{{ $cell['key'] === $this->selectedDay ? ' is-selected' : '' }}"
                                     wire:click="selectDay('{{ $cell['key'] }}')"
                                     data-testid="schedule-day-{{ $cell['key'] }}"
-                                    aria-label="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['count'] ? ', '.$cell['count'].' games' : '' }}"
+                                    data-reserved="{{ $cell['reserved'] ? 'true' : 'false' }}"
+                                    aria-label="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['count'] ? ', '.$cell['count'].' games' : '' }}{{ $cell['reserved'] ? ', reserved for playoffs' : '' }}"
                                     style="{{ $cell['outside'] ? 'opacity: .45' : '' }}">
                                 <span>{{ $cell['day'] }}</span>
                                 @if ($cell['count'])
@@ -100,7 +101,7 @@
                     <div class="hf-week-strip" data-testid="schedule-week">
                         @foreach ($this->weekDays as $day)
                             <button type="button"
-                                    class="{{ $day['key'] === $this->selectedDay ? 'is-selected' : '' }}"
+                                    class="{{ $day['reserved'] ? 'is-reserved' : '' }}{{ $day['key'] === $this->selectedDay ? ' is-selected' : '' }}"
                                     wire:click="selectDay('{{ $day['key'] }}')"
                                     data-testid="schedule-week-{{ $day['key'] }}">
                                 <small>{{ $day['weekday'] }}</small>
@@ -111,6 +112,17 @@
                             </button>
                         @endforeach
                     </div>
+
+                    @php
+                        $calendarWindow = $this->calendarPlayoffWindow;
+                    @endphp
+
+                    @if ($calendarWindow !== null)
+                        <p class="hf-small hf-muted hf-mt-2 hf-mb-0" data-testid="schedule-playoff-window">
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                            {{ \Carbon\Carbon::parse($calendarWindow['startDate'])->format('M j, Y') }}–{{ \Carbon\Carbon::parse($calendarWindow['endDate'])->format('M j, Y') }} reserved for playoffs
+                        </p>
+                    @endif
 
                     <div class="hf-between hf-mt-2">
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="shiftWeek(-1)" data-testid="schedule-week-prev">

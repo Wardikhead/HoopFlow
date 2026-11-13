@@ -1287,6 +1287,21 @@ textarea {
   color: var(--hf-ground);
 }
 
+.hf-calendar-cell.is-reserved {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--hf-gold) 70%, transparent);
+}
+
+.hf-calendar-cell.is-reserved:not(.has-events) {
+  background: color-mix(in srgb, var(--hf-gold) 8%, transparent);
+}
+
+.hf-calendar-cell.is-reserved.is-selected {
+  border-style: solid;
+  border-color: var(--hf-ink);
+  background: var(--hf-ink);
+}
+
 .hf-calendar-count {
   display: block;
   margin-top: 2px;
@@ -1318,6 +1333,18 @@ textarea {
   border-color: var(--hf-ink);
   background: var(--hf-ink);
   color: var(--hf-ground);
+}
+
+.hf-week-strip button.is-reserved {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--hf-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--hf-gold) 8%, var(--hf-surface-2));
+}
+
+.hf-week-strip button.is-reserved.is-selected {
+  border-style: solid;
+  border-color: var(--hf-ink);
+  background: var(--hf-ink);
 }
 
 .hf-week-strip small {
