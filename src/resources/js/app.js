@@ -3,12 +3,14 @@
 // Alpine 3 ships with Livewire, so no separate Alpine import is needed.
 // Bootstrap's JavaScript is intentionally not imported (ADR-0001).
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { initCountUp } from './ui/countup';
 import { initFeedback } from './ui/feedback';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
 import { initMoreSheet, initShell } from './ui/shell';
 import { registerToasts } from './ui/toasts';
 import { initValidation } from './ui/validation';
 
+initCountUp();
 initFeedback();
 initPreferences();
 document.addEventListener('hf:theme-changed', syncPreferenceButtons);

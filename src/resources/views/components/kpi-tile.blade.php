@@ -5,6 +5,7 @@
     'tone' => null,
     'href' => null,
     'testid' => null,
+    'countup' => false,
 ])
 
 @php
@@ -21,7 +22,7 @@
     @if ($href) href="{{ $href }}" @endif
 >
     <span class="hf-kpi-label">{{ $label }}</span>
-    <span class="hf-kpi-value">{{ $value }}</span>
+    <span class="hf-kpi-value" @if ($countup) data-countup @endif>{{ $value }}</span>
     @if ($hint)
         <span class="hf-kpi-hint">{{ $hint }}</span>
     @endif

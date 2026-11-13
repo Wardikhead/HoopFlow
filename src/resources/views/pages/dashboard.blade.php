@@ -54,32 +54,34 @@
         $scoreHref = $nextMatch
             ? route('bracket', ['id' => $tournament?->id, 'match' => $nextMatch->id])
             : route('bracket', $tournament ? ['id' => $tournament->id] : []);
+        $nextUp = $nextMatch
+            ? trim(($nextMatch->roundLabel() ?? 'Next game')
+                .' · '.($nextMatch->matchSlots->first()?->start_at?->format('M j, g:i A') ?? 'Time TBD')
+                .' · '.($nextMatch->homeTeam?->shortLabel() ?? 'TBD').' vs '.($nextMatch->awayTeam?->shortLabel() ?? 'TBD'))
+            : null;
     @endphp
 
-    <header class="hf-page-head hf-mb-3">
-        <div>
-            <span class="hf-eyebrow">Matchday desk · organizer</span>
-            <h1 class="hf-page-title">Run the tournament</h1>
-            <p class="hf-page-desc">Approvals, payments, bracket progress, and the next action that keeps the matchday moving.</p>
-            @if ($tournament)
-                <div class="hf-page-meta">
-                    <span><i class="bi bi-calendar3"></i>{{ $tournament->start_date?->format('M d, Y') }} – {{ $tournament->end_date?->format('M d, Y') }}</span>
-                    <span><i class="bi bi-geo-alt"></i>{{ $tournament->venueName() }}</span>
-                    <span><i class="bi bi-people"></i>{{ $tournament->slotCount() }} slots · {{ $tournament->courtCount() }} courts</span>
-                </div>
-            @endif
-        </div>
-        <div class="hf-page-actions">
-            <a class="hf-btn hf-btn--primary" href="{{ route('tournamentCreate') }}" data-testid="dashboard-create-tournament"><i class="bi bi-plus-lg"></i> New tournament</a>
-            <a class="hf-btn" href="{{ route('submissions') }}" data-testid="dashboard-open-submissions">Review queue</a>
-        </div>
-    </header>
+    <x-matchday-strip
+        eyebrow="Matchday desk · organizer"
+        title="Run the tournament"
+        :status="$tournament?->statusLabel()"
+        :description="$tournament ? $tournament->name : 'No active tournament yet. Create one to open the matchday desk.'"
+        :meta="$tournament ? [
+            ['icon' => 'calendar3', 'label' => $tournament->start_date?->format('M d, Y').' – '.$tournament->end_date?->format('M d, Y')],
+            ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
+            ['icon' => 'people', 'label' => $tournament->slotCount().' slots · '.$tournament->courtCount().' courts'],
+        ] : []"
+        :next-up="$nextUp"
+    >
+        <a class="hf-btn hf-btn--primary" href="{{ route('tournamentCreate') }}" data-testid="dashboard-create-tournament"><i class="bi bi-plus-lg" aria-hidden="true"></i> New tournament</a>
+        <a class="hf-btn" href="{{ route('submissions') }}" data-testid="dashboard-open-submissions">Review queue</a>
+    </x-matchday-strip>
 
     <div class="hf-grid hf-grid--4 hf-mb-3">
-        <x-kpi-tile label="Tournaments" :value="$tournamentsCount" :hint="$tournamentsCount.' seeded venues'" tone="primary" :href="route('tournaments')" testid="kpi-tournaments" />
-        <x-kpi-tile label="Pending teams" :value="$pending" hint="Waiting for review" tone="gold" :href="route('submissions', ['status' => 'pending'])" testid="kpi-pending" />
-        <x-kpi-tile label="Uncollected" :value="$money($uncollected)" :hint="$unpaidTeams.' teams unpaid'" tone="alert" :href="route('payments', ['status' => 'pending'])" testid="kpi-uncollected" />
-        <x-kpi-tile label="Approved teams" :value="$approved" :hint="$registered.' registered'" tone="success" :href="route('teams')" testid="kpi-approved" />
+        <x-kpi-tile label="Tournaments" :value="$tournamentsCount" :hint="$tournamentsCount.' in the workspace'" tone="primary" :href="route('tournaments')" testid="kpi-tournaments" :countup="true" />
+        <x-kpi-tile label="Pending teams" :value="$pending" hint="Waiting for review" tone="gold" :href="route('submissions', ['status' => 'pending'])" testid="kpi-pending" :countup="true" />
+        <x-kpi-tile label="Uncollected" :value="$money($uncollected)" :hint="$unpaidTeams.' teams unpaid'" tone="alert" :href="route('payments', ['status' => 'pending'])" testid="kpi-uncollected" :countup="true" />
+        <x-kpi-tile label="Approved teams" :value="$approved" :hint="$registered.' registered'" tone="success" :href="route('teams')" testid="kpi-approved" :countup="true" />
     </div>
 
     <div class="hf-split hf-mb-3">
@@ -89,20 +91,23 @@
                 <a class="hf-section-link" href="{{ route('submissions') }}">Open queue</a>
             </div>
             <div class="hf-grid hf-grid--3 hf-mb-3">
-                <a class="hf-card hf-card--flat" href="{{ route('submissions', ['status' => 'pending']) }}" data-testid="dashboard-action-review">
+                <a class="hf-card hf-card--flat hf-card--link" href="{{ route('submissions', ['status' => 'pending']) }}" data-testid="dashboard-action-review">
                     <span class="hf-chip hf-chip--warning">Review</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $pending }} pending teams</h3>
                     <p class="hf-muted hf-small hf-mb-0">Roster, consent, and documents are waiting for an organizer decision.</p>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
                 </a>
-                <a class="hf-card hf-card--flat" href="{{ route('payments', ['status' => 'pending']) }}" data-testid="dashboard-action-payments">
+                <a class="hf-card hf-card--flat hf-card--link" href="{{ route('payments', ['status' => 'pending']) }}" data-testid="dashboard-action-payments">
                     <span class="hf-chip hf-chip--danger">Verify</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $unpaidCount }} payments</h3>
                     <p class="hf-muted hf-small hf-mb-0">Collected {{ $money($collected) }} of {{ $money($expected) }}.</p>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
                 </a>
-                <a class="hf-card hf-card--flat" href="{{ $scoreHref }}" data-testid="dashboard-action-score">
+                <a class="hf-card hf-card--flat hf-card--link" href="{{ $scoreHref }}" data-testid="dashboard-action-score">
                     <span class="hf-chip hf-chip--primary">Score</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $matchesScheduled }} games left</h3>
                     <p class="hf-muted hf-small hf-mb-0">Open the quarterfinal console and advance the winner.</p>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
                 </a>
             </div>
 
@@ -126,7 +131,18 @@
                             <strong class="hf-kpi-value" style="font-size: 32px">{{ $matchesPlayed }}/{{ $totalMatches }}</strong>
                         </div>
                     </div>
-                    <div class="hf-round-progress hf-mt-2"><span style="width: {{ $progress }}%"></span></div>
+                    <div class="hf-milestones hf-mt-2" aria-label="Tournament progress">
+                        @foreach (['Round of 16', 'Quarterfinals', 'Semifinals', 'Final'] as $index => $milestone)
+                            @php
+                                $threshold = ($index + 1) * 25;
+                                $state = $progress >= $threshold ? 'is-done' : ($progress >= $threshold - 25 ? 'is-active' : '');
+                            @endphp
+                            <span class="hf-milestone {{ $state }}">
+                                <i class="bi bi-{{ $state === 'is-done' ? 'check-circle-fill' : 'circle' }}" aria-hidden="true"></i>
+                                {{ $milestone }}
+                            </span>
+                        @endforeach
+                    </div>
                     <div class="hf-flex hf-wrap hf-gap-2 hf-mt-2">
                         <a class="hf-btn hf-btn--sm" href="{{ route('bracket', ['id' => $tournament->id]) }}">Bracket</a>
                         <a class="hf-btn hf-btn--sm" href="{{ route('schedule', ['id' => $tournament->id]) }}">Schedule</a>
@@ -167,9 +183,16 @@
                 <a class="hf-section-link" href="{{ route('announcements', $tournament ? ['id' => $tournament->id] : []) }}">All</a>
             </div>
             <div class="hf-grid">
-                @foreach ($announcements as $announcement)
+                @forelse ($announcements as $announcement)
                     <x-announcement-card :announcement="$announcement" :compact="true" />
-                @endforeach
+                @empty
+                    <div class="hf-empty hf-empty--compact">
+                        <i class="bi bi-megaphone" aria-hidden="true"></i>
+                        <h3>No announcements yet</h3>
+                        <p>Post a venue, schedule, or eligibility notice for the tournament.</p>
+                        <a class="hf-btn hf-btn--sm" href="{{ route('announcementCreate') }}">New announcement</a>
+                    </div>
+                @endforelse
             </div>
         </aside>
     </div>
@@ -188,23 +211,20 @@
         };
     @endphp
 
-    <header class="hf-page-head hf-mb-3">
-        <div>
-            <span class="hf-eyebrow">Matchday desk · coach</span>
-            <h1 class="hf-page-title">Coach corner</h1>
-            <p class="hf-page-desc">Your registration status, roster readiness, payment, and next game.</p>
-            @if ($tournament)
-                <div class="hf-page-meta">
-                    <span><i class="bi bi-calendar3"></i>{{ $tournament->start_date?->format('M d, Y') }} – {{ $tournament->end_date?->format('M d, Y') }}</span>
-                    <span><i class="bi bi-geo-alt"></i>{{ $tournament->venueName() }}</span>
-                    <span><i class="bi bi-people"></i>{{ $tournament->slotCount() }} slots · {{ $tournament->courtCount() }} courts</span>
-                </div>
-            @endif
-        </div>
-        <div class="hf-page-actions">
-            <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}" data-testid="dashboard-register-cta"><i class="bi bi-trophy"></i> Find open tournament</a>
-        </div>
-    </header>
+    <x-matchday-strip
+        eyebrow="Matchday desk · coach"
+        title="Coach corner"
+        :status="$team ? $registrationLabel : null"
+        :description="$team ? $team->name.' · '.($divisionName ?? 'Division').' · '.$team->city : 'Register a team to start the coach journey.'"
+        :meta="$tournament ? [
+            ['icon' => 'calendar3', 'label' => $tournament->start_date?->format('M d, Y').' – '.$tournament->end_date?->format('M d, Y')],
+            ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
+            ['icon' => 'people', 'label' => $tournament->slotCount().' slots · '.$tournament->courtCount().' courts'],
+        ] : []"
+        :next-up="$coachNextMatch?->roundLabel()"
+    >
+        <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}" data-testid="dashboard-register-cta"><i class="bi bi-trophy" aria-hidden="true"></i> Find open tournament</a>
+    </x-matchday-strip>
 
     @if (! $team)
         <div class="hf-empty">
@@ -288,23 +308,20 @@
             ->values();
     @endphp
 
-    <header class="hf-page-head hf-mb-3">
-        <div>
-            <span class="hf-eyebrow">Courtside pass · fan</span>
-            <h1 class="hf-page-title">Courtside pass</h1>
-            <p class="hf-page-desc">Follow the active tournament: bracket, schedule, results, standings, and announcements.</p>
-            @if ($tournament)
-                <div class="hf-page-meta">
-                    <span><i class="bi bi-calendar3"></i>{{ $tournament->start_date?->format('M d, Y') }} – {{ $tournament->end_date?->format('M d, Y') }}</span>
-                    <span><i class="bi bi-geo-alt"></i>{{ $tournament->venueName() }}</span>
-                    <span><i class="bi bi-people"></i>{{ $tournament->slotCount() }} slots · {{ $tournament->courtCount() }} courts</span>
-                </div>
-            @endif
-        </div>
-        <div class="hf-page-actions">
-            <a class="hf-btn hf-btn--primary" href="{{ route('bracket', $tournament ? ['id' => $tournament->id] : []) }}" data-testid="dashboard-open-bracket"><i class="bi bi-diagram-3"></i> Open bracket</a>
-        </div>
-    </header>
+    <x-matchday-strip
+        eyebrow="Courtside pass · fan"
+        title="Courtside pass"
+        :status="$tournament ? $statusLabel($tournament->status) : null"
+        :description="$tournament?->name ?? 'HoopFlow'"
+        :meta="$tournament ? [
+            ['icon' => 'calendar3', 'label' => $tournament->start_date?->format('M d, Y').' – '.$tournament->end_date?->format('M d, Y')],
+            ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
+            ['icon' => 'people', 'label' => $tournament->slotCount().' slots · '.$tournament->courtCount().' courts'],
+        ] : []"
+        :next-up="$upcomingMatches->first()?->roundLabel()"
+    >
+        <a class="hf-btn hf-btn--primary" href="{{ route('bracket', $tournament ? ['id' => $tournament->id] : []) }}" data-testid="dashboard-open-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Open bracket</a>
+    </x-matchday-strip>
 
     <section class="hf-hero hf-mb-3" data-testid="fan-hero">
         <span class="hf-eyebrow" style="color: var(--hf-gold)">Courtside pass · {{ $statusLabel($tournament?->status) }}</span>
@@ -364,9 +381,15 @@
                 <h2 class="hf-section-title">Announcements</h2>
             </div>
             <div class="hf-grid">
-                @foreach ($fanAnnouncements as $announcement)
+                @forelse ($fanAnnouncements as $announcement)
                     <x-announcement-card :announcement="$announcement" :compact="true" />
-                @endforeach
+                @empty
+                    <div class="hf-empty hf-empty--compact">
+                        <i class="bi bi-megaphone" aria-hidden="true"></i>
+                        <h3>No announcements yet</h3>
+                        <p>Venue, schedule, and eligibility notices will appear here.</p>
+                    </div>
+                @endforelse
             </div>
         </aside>
     </div>
