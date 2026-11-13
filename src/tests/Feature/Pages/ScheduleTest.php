@@ -11,6 +11,7 @@ use App\Services\BracketService;
 use App\Services\SchedulingService;
 use Carbon\Carbon;
 use Database\Seeders\PrototypeSeeder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -51,6 +52,113 @@ it('renders the prototype schedule controls', function () {
         ->assertSee('Reschedule match')
         ->assertDontSee('Manual manage')
         ->assertSee('schedule-calendar', false);
+});
+
+/**
+ * @return array{Tournament, Collection<int, MatchModel>, Collection<int, MatchModel>}
+ */
+function scheduleRoundRobinPlayoffTournament(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'start_date' => '2026-07-10',
+        'end_date' => '2026-07-31',
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 4,
+        ]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'round-robin');
+    app(SchedulingService::class)->generate($tournament);
+
+    $groupMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'group'))
+        ->orderBy('id')
+        ->get();
+
+    foreach ($groupMatches as $match) {
+        $bracketService->recordScore($match->fresh(), 80, 70);
+    }
+
+    $bracketService->generatePlayoffs($tournament->fresh());
+
+    $playoffMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'playoffs'))
+        ->orderBy('id')
+        ->get();
+
+    return [$tournament->fresh(), $groupMatches, $playoffMatches];
+}
+
+it('keeps full schedule generation and rebuild locked after group results', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament] = scheduleRoundRobinPlayoffTournament();
+
+    Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openPreview')
+        ->assertSet('showPreview', false)
+        ->assertDispatched('hf-toast')
+        ->call('openRebuild')
+        ->assertSet('showPreview', false)
+        ->assertDispatched('hf-toast');
+});
+
+it('publishes remaining playoff games from the schedule page without moving group slots', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament, $groupMatches, $playoffMatches] = scheduleRoundRobinPlayoffTournament();
+
+    $groupSnapshot = MatchSlot::query()
+        ->whereIn('match_id', $groupMatches->pluck('id'))
+        ->orderBy('id')
+        ->get()
+        ->map(fn (MatchSlot $slot): array => [
+            (int) $slot->id,
+            (int) $slot->match_id,
+            (int) $slot->court_id,
+            $slot->start_at?->format('Y-m-d H:i:s'),
+        ])
+        ->all();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->assertSeeHtml('data-testid="schedule-remaining-preview"')
+        ->assertDontSeeHtml('data-testid="schedule-rebuild-preview"')
+        ->call('openRemaining')
+        ->assertSet('showPreview', true)
+        ->assertSet('previewMode', 'remaining')
+        ->assertSee('Schedule remaining games');
+
+    $plan = $component->get('previewPlan');
+
+    expect($plan['assignments'])->toHaveCount($playoffMatches->count());
+
+    $component
+        ->call('publishSchedule')
+        ->assertSet('showPreview', false)
+        ->assertDispatched('hf-toast');
+
+    $afterSnapshot = MatchSlot::query()
+        ->whereIn('match_id', $groupMatches->pluck('id'))
+        ->orderBy('id')
+        ->get()
+        ->map(fn (MatchSlot $slot): array => [
+            (int) $slot->id,
+            (int) $slot->match_id,
+            (int) $slot->court_id,
+            $slot->start_at?->format('Y-m-d H:i:s'),
+        ])
+        ->all();
+
+    expect($afterSnapshot)->toBe($groupSnapshot)
+        ->and(MatchSlot::query()->whereIn('match_id', $playoffMatches->pluck('id'))->count())
+        ->toBe($playoffMatches->count())
+        ->and(AuditLog::where('action', 'schedule.remaining')->count())->toBe(1);
 });
 
 it('toggles court filters and restores all courts', function () {

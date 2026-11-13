@@ -191,6 +191,9 @@
                     @elseif ($this->canRebuild)
                         <p class="hf-small hf-muted hf-mt-1">Rebuild the published schedule from new dates, match days, and timing settings.</p>
                         <button type="button" class="hf-btn hf-btn--primary" wire:click="openRebuild" data-testid="schedule-rebuild-preview">Rebuild schedule</button>
+                    @elseif ($this->canScheduleRemaining)
+                        <p class="hf-small hf-muted hf-mt-1">Group results are in. Place the remaining playoff games after the last published match day.</p>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openRemaining" data-testid="schedule-remaining-preview">Schedule remaining games</button>
                     @else
                         <p class="hf-small hf-muted hf-mt-1 hf-mb-0">
                             {{ $this->locked ? 'Results exist, so the schedule is locked.' : 'The court schedule is already published.' }}
@@ -220,7 +223,7 @@
                 data-testid="schedule-preview-dialog"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $previewMode === 'rebuild' ? 'Rebuild schedule' : 'Schedule preview' }}</h2>
+                    <h2 class="hf-dialog__title">{{ $previewMode === 'rebuild' ? 'Rebuild schedule' : ($previewMode === 'remaining' ? 'Schedule remaining games' : 'Schedule preview') }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closePreview" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -350,7 +353,7 @@
                         data-testid="schedule-preview-publish"
                         wire:loading.attr="disabled"
                         @disabled($previewDirty || $previewErrors !== [])
-                    >Publish schedule</button>
+                    >{{ $previewMode === 'remaining' ? 'Schedule remaining games' : 'Publish schedule' }}</button>
                 </div>
             </dialog>
         @endif
