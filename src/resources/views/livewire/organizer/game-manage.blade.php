@@ -65,6 +65,15 @@
             $teamsReady = $home !== null && $away !== null;
         @endphp
 
+        @section('breadcrumbs')
+            <x-breadcrumbs :items="[
+                ['label' => 'Home', 'href' => route('dashboard')],
+                ['label' => 'Tournaments', 'href' => route('tournaments')],
+                ['label' => $match->tournament?->name ?? 'Tournament', 'href' => route('tournamentShow', ['tournament' => $match->tournament_id])],
+                ['label' => 'Game scoring'],
+            ]" />
+        @endsection
+
         <header class="hf-page-head hf-mb-3">
             <div>
                 <span class="hf-eyebrow">{{ $home?->name ?? 'TBD' }} vs {{ $away?->name ?? 'TBD' }}</span>

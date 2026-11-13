@@ -2,6 +2,14 @@
 
 @section('title', $team->name)
 
+@section('breadcrumbs')
+    <x-breadcrumbs :items="[
+        ['label' => 'Home', 'href' => route('dashboard')],
+        ['label' => 'Teams', 'href' => route('teams')],
+        ['label' => $team->name],
+    ]" />
+@endsection
+
 @section('content')
 @php
     $money = fn ($value) => '₱' . number_format((int) ($value ?? 0));
@@ -40,7 +48,7 @@
                         <span class="hf-chip hf-chip--slate">Seed {{ $registration->seed }}</span>
                     @endif
                 </span>
-                <h1>{{ $team->name }}</h1>
+                <h2 class="hf-hero__name">{{ $team->name }}</h2>
                 <p>{{ $team->coachUser?->name ?? $team->coach_name ?? 'Coach' }} · {{ $team->city }} · {{ $tournament?->venueName() ?? '' }}</p>
             </div>
         </div>

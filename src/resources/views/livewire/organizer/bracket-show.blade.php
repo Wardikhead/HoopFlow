@@ -45,6 +45,15 @@
             <p class="hf-muted hf-mb-0">Tournament not found.</p>
         </div>
     @else
+        @section('breadcrumbs')
+            <x-breadcrumbs :items="[
+                ['label' => 'Home', 'href' => route('dashboard')],
+                ['label' => 'Tournaments', 'href' => route('tournaments')],
+                ['label' => $tournament->name, 'href' => route('tournamentShow', ['tournament' => $tournament->id])],
+                ['label' => 'Bracket'],
+            ]" />
+        @endsection
+
         <header class="hf-page-head hf-mb-3">
             <div>
                 <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? $tournament->name }} · {{ $tournament->status }}</span>
@@ -119,7 +128,7 @@
                     <div class="hf-flex hf-items-center hf-gap-3 hf-mt-1">
                         <x-team-shield :team="$bracket['champion']" size="lg" />
                         <div>
-                            <h1>{{ $bracket['champion']->name }}</h1>
+                            <h2 class="hf-hero__name">{{ $bracket['champion']->name }}</h2>
                             <p class="hf-mb-0">{{ $bracket['champion']->coach_name ?? 'Coach TBD' }} · {{ $bracket['champion']->city ?? 'City TBD' }}</p>
                         </div>
                     </div>

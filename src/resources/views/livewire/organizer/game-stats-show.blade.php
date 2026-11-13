@@ -47,6 +47,15 @@
             <a class="hf-btn hf-btn--primary" href="{{ route('matches') }}">Browse matchups</a>
         </div>
     @else
+        @section('breadcrumbs')
+            <x-breadcrumbs :items="[
+                ['label' => 'Home', 'href' => route('dashboard')],
+                ['label' => 'Tournaments', 'href' => route('tournaments')],
+                ['label' => $match->tournament?->name ?? 'Tournament', 'href' => route('tournamentShow', ['tournament' => $match->tournament_id])],
+                ['label' => 'Game stats'],
+            ]" />
+        @endsection
+
         <header class="hf-page-head hf-mb-3">
             <div>
                 <span class="hf-eyebrow">{{ $match->tournament?->divisions?->first()?->name ?? 'Tournament' }} · {{ $match->tournament?->name ?? 'HoopFlow' }}</span>
@@ -96,7 +105,7 @@
                 <div class="hf-flex hf-items-center hf-between hf-gap-2 {{ $homeWinner ? 'is-winner' : '' }}">
                     <span class="hf-flex hf-items-center hf-gap-2">
                         <x-team-shield :team="$home" size="lg" />
-                        <strong class="hf-page-title hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $home?->name ?? 'TBD' }}</strong>
+                        <strong class="hf-team-name hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $home?->name ?? 'TBD' }}</strong>
                     </span>
                     <span class="hf-score" style="font-size: clamp(34px, 6vw, 64px)">{{ $match->home_score ?? '–' }}</span>
                 </div>
@@ -108,7 +117,7 @@
                 <div class="hf-flex hf-items-center hf-between hf-gap-2 {{ $awayWinner ? 'is-winner' : '' }}">
                     <span class="hf-flex hf-items-center hf-gap-2">
                         <x-team-shield :team="$away" size="lg" />
-                        <strong class="hf-page-title hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $away?->name ?? 'TBD' }}</strong>
+                        <strong class="hf-team-name hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $away?->name ?? 'TBD' }}</strong>
                     </span>
                     <span class="hf-score" style="font-size: clamp(34px, 6vw, 64px)">{{ $match->away_score ?? '–' }}</span>
                 </div>
