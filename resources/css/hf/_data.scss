@@ -477,8 +477,12 @@
 }
 
 .hf-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   padding: 10px 8px;
   border-bottom: 2px solid var(--hf-ink);
+  background: var(--hf-surface-2);
   color: var(--hf-muted);
   font-size: 10px;
   font-weight: 800;
@@ -494,12 +498,16 @@
   vertical-align: middle;
 }
 
+.hf-table tbody tr {
+  transition: background var(--hf-dur-micro) linear;
+}
+
 .hf-table tbody tr:hover {
-  background: color-mix(in srgb, var(--hf-primary) 4%, transparent);
+  background: color-mix(in srgb, var(--hf-primary) 6%, transparent);
 }
 
 .hf-table tbody tr.is-active {
-  background: color-mix(in srgb, var(--hf-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--hf-primary) 9%, transparent);
   box-shadow: inset 3px 0 0 var(--hf-primary);
 }
 
