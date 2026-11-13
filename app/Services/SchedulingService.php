@@ -33,26 +33,71 @@ class SchedulingService
      */
     public function plan(Tournament $tournament, array $options = []): array
     {
+        return $this->buildPlan($tournament, $options, false);
+    }
+
+    /**
+     * Build a plan for games that do not have a court slot yet. Used after
+     * results exist, when a full rebuild is locked but playoff games still
+     * need to be placed on the calendar.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array{
+     *     assignments: array<int, array{matchId: int, courtId: int, scheduledAt: string}>,
+     *     courts: Collection<int, Court>,
+     *     slotMinutes: int,
+     *     restMinutes: int,
+     *     startDate: string,
+     *     endDate: string|null,
+     *     weekdays: list<int>,
+     *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
+     * }
+     */
+    public function planRemaining(Tournament $tournament, array $options = []): array
+    {
+        return $this->buildPlan($tournament, $options, true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return array{
+     *     assignments: array<int, array{matchId: int, courtId: int, scheduledAt: string}>,
+     *     courts: Collection<int, Court>,
+     *     slotMinutes: int,
+     *     restMinutes: int,
+     *     startDate: string,
+     *     endDate: string|null,
+     *     weekdays: list<int>,
+     *     summary: array{games: int, matchDays: int, firstDate: string|null, lastDate: string|null, seriesCount: int}
+     * }
+     */
+    protected function buildPlan(Tournament $tournament, array $options, bool $remaining): array
+    {
         $matches = MatchModel::query()
             ->where('tournament_id', $tournament->id)
             ->whereIn('status', ['scheduled', 'conditional'])
+            ->when($remaining, fn ($query) => $query->whereDoesntHave('matchSlots'))
             ->with('bracket:id,format')
             ->get()
             ->reject(fn (MatchModel $match): bool => $match->isByeGame())
             ->values();
 
         if ($matches->isEmpty()) {
-            throw new InvalidArgumentException('Generate a bracket before scheduling.');
+            throw new InvalidArgumentException($remaining
+                ? 'Every remaining game already has a court and time.'
+                : 'Generate a bracket before scheduling.');
         }
 
-        $hasResults = MatchModel::query()
-            ->where('tournament_id', $tournament->id)
-            ->whereIn('status', ['final', 'forfeit', 'in_progress'])
-            ->get()
-            ->contains(fn (MatchModel $match): bool => ! $match->isByeGame());
+        if (! $remaining) {
+            $hasResults = MatchModel::query()
+                ->where('tournament_id', $tournament->id)
+                ->whereIn('status', ['final', 'forfeit', 'in_progress'])
+                ->get()
+                ->contains(fn (MatchModel $match): bool => ! $match->isByeGame());
 
-        if ($hasResults) {
-            throw new InvalidArgumentException('The schedule is locked because results exist.');
+            if ($hasResults) {
+                throw new InvalidArgumentException('The schedule is locked because results exist.');
+            }
         }
 
         $courts = $this->courts($tournament);
@@ -63,10 +108,23 @@ class SchedulingService
 
         $tournamentStart = $tournament->start_date?->copy()->startOfDay();
         $tournamentEnd = $tournament->end_date?->copy()->startOfDay();
+        $remainingStart = $remaining ? $this->remainingStartDate($tournament) : null;
 
-        $startDate = isset($options['startDate']) && is_string($options['startDate']) && $options['startDate'] !== ''
+        $requestedStart = isset($options['startDate']) && is_string($options['startDate']) && $options['startDate'] !== ''
             ? Carbon::parse($options['startDate'])->startOfDay()
-            : ($tournamentStart ?? Carbon::today());
+            : null;
+
+        if ($requestedStart instanceof Carbon && $remainingStart instanceof Carbon && $requestedStart->lt($remainingStart)) {
+            throw new InvalidArgumentException(sprintf(
+                'Remaining games must start on or after %s, after the last published match day.',
+                $remainingStart->format('M j, Y'),
+            ));
+        }
+
+        $startDate = $requestedStart
+            ?? $remainingStart
+            ?? $tournamentStart
+            ?? Carbon::today();
 
         if ($tournamentStart instanceof Carbon && $startDate->lt($tournamentStart)) {
             throw new InvalidArgumentException('Start date must be within the tournament dates.');
@@ -141,11 +199,29 @@ class SchedulingService
             })
             ->values();
 
+        $existingSlots = $remaining
+            ? MatchSlot::query()
+                ->where('tournament_id', $tournament->id)
+                ->whereNotNull('start_at')
+                ->with('match:id,home_team_id,away_team_id')
+                ->get()
+            : new Collection;
+
         $baseDate = $startDate->copy();
         $assignments = [];
         $laneSlots = [];
         $teamTimes = [];
         $previousSequenceLastDay = null;
+
+        foreach ($existingSlots as $slot) {
+            if (! $slot->start_at instanceof Carbon) {
+                continue;
+            }
+
+            foreach (array_filter([$slot->match?->home_team_id, $slot->match?->away_team_id]) as $teamId) {
+                $teamTimes[(int) $teamId][] = $slot->start_at->getTimestamp();
+            }
+        }
 
         foreach ($rounds as $round) {
             $earliestDay = $previousSequenceLastDay === null ? 0 : $previousSequenceLastDay + 1;
@@ -170,7 +246,7 @@ class SchedulingService
                         ));
                     }
 
-                    $placement = $this->findLane($unit, $gameDays, $courts, $baseHour, $slotMinutes, $restMinutes, $laneSlots, $teamTimes);
+                    $placement = $this->findLane($unit, $gameDays, $courts, $baseHour, $slotMinutes, $restMinutes, $laneSlots, $teamTimes, $existingSlots);
 
                     if ($placement === null) {
                         $candidate->addDay();
@@ -290,6 +366,7 @@ class SchedulingService
      * @param  Collection<int, Court>  $courts
      * @param  array<string, array<int, array<string, bool>>>  $laneSlots
      * @param  array<int, list<int>>  $teamTimes
+     * @param  Collection<int, MatchSlot>  $existingSlots
      * @return array{court: Court, time: string}|null
      */
     protected function findLane(
@@ -301,6 +378,7 @@ class SchedulingService
         int $restMinutes,
         array $laneSlots,
         array &$teamTimes,
+        Collection $existingSlots,
     ): ?array {
         $step = $slotMinutes + $restMinutes;
         $minutes = $baseHour * 60;
@@ -318,6 +396,12 @@ class SchedulingService
                     }
 
                     $start = $day->copy()->setTimeFromTimeString($time);
+
+                    if ($this->existingSlotConflict($existingSlots, (int) $court->id, $start, $slotMinutes, $restMinutes) instanceof MatchSlot) {
+                        $free = false;
+                        break;
+                    }
+
                     $timestamp = $start->getTimestamp();
 
                     foreach ([$unit['anchor']->home_team_id, $unit['anchor']->away_team_id] as $teamId) {
@@ -353,6 +437,30 @@ class SchedulingService
         }
 
         return null;
+    }
+
+    /**
+     * @param  Collection<int, MatchSlot>  $slots
+     */
+    protected function existingSlotConflict(
+        Collection $slots,
+        int $courtId,
+        Carbon $start,
+        int $slotMinutes,
+        int $restMinutes,
+    ): ?MatchSlot {
+        $end = $start->copy()->addMinutes($slotMinutes + $restMinutes);
+
+        return $slots->first(function (MatchSlot $slot) use ($courtId, $start, $end, $slotMinutes, $restMinutes): bool {
+            if ((int) $slot->court_id !== $courtId || ! $slot->start_at instanceof Carbon) {
+                return false;
+            }
+
+            $otherStart = $slot->start_at->copy();
+            $otherEnd = $otherStart->copy()->addMinutes($slotMinutes + $restMinutes);
+
+            return $start->lt($otherEnd) && $otherStart->lt($end);
+        });
     }
 
     protected function dayOffset(Carbon $base, Carbon $date): int
@@ -455,10 +563,79 @@ class SchedulingService
     }
 
     /**
+     * Publish a remaining-games plan without touching any published slot.
+     *
+     * @param  array<string, mixed>  $plan
+     */
+    public function publishRemaining(Tournament $tournament, array $plan): int
+    {
+        $validation = $this->validatePlan($tournament, $plan, true);
+
+        if (! $validation['valid']) {
+            $message = $validation['errors'] === []
+                ? 'The schedule plan is invalid.'
+                : (string) reset($validation['errors']);
+
+            throw new InvalidArgumentException($message);
+        }
+
+        return DB::transaction(function () use ($tournament, $plan): int {
+            $dates = [];
+            $matches = 0;
+
+            foreach ($plan['assignments'] as $assignment) {
+                $matchId = (int) $assignment['matchId'];
+
+                if (MatchSlot::query()->where('match_id', $matchId)->exists()) {
+                    throw new InvalidArgumentException('One of these games already has a court and time. Rebuild the preview.');
+                }
+
+                $start = Carbon::parse($assignment['scheduledAt']);
+                $dates[] = $start->format('Y-m-d');
+                $matches++;
+
+                MatchSlot::create([
+                    'match_id' => $matchId,
+                    'tournament_id' => $tournament->id,
+                    'court_id' => (int) $assignment['courtId'],
+                    'start_at' => $start,
+                    'end_at' => $start->copy()->addMinutes((int) $plan['slotMinutes']),
+                    'status' => 'published',
+                    'version' => 1,
+                    'published_at' => now(),
+                ]);
+            }
+
+            $dates = array_values(array_unique($dates));
+            sort($dates);
+
+            app(AuditLogger::class)->log(
+                'schedule.remaining',
+                'tournament',
+                $tournament->id,
+                null,
+                [
+                    'courts' => count($plan['courts']),
+                    'slotMinutes' => (int) $plan['slotMinutes'],
+                    'restMinutes' => (int) $plan['restMinutes'],
+                    'matches' => $matches,
+                    'weekdays' => $plan['weekdays'] ?? range(1, 7),
+                    'endDate' => $plan['endDate'] ?? null,
+                    'firstDate' => $dates[0] ?? null,
+                    'lastDate' => $dates === [] ? null : $dates[array_key_last($dates)],
+                ],
+                $tournament->organization_id,
+            );
+
+            return $matches;
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $plan
      * @return array{errors: array<int, string>, warnings: array<int, string>, valid: bool}
      */
-    public function validatePlan(Tournament $tournament, array $plan): array
+    public function validatePlan(Tournament $tournament, array $plan, bool $remaining = false): array
     {
         $errors = [];
         $warnings = [];
@@ -481,6 +658,7 @@ class SchedulingService
         $schedulable = MatchModel::query()
             ->where('tournament_id', $tournament->id)
             ->whereIn('status', ['scheduled', 'conditional'])
+            ->when($remaining, fn ($query) => $query->whereDoesntHave('matchSlots'))
             ->get()
             ->reject(fn (MatchModel $match): bool => $match->isByeGame())
             ->filter(fn (MatchModel $match): bool => $match->status === 'scheduled' || $match->series_id !== null)
@@ -488,6 +666,12 @@ class SchedulingService
 
         $startDate = Carbon::parse((string) $plan['startDate'])->startOfDay();
         $tournamentStart = $tournament->start_date?->copy()->startOfDay();
+        $remainingStart = $remaining ? $this->remainingStartDate($tournament) : null;
+
+        if ($remainingStart instanceof Carbon && $startDate->lt($remainingStart)) {
+            $errors[0] = 'Remaining games must start on or after '.$remainingStart->format('M j, Y').', after the last published match day.';
+        }
+
         $endDate = isset($plan['endDate']) && is_string($plan['endDate']) && $plan['endDate'] !== ''
             ? Carbon::parse($plan['endDate'])->startOfDay()
             : $tournament->end_date?->copy()->startOfDay();
@@ -561,9 +745,11 @@ class SchedulingService
             ];
         }
 
-        foreach ($schedulable as $matchId => $match) {
-            if (! isset($seen[(int) $matchId])) {
-                $errors[(int) $matchId] = 'This match is missing from the plan.';
+        if (! $remaining) {
+            foreach ($schedulable as $matchId => $match) {
+                if (! isset($seen[(int) $matchId])) {
+                    $errors[(int) $matchId] = 'This match is missing from the plan.';
+                }
             }
         }
 
@@ -614,6 +800,46 @@ class SchedulingService
                         ? ($match->home_team_id !== null ? $match->homeTeam : $match->awayTeam)
                         : null;
                     $teamName = $team->name;
+                    $errors[$row['matchId']] ??= $teamName.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.';
+                }
+            }
+        }
+
+        if ($remaining) {
+            $publishedSlots = MatchSlot::query()
+                ->where('tournament_id', $tournament->id)
+                ->whereNotNull('start_at')
+                ->get();
+
+            foreach ($rows as $row) {
+                $conflict = $this->existingSlotConflict(
+                    $publishedSlots,
+                    $row['courtId'],
+                    $row['start'],
+                    $slotMinutes,
+                    $restMinutes,
+                );
+
+                if (! $conflict instanceof MatchSlot) {
+                    continue;
+                }
+
+                $court = $courts->get($row['courtId']);
+                $errors[$row['matchId']] ??= ($court->name ?? 'Court')
+                    .' is already booked at '.($conflict->start_at?->format('M j, g:i A') ?? 'that time')
+                    .'. Pick another court or time.';
+            }
+
+            foreach ($rows as $row) {
+                $match = $row['match'];
+
+                if (! $match instanceof MatchModel) {
+                    continue;
+                }
+
+                $teamName = $this->teamRestConflict($tournament, $match, $row['start'], $slotMinutes, $restMinutes);
+
+                if ($teamName !== null) {
                     $errors[$row['matchId']] ??= $teamName.' would play twice within '.($slotMinutes + $restMinutes).' minutes. Move one game.';
                 }
             }
@@ -708,7 +934,7 @@ class SchedulingService
         $log = AuditLog::query()
             ->where('entity_type', 'tournament')
             ->where('entity_id', $tournament->id)
-            ->whereIn('action', ['schedule.publish', 'schedule.rebuild', 'schedule.generate'])
+            ->whereIn('action', ['schedule.publish', 'schedule.rebuild', 'schedule.generate', 'schedule.remaining'])
             ->orderByDesc('id')
             ->first();
 
@@ -989,6 +1215,27 @@ class SchedulingService
     public function startDate(Tournament $tournament): string
     {
         return $tournament->start_date?->format('Y-m-d') ?? now()->format('Y-m-d');
+    }
+
+    /**
+     * The first day an incremental schedule may use: the day after the latest
+     * published slot, so new games never jump ahead of an existing match.
+     */
+    public function remainingStartDate(Tournament $tournament): Carbon
+    {
+        $start = $tournament->start_date?->copy()->startOfDay() ?? Carbon::today();
+        $lastSlot = MatchSlot::query()
+            ->where('tournament_id', $tournament->id)
+            ->whereNotNull('start_at')
+            ->max('start_at');
+
+        if ($lastSlot === null) {
+            return $start;
+        }
+
+        $dayAfter = Carbon::parse((string) $lastSlot)->startOfDay()->addDay();
+
+        return $dayAfter->gt($start) ? $dayAfter : $start;
     }
 
     public function slotMinutes(Tournament $tournament): int

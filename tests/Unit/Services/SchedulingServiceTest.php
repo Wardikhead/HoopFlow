@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AuditLog;
 use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
@@ -9,6 +10,7 @@ use App\Services\BracketService;
 use App\Services\SchedulingService;
 use Carbon\Carbon;
 use Database\Seeders\PrototypeSeeder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -58,6 +60,109 @@ function schedulingCourtForPlan(Tournament $tournament, int $excludeId): Court
         ->first(fn (Court $court): bool => (int) $court->id !== $excludeId)
         ?? throw new RuntimeException('This test needs two courts.');
 }
+
+/**
+ * @return array{Tournament, Collection<int, MatchModel>, Collection<int, MatchModel>}
+ */
+function schedulingRoundRobinPlayoffTournament(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'start_date' => '2026-07-10',
+        'end_date' => '2026-07-31',
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 4,
+        ]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'round-robin');
+    app(SchedulingService::class)->generate($tournament);
+
+    $groupMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'group'))
+        ->orderBy('id')
+        ->get();
+
+    foreach ($groupMatches as $match) {
+        $bracketService->recordScore($match->fresh(), 80, 70);
+    }
+
+    $bracketService->generatePlayoffs($tournament->fresh());
+
+    $playoffMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'playoffs'))
+        ->orderBy('id')
+        ->get();
+
+    return [$tournament->fresh(), $groupMatches, $playoffMatches];
+}
+
+it('keeps full schedule generation locked once group results exist', function () {
+    [$tournament] = schedulingRoundRobinPlayoffTournament();
+
+    expect(fn () => app(SchedulingService::class)->plan($tournament))
+        ->toThrow(InvalidArgumentException::class, 'The schedule is locked because results exist.');
+});
+
+it('plans and publishes only the unscheduled playoff games after the last group match day', function () {
+    [$tournament, $groupMatches, $playoffMatches] = schedulingRoundRobinPlayoffTournament();
+
+    $groupSnapshot = MatchSlot::query()
+        ->whereIn('match_id', $groupMatches->pluck('id'))
+        ->orderBy('id')
+        ->get()
+        ->map(fn (MatchSlot $slot): array => [
+            (int) $slot->id,
+            (int) $slot->match_id,
+            (int) $slot->court_id,
+            $slot->start_at?->format('Y-m-d H:i:s'),
+        ])
+        ->all();
+
+    $lastGroupDate = substr((string) MatchSlot::query()
+        ->whereIn('match_id', $groupMatches->pluck('id'))
+        ->max('start_at'), 0, 10);
+
+    $plan = app(SchedulingService::class)->planRemaining($tournament);
+
+    expect($plan['assignments'])->toHaveCount($playoffMatches->count())
+        ->and(collect($plan['assignments'])->pluck('matchId')->sort()->values()->all())
+        ->toBe($playoffMatches->pluck('id')->sort()->values()->all())
+        ->and($playoffMatches->every(fn (MatchModel $match): bool => $match->matchSlots()->doesntExist()))->toBeTrue();
+
+    $firstRemainingDate = collect($plan['assignments'])
+        ->map(fn (array $assignment): string => substr((string) $assignment['scheduledAt'], 0, 10))
+        ->min();
+
+    expect($firstRemainingDate > $lastGroupDate)->toBeTrue();
+
+    $published = app(SchedulingService::class)->publishRemaining($tournament, $plan);
+
+    $afterSnapshot = MatchSlot::query()
+        ->whereIn('match_id', $groupMatches->pluck('id'))
+        ->orderBy('id')
+        ->get()
+        ->map(fn (MatchSlot $slot): array => [
+            (int) $slot->id,
+            (int) $slot->match_id,
+            (int) $slot->court_id,
+            $slot->start_at?->format('Y-m-d H:i:s'),
+        ])
+        ->all();
+
+    expect($published)->toBe($playoffMatches->count())
+        ->and($afterSnapshot)->toBe($groupSnapshot)
+        ->and(MatchSlot::query()->whereIn('match_id', $playoffMatches->pluck('id'))->count())
+        ->toBe($playoffMatches->count())
+        ->and(MatchSlot::query()->where('tournament_id', $tournament->id)->count())
+        ->toBe($groupMatches->count() + $playoffMatches->count())
+        ->and(AuditLog::where('action', 'schedule.remaining')->count())->toBe(1);
+});
 
 it('pre-schedules every series game one per eligible day on one court and tip-off', function () {
     $tournament = schedulingTwoTeamTournament();
