@@ -30,6 +30,38 @@
     @livewireStyles
 </head>
 <body class="@yield('body-class')">
+    @php
+        $flashToast = session('announcement_toast');
+    @endphp
+
+    <div class="hf-toast-region"
+         aria-live="polite"
+         aria-atomic="false"
+         x-data="hfToasts"
+         @hf-toast.window="push($event.detail)"
+         @if ($flashToast) x-init="push(@js($flashToast))" @endif>
+        <template x-for="toast in toasts" :key="toast.id">
+            <div class="hf-toast"
+                 :class="`hf-toast--${toast.tone}${toast.paused ? ' is-paused' : ''}`"
+                 :role="toast.tone === 'danger' ? 'alert' : 'status'"
+                 @mouseenter="pause(toast.id)"
+                 @mouseleave="resume(toast.id)"
+                 @focusin="pause(toast.id)"
+                 @focusout="resume(toast.id)">
+                <i class="bi"
+                   :class="toast.tone === 'danger' ? 'bi-x-circle-fill' : toast.tone === 'warning' ? 'bi-exclamation-triangle-fill' : toast.tone === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill'"
+                   aria-hidden="true"></i>
+                <div>
+                    <strong x-show="toast.title" x-text="toast.title"></strong>
+                    <p x-text="toast.message"></p>
+                    <a x-show="toast.actionLabel" class="hf-toast__action" :href="toast.actionHref" x-text="toast.actionLabel"></a>
+                </div>
+                <button type="button" aria-label="Dismiss notification" data-testid="toast-dismiss" @click="dismiss(toast.id)">&times;</button>
+                <span class="hf-toast__timer" :style="`animation-duration:${toast.duration}ms`" aria-hidden="true"></span>
+            </div>
+        </template>
+    </div>
+
     <a class="visually-hidden-focusable" href="#main">Skip to content</a>
 
     @guest

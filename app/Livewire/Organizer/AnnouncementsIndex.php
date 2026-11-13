@@ -34,9 +34,6 @@ class AnnouncementsIndex extends Component
 
     public bool $confirmingDelete = false;
 
-    /** @var array{title: string, message: string, tone: string}|null */
-    public ?array $flashToast = null;
-
     public function mount(): void
     {
         $requested = request()->query('id') ?? request()->query('tournament');
@@ -52,16 +49,6 @@ class AnnouncementsIndex extends Component
         }
 
         $this->search = (string) (request()->query('q') ?? '');
-
-        $flash = session('announcement_toast');
-
-        if (is_array($flash)) {
-            $this->flashToast = [
-                'title' => is_string($flash['title'] ?? null) ? $flash['title'] : '',
-                'message' => is_string($flash['message'] ?? null) ? $flash['message'] : '',
-                'tone' => is_string($flash['tone'] ?? null) ? $flash['tone'] : 'success',
-            ];
-        }
     }
 
     public function clearFilters(): void

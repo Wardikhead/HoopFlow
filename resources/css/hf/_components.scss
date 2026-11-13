@@ -832,42 +832,30 @@
 }
 
 .hf-toast {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: start;
-  padding: 12px;
+  overflow: hidden;
+  padding: 12px 12px 14px;
   border: 1px solid var(--hf-border);
   border-left: 4px solid var(--hf-primary);
-  border-radius: 12px;
+  border-radius: var(--hf-radius-lg);
   background: var(--hf-surface-2);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
-  animation: hf-toast-in 200ms ease-out;
+  box-shadow: var(--hf-shadow-overlay);
+  animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out);
 }
 
-.hf-toast--success {
-  border-left-color: var(--hf-success);
-}
-
-.hf-toast--warning {
-  border-left-color: var(--hf-warning);
-}
-
-.hf-toast--danger {
-  border-left-color: var(--hf-alert);
-}
-
-.hf-toast strong {
-  display: block;
-  font-size: 13px;
-}
-
-.hf-toast p {
-  margin: 3px 0 0;
-  color: var(--hf-muted);
-  font-size: 12px;
-}
-
+.hf-toast > .bi { margin-top: 1px; color: var(--hf-primary-ink); font-size: 18px; }
+.hf-toast--success { border-left-color: var(--hf-success); }
+.hf-toast--success > .bi { color: var(--hf-success-ink); }
+.hf-toast--warning { border-left-color: var(--hf-warning); }
+.hf-toast--warning > .bi { color: var(--hf-warning-ink); }
+.hf-toast--danger { border-left-color: var(--hf-danger-ink); }
+.hf-toast--danger > .bi { color: var(--hf-danger-ink); }
+.hf-toast strong { display: block; font-size: 13px; }
+.hf-toast p { margin: 3px 0 0; color: var(--hf-muted); font-size: 12px; }
 .hf-toast button {
   padding: 0;
   border: 0;
@@ -877,6 +865,27 @@
   font-size: 18px;
   line-height: 1;
 }
+.hf-toast__action {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--hf-primary-ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.hf-toast__timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.35;
+  transform-origin: left;
+  animation: hf-toast-timer linear forwards;
+}
+.hf-toast.is-paused .hf-toast__timer { animation-play-state: paused; }
 
 @keyframes hf-toast-in {
   from {
@@ -889,10 +898,15 @@
   }
 }
 
-@media (max-width: 991.98px) {
+@keyframes hf-toast-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 767.98px) {
   .hf-toast-region {
     right: 12px;
-    bottom: 76px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
     left: 12px;
     width: auto;
   }

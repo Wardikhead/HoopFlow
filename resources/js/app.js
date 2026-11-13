@@ -5,11 +5,13 @@
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
 import { initMoreSheet, initShell } from './ui/shell';
+import { registerToasts } from './ui/toasts';
 
 initPreferences();
 document.addEventListener('hf:theme-changed', syncPreferenceButtons);
 initShell();
 initMoreSheet();
+registerToasts();
 
 // Native <dialog> elements keep their open state outside the DOM attributes that
 // Livewire morphs. Re-open any server-rendered modal after a morph so score
