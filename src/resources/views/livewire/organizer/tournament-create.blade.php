@@ -24,6 +24,8 @@
     </ol>
 
     <form wire:submit="save" class="hf-card" novalidate data-testid="create-form">
+        <x-form-errors />
+
         <section data-step-panel="0" @if ($step !== 0) hidden @endif>
             <div class="hf-form-grid">
                 <div class="hf-field hf-field--full">

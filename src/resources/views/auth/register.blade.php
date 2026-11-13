@@ -13,6 +13,14 @@
         <form id="registerForm" method="POST" action="{{ route('register.store') }}" novalidate>
             @csrf
 
+            <x-form-errors :targets="[
+                'name' => 'registerName',
+                'email' => 'registerEmail',
+                'password' => 'registerPassword',
+                'role' => 'registerRole',
+                'organization' => 'registerOrganization',
+            ]" />
+
             <div class="hf-form-grid">
                 <div class="hf-field hf-field--full">
                     <label class="hf-label" for="registerName">Full name</label>

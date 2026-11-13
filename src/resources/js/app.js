@@ -7,12 +7,14 @@ import { initFeedback } from './ui/feedback';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
 import { initMoreSheet, initShell } from './ui/shell';
 import { registerToasts } from './ui/toasts';
+import { initValidation } from './ui/validation';
 
 initFeedback();
 initPreferences();
 document.addEventListener('hf:theme-changed', syncPreferenceButtons);
 initShell();
 initMoreSheet();
+initValidation();
 registerToasts();
 
 // Native <dialog> elements keep their open state outside the DOM attributes that
