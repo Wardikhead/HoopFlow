@@ -231,6 +231,44 @@ it('stores best-of settings for playoff rounds', function () {
         ->and($tournament->rules_json['best_of_final'])->toBe(7);
 });
 
+it('labels a double-elimination series final as modified double elimination', function () {
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'double-elimination',
+            'best_of_final' => 3,
+        ]),
+    ]);
+
+    $tournament = $tournament->fresh();
+
+    expect($tournament->grandFinalBestOf())->toBe(3)
+        ->and($tournament->isModifiedDoubleElimination())->toBeTrue()
+        ->and($tournament->formatLabel())->toBe('Modified double elimination');
+
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], ['best_of_final' => 1]),
+    ]);
+
+    $tournament = $tournament->fresh();
+
+    expect($tournament->isModifiedDoubleElimination())->toBeFalse()
+        ->and($tournament->formatLabel())->toBe('Double elimination');
+});
+
+it('explains the reset rule when double elimination is selected', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentCreate::class)
+        ->call('nextStep')
+        ->set('format', 'double-elimination')
+        ->set('bestOfFinal', 1)
+        ->assertSee('True double elimination: if the losers-bracket team wins the grand final, a reset game decides the title.')
+        ->set('bestOfFinal', 3)
+        ->assertSee('Modified double elimination: the best-of-3 final decides the title. No reset game is played.');
+});
+
 it('rejects even best-of lengths and out-of-range legs', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 

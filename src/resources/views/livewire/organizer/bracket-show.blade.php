@@ -51,9 +51,9 @@
                 <h1 class="hf-page-title">{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
                 <p class="hf-page-desc">
                     @if ($bracket['hasBracket'])
-                        {{ $tournament->name }} · {{ $format }} · {{ $totalRounds }} rounds
+                        {{ $tournament->name }} · {{ $tournament->formatLabel() }} · {{ $totalRounds }} rounds
                     @else
-                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournamentSlots }}-slot {{ $format }} bracket.
+                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournamentSlots }}-slot {{ $tournament->formatLabel() }} bracket.
                     @endif
                 </p>
             </div>
@@ -143,6 +143,11 @@
             @foreach ($sections as $section)
                 <section class="hf-mb-3" data-testid="bracket-section-{{ $section['key'] }}">
                     <h2 class="hf-section-title">{{ $section['title'] }}</h2>
+                    @if ($section['key'] === 'grand_final' && $tournament->isModifiedDoubleElimination())
+                        <p class="hf-small hf-muted" data-testid="bracket-grand-final-note">
+                            Best of {{ $tournament->grandFinalBestOf() }} — the series winner takes the title. No reset game is played.
+                        </p>
+                    @endif
                     <div class="hf-bracket" data-testid="bracket-tree">
                         @foreach ($section['rounds'] as $round)
                             <div class="hf-bracket-round">

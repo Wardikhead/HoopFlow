@@ -213,6 +213,26 @@ it('renders winners, losers, and grand final sections for double elimination', f
         ->assertDontSeeHtml('data-testid="bracket-champion"');
 });
 
+it('labels a double-elimination series final as modified and explains the missing reset', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'double-elimination',
+            'best_of_final' => 3,
+        ]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    (new BracketService)->generate($tournament, 'double-elimination');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class, ['id' => $tournament->id])
+        ->assertSee('Modified double elimination')
+        ->assertSee('Best of 3 — the series winner takes the title. No reset game is played.')
+        ->assertDontSee('Grand Final Reset');
+});
+
 it('shows the best-of length and series score on a playoff card', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();

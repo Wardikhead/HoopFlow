@@ -181,12 +181,21 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createBestOfFinal">Final series</label>
-                    <select class="hf-select" id="createBestOfFinal" wire:model="bestOfFinal"
+                    <select class="hf-select" id="createBestOfFinal" wire:model.live="bestOfFinal"
                             @error('bestOfFinal') aria-invalid="true" @enderror data-testid="create-best-of-final">
                         @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
                             <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
                         @endforeach
                     </select>
+                    @if ($format === 'double-elimination')
+                        <p class="hf-small hf-muted hf-mb-0" data-testid="create-best-of-final-reset-note">
+                            @if ((int) $bestOfFinal > 1)
+                                Modified double elimination: the best-of-{{ $bestOfFinal }} final decides the title. No reset game is played.
+                            @else
+                                True double elimination: if the losers-bracket team wins the grand final, a reset game decides the title.
+                            @endif
+                        </p>
+                    @endif
                     @error('bestOfFinal') <p class="hf-field-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-field">
@@ -255,7 +264,9 @@
                 $filledCourts = collect($courts)->map(fn ($court) => trim((string) $court))->filter()->values();
                 $firstRound = (int) ($bracketSlots / 2);
                 $formatLabel = match ($format) {
-                    'double-elimination' => 'Double elimination',
+                    'double-elimination' => (int) $bestOfFinal > 1
+                        ? 'Modified double elimination'
+                        : 'Double elimination',
                     'round-robin' => 'Round robin',
                     default => 'Single elimination',
                 };
