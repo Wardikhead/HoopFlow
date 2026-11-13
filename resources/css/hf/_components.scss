@@ -952,6 +952,26 @@
 .hf-empty--compact .bi { font-size: 24px; }
 .hf-empty--compact h3 { font-size: 18px; }
 
+[data-score-team] {
+  cursor: pointer;
+  transition: border-color var(--hf-dur-micro) linear, box-shadow var(--hf-dur-micro) linear;
+}
+
+[data-score-team].is-active {
+  border-color: var(--hf-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--hf-primary) 28%, transparent);
+}
+
+[data-score-team].is-active [data-score-display] {
+  animation: hf-score-pop var(--hf-dur-expressive) var(--hf-ease-out);
+}
+
+@keyframes hf-score-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
 [data-density='compact'] .hf-card { padding: 14px; }
 [data-density='compact'] .hf-table th,
 [data-density='compact'] .hf-table td { padding-block: 8px; }

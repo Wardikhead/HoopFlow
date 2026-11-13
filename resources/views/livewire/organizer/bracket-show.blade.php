@@ -32,33 +32,34 @@
             ]" />
         @endsection
 
-        <header class="hf-page-head hf-mb-3">
-            <div>
-                <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? $tournament->name }} · {{ $tournament->status }}</span>
-                <h1 class="hf-page-title">{{ $bracket['hasBracket'] ? 'Bracket' : 'Build the bracket' }}</h1>
-                <p class="hf-page-desc">
-                    @if ($bracket['hasBracket'])
-                        {{ $tournament->name }} · {{ $tournament->formatLabel() }} · {{ $totalRounds }} rounds
-                    @else
-                        {{ $tournament->name }} · {{ $approved->count() }} approved teams ready to seed into a {{ $tournamentSlots }}-slot {{ $tournament->formatLabel() }} bracket.
-                    @endif
-                </p>
-            </div>
-            <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="bracket-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
-                <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="bracket-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
-                <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="bracket-standings"><i class="bi bi-bar-chart"></i> Standings</a>
-                @if ($isOrganizer && $bracket['hasBracket'] && $kpis['matchesPlayed'] === 0)
-                    <button type="button" class="hf-btn" wire:click="requestRegenerate" data-testid="bracket-regenerate">Regenerate bracket</button>
-                    <button type="button" class="hf-btn" wire:click="openEditSlots" data-testid="bracket-edit-slots">Edit slots</button>
-                @endif
-                @if ($isOrganizer && $format === 'round-robin' && $this->canGeneratePlayoffs)
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGeneratePlayoffs" wire:loading.class="is-loading" wire:loading.attr="aria-busy" data-testid="bracket-generate-playoffs">
-                        Generate playoffs
-                    </button>
-                @endif
-            </div>
-        </header>
+        <x-matchday-strip
+            eyebrow="{{ $tournament->divisions?->first()?->name ?? $tournament->name }} · {{ $tournament->statusLabel() }}"
+            :title="$bracket['hasBracket'] ? 'Bracket' : 'Build the bracket'"
+            :description="$bracket['hasBracket']
+                ? $tournament->name.' · '.$tournament->formatLabel().' · '.$totalRounds.' rounds'
+                : $tournament->name.' · '.$approved->count().' approved teams ready to seed into a '.$tournamentSlots.'-slot '.$tournament->formatLabel().' bracket.'"
+            :status="$tournament->statusLabel()"
+            :meta="[
+                ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
+                ['icon' => 'diagram-3', 'label' => $tournament->formatLabel()],
+                ['icon' => 'people', 'label' => $approved->count().' approved teams'],
+            ]"
+        >
+            <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="bracket-tournament"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tournament</a>
+            <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="bracket-schedule"><i class="bi bi-calendar3" aria-hidden="true"></i> Schedule</a>
+            <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="bracket-standings"><i class="bi bi-bar-chart" aria-hidden="true"></i> Standings</a>
+            @if ($isOrganizer && $bracket['hasBracket'] && $kpis['matchesPlayed'] === 0)
+                <div class="hf-btn-group">
+                    <button type="button" class="hf-btn hf-btn--sm" wire:click="requestRegenerate" data-testid="bracket-regenerate">Regenerate bracket</button>
+                    <button type="button" class="hf-btn hf-btn--sm" wire:click="openEditSlots" data-testid="bracket-edit-slots">Edit slots</button>
+                </div>
+            @endif
+            @if ($isOrganizer && $format === 'round-robin' && $this->canGeneratePlayoffs)
+                <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGeneratePlayoffs" data-testid="bracket-generate-playoffs" wire:loading.class="is-loading" wire:loading.attr="aria-busy">
+                    Generate playoffs
+                </button>
+            @endif
+        </x-matchday-strip>
 
         @if (! $bracket['hasBracket'])
             <div class="hf-grid hf-grid--3 hf-mb-3">
@@ -101,13 +102,14 @@
             </div>
         @else
             @if ($bracket['champion'])
-                <section class="hf-bracket-champion hf-mb-3" data-testid="bracket-champion">
-                    <span class="hf-eyebrow" style="color: var(--hf-gold)">Champion</span>
+                <section class="hf-hero hf-champion hf-mb-3" data-testid="bracket-champion">
+                    <span class="hf-eyebrow hf-eyebrow--on-dark">Champion</span>
                     <div class="hf-flex hf-items-center hf-gap-3 hf-mt-1">
                         <x-team-shield :team="$bracket['champion']" size="lg" />
                         <div>
                             <h2 class="hf-hero__name">{{ $bracket['champion']->name }}</h2>
                             <p class="hf-mb-0">{{ $bracket['champion']->coach_name ?? 'Coach TBD' }} · {{ $bracket['champion']->city ?? 'City TBD' }}</p>
+                            <p class="hf-mb-0">Road to the title · {{ $totalRounds }} rounds · {{ $tournament->name }}</p>
                         </div>
                     </div>
                 </section>
@@ -127,6 +129,15 @@
                 <span>{{ $isOrganizer ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
             </div>
 
+            <div class="hf-bracket-toolbar">
+                <span class="hf-small hf-muted">{{ $totalRounds }} rounds · {{ $approved->count() }} teams</span>
+                <div class="hf-btn-group" aria-label="Bracket zoom">
+                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="out" aria-label="Zoom out"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
+                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="reset">Fit</button>
+                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="in" aria-label="Zoom in"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                </div>
+            </div>
+
             @foreach ($sections as $section)
                 <section class="hf-mb-3" data-testid="bracket-section-{{ $section['key'] }}">
                     <h2 class="hf-section-title">{{ $section['title'] }}</h2>
@@ -135,7 +146,7 @@
                             Best of {{ $tournament->grandFinalBestOf() }} — the series winner takes the title. No reset game is played.
                         </p>
                     @endif
-                    <div class="hf-bracket" data-testid="bracket-tree" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+                    <div class="hf-bracket" data-testid="bracket-tree" data-bracket-canvas wire:loading.class="is-updating" wire:loading.attr="aria-busy">
                 <div class="hf-updating-pill" wire:loading wire:target="requestGenerate,requestGeneratePlayoffs,requestRegenerate,saveSlots,addScore,undoScore,requestFinalizeScore,requestCorrection,confirm">
                     <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
                 </div>
@@ -512,6 +523,8 @@
                 x-on:click="if ($event.target === $el) $wire.closeScoreConsole()"
                 wire:key="bracket-score-dialog-{{ $scoreMatch->id }}"
                 data-testid="bracket-score-dialog"
+                data-score-console
+                tabindex="-1"
             >
                 <div class="hf-dialog__head">
                     <h2 class="hf-dialog__title">{{ $scoreHome?->shortLabel() ?? 'TBD' }} vs {{ $scoreAway?->shortLabel() ?? 'TBD' }}</h2>
@@ -522,7 +535,7 @@
                 <div class="hf-dialog__body">
                     <p class="hf-small hf-muted">{{ $this->selectedRoundLabel }} · Slot {{ $scoreMatch->match_number }}. Use the score buttons or a forfeit, then finalize. The winner advances immediately.</p>
                     <div class="hf-grid hf-grid--2">
-                        <div class="hf-card hf-card--flat" data-team-panel="1">
+                        <div class="hf-card hf-card--flat" data-team-panel="1" data-score-team="1">
                             <span class="hf-flex hf-items-center hf-gap-2">
                                 <x-team-shield :team="$scoreHome" />
                                 <strong>{{ $scoreHome?->name ?? 'TBD' }}</strong>
@@ -536,7 +549,7 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div class="hf-card hf-card--flat" data-team-panel="2">
+                        <div class="hf-card hf-card--flat" data-team-panel="2" data-score-team="2">
                             <span class="hf-flex hf-items-center hf-gap-2">
                                 <x-team-shield :team="$scoreAway" />
                                 <strong>{{ $scoreAway?->name ?? 'TBD' }}</strong>
