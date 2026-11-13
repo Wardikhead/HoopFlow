@@ -944,6 +944,14 @@
   font-size: 13px;
 }
 
+.hf-empty--compact {
+  min-height: 140px;
+  padding: 18px 14px;
+}
+
+.hf-empty--compact .bi { font-size: 24px; }
+.hf-empty--compact h3 { font-size: 18px; }
+
 [data-density='compact'] .hf-card { padding: 14px; }
 [data-density='compact'] .hf-table th,
 [data-density='compact'] .hf-table td { padding-block: 8px; }

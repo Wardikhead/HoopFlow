@@ -441,3 +441,36 @@
 .hf-error-message { max-width: 58ch; margin: 0; color: var(--hf-muted); font-size: 16px; }
 .hf-error-detail { max-width: 58ch; margin: 10px 0 0; color: var(--hf-muted); font-size: 13px; }
 .hf-error-actions { margin-top: 24px; }
+
+.hf-milestones {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hf-milestone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-radius-md);
+  color: var(--hf-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hf-milestone.is-active {
+  border-color: color-mix(in srgb, var(--hf-primary) 40%, var(--hf-border));
+  background: color-mix(in srgb, var(--hf-primary) 7%, transparent);
+  color: var(--hf-primary-ink);
+}
+
+.hf-milestone.is-done {
+  border-color: color-mix(in srgb, var(--hf-success) 40%, var(--hf-border));
+  color: var(--hf-success-ink);
+}
+
+@media (max-width: 767.98px) {
+  .hf-milestones { grid-template-columns: 1fr 1fr; }
+}
