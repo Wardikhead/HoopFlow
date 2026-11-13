@@ -102,6 +102,114 @@ function schedulingRoundRobinPlayoffTournament(): array
     return [$tournament->fresh(), $groupMatches, $playoffMatches];
 }
 
+/**
+ * @param  array<string, mixed>  $rules
+ */
+function schedulingConfiguredTournament(
+    array $rules,
+    string $start = '2026-07-10',
+    string $end = '2026-07-31',
+): Tournament {
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'start_date' => $start,
+        'end_date' => $end,
+        'rules_json' => array_merge($tournament->rules_json ?? [], $rules),
+    ]);
+
+    return $tournament->fresh();
+}
+
+it('reserves a four-day footprint for four playoff teams and a best-of-three final', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+
+    $footprint = (new SchedulingService)->playoffFootprint($tournament);
+
+    expect($footprint)->not->toBeNull()
+        ->and($footprint['days'])->toBe(4)
+        ->and($footprint['rounds'])->toBe([
+            ['label' => 'Semifinal', 'bestOf' => 1, 'days' => 1],
+            ['label' => 'Final', 'bestOf' => 3, 'days' => 3],
+        ]);
+});
+
+it('sums quarterfinal, semifinal, and final best-of games for eight playoff teams', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 8,
+        'best_of_quarterfinal' => 3,
+        'best_of_semifinal' => 5,
+        'best_of_final' => 7,
+    ]);
+
+    $footprint = (new SchedulingService)->playoffFootprint($tournament);
+
+    expect($footprint['days'])->toBe(15)
+        ->and($footprint['rounds'])->toBe([
+            ['label' => 'Quarterfinal', 'bestOf' => 3, 'days' => 3],
+            ['label' => 'Semifinal', 'bestOf' => 5, 'days' => 5],
+            ['label' => 'Final', 'bestOf' => 7, 'days' => 7],
+        ]);
+});
+
+it('includes a single round-of-16 day for sixteen playoff teams', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 16,
+    ]);
+
+    $footprint = (new SchedulingService)->playoffFootprint($tournament);
+
+    expect($footprint['days'])->toBe(4)
+        ->and($footprint['rounds'])->toBe([
+            ['label' => 'Round of 16', 'bestOf' => 1, 'days' => 1],
+            ['label' => 'Quarterfinal', 'bestOf' => 1, 'days' => 1],
+            ['label' => 'Semifinal', 'bestOf' => 1, 'days' => 1],
+            ['label' => 'Final', 'bestOf' => 1, 'days' => 1],
+        ]);
+});
+
+it('falls back to one day for invalid best-of values', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 2,
+        'best_of_final' => 4,
+    ]);
+
+    $footprint = (new SchedulingService)->playoffFootprint($tournament);
+
+    expect($footprint['days'])->toBe(1)
+        ->and($footprint['rounds'])->toBe([
+            ['label' => 'Final', 'bestOf' => 1, 'days' => 1],
+        ]);
+});
+
+it('does not reserve a footprint without a round-robin playoff field', function () {
+    $single = schedulingConfiguredTournament([
+        'format' => 'single-elimination',
+        'playoff_teams' => 4,
+    ]);
+    $none = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 0,
+    ]);
+    $odd = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 6,
+    ]);
+
+    $service = new SchedulingService;
+
+    expect($service->playoffFootprint($single))->toBeNull()
+        ->and($service->playoffFootprint($none))->toBeNull()
+        ->and($service->playoffFootprint($odd))->toBeNull();
+});
+
 it('keeps full schedule generation locked once group results exist', function () {
     [$tournament] = schedulingRoundRobinPlayoffTournament();
 
