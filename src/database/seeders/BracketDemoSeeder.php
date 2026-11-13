@@ -362,7 +362,7 @@ class BracketDemoSeeder extends Seeder
         $tournament = $this->createTournament([
             'name' => 'HoopFlow Round Robin Showcase',
             'slug' => 'demo-round-robin',
-            'start' => '2026-12-15',
+            'start' => '2026-12-09',
             'end' => '2026-12-21',
             'format' => 'round-robin',
             'division' => 'Under 15 (U15)',
