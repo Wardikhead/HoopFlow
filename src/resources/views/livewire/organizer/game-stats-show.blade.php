@@ -414,6 +414,8 @@
                 x-on:click="if ($event.target === $el) $wire.closeScoreConsole()"
                 wire:key="stats-score-dialog-{{ $match->id }}"
                 data-testid="stats-score-dialog"
+                data-score-console
+                tabindex="-1"
             >
                 <div class="hf-dialog__head">
                     <h2 class="hf-dialog__title">{{ $home?->shortLabel() ?? 'TBD' }} vs {{ $away?->shortLabel() ?? 'TBD' }}</h2>
@@ -424,7 +426,7 @@
                 <div class="hf-dialog__body">
                     <p class="hf-small hf-muted">{{ $match->roundLabel() }} · Slot {{ $match->match_number }}. Use the score buttons or a forfeit, then finalize. The winner advances immediately.</p>
                     <div class="hf-grid hf-grid--2">
-                        <div class="hf-card hf-card--flat" data-team-panel="1">
+                        <div class="hf-card hf-card--flat" data-team-panel="1" data-score-team="1">
                             <span class="hf-flex hf-items-center hf-gap-2">
                                 <x-team-shield :team="$home" />
                                 <strong>{{ $home?->name ?? 'TBD' }}</strong>
@@ -438,7 +440,7 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div class="hf-card hf-card--flat" data-team-panel="2">
+                        <div class="hf-card hf-card--flat" data-team-panel="2" data-score-team="2">
                             <span class="hf-flex hf-items-center hf-gap-2">
                                 <x-team-shield :team="$away" />
                                 <strong>{{ $away?->name ?? 'TBD' }}</strong>

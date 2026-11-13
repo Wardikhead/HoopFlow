@@ -616,3 +616,35 @@
   }
 }
 
+.hf-bracket-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+[data-bracket-canvas] {
+  transition: transform var(--hf-dur-standard) var(--hf-ease-out);
+}
+
+.hf-bracket-round-head {
+  position: sticky;
+  top: 72px;
+  z-index: 5;
+  padding: 6px 0;
+  background: var(--hf-ground);
+}
+
+.hf-bracket-path,
+.hf-bracket-connector {
+  stroke: color-mix(in srgb, var(--hf-ink) 45%, transparent);
+  stroke-width: 1.5;
+}
+
+.hf-champion {
+  border-color: color-mix(in srgb, var(--hf-gold) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--hf-gold) 25%, transparent), 0 12px 40px color-mix(in srgb, var(--hf-gold) 16%, transparent);
+}
+
