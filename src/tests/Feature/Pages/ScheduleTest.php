@@ -95,6 +95,47 @@ function scheduleRoundRobinPlayoffTournament(): array
     return [$tournament->fresh(), $groupMatches, $playoffMatches];
 }
 
+/**
+ * @return array{Tournament, Collection<int, MatchModel>}
+ */
+function scheduleLegacyRoundRobinPlayoffTournament(): array
+{
+    $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
+    $tournament->update([
+        'start_date' => '2026-07-10',
+        'end_date' => '2026-07-16',
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'format' => 'round-robin',
+            'playoff_teams' => 0,
+        ]),
+    ]);
+    $tournament = $tournament->fresh();
+
+    $bracketService = new BracketService;
+    $bracketService->generate($tournament, 'round-robin');
+    app(SchedulingService::class)->generate($tournament);
+
+    $groupMatches = MatchModel::query()
+        ->where('tournament_id', $tournament->id)
+        ->whereHas('bracket', fn ($query) => $query->where('phase', 'group'))
+        ->orderBy('id')
+        ->get();
+
+    foreach ($groupMatches as $match) {
+        $bracketService->recordScore($match->fresh(), 80, 70);
+    }
+
+    $tournament->update([
+        'rules_json' => array_merge($tournament->rules_json ?? [], [
+            'playoff_teams' => 4,
+        ]),
+    ]);
+
+    $bracketService->generatePlayoffs($tournament->fresh());
+
+    return [$tournament->fresh(), $groupMatches];
+}
+
 it('keeps full schedule generation and rebuild locked after group results', function () {
     $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
     [$tournament] = scheduleRoundRobinPlayoffTournament();
@@ -420,4 +461,54 @@ it('removes cancelled series games from the calendar', function () {
         ->assertDontSeeHtml('data-testid="schedule-match-'.$game3->id.'"');
 
     expect(MatchSlot::where('match_id', $game3->id)->exists())->toBeFalse();
+});
+
+it('shows the reserved playoff window in the schedule preview', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament] = scheduleRoundRobinPlayoffTournament();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openRemaining')
+        ->assertSeeHtml('data-testid="preview-playoff-window"')
+        ->assertSee('Playoffs reserved')
+        ->assertSee('Jul 30, 2026–Jul 31, 2026')
+        ->assertSee('Group stage must finish by Jul 29, 2026.')
+        ->assertSee('Semifinal: 1 day')
+        ->assertSee('Final: 1 day');
+
+    $window = $component->instance()->previewPlayoffWindow;
+
+    expect($window['dates'])->toBe(['2026-07-30', '2026-07-31'])
+        ->and($window['groupEndDate'])->toBe('2026-07-29');
+});
+
+it('updates the reserved playoff window when preview weekdays change', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament] = scheduleRoundRobinPlayoffTournament();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openRemaining');
+
+    foreach ([2, 3, 4, 5, 6, 7] as $day) {
+        $component->call('togglePreviewWeekday', $day);
+    }
+
+    $component
+        ->assertSet('previewWeekdays', [1])
+        ->assertSee('Jul 20, 2026–Jul 27, 2026');
+});
+
+it('warns when a legacy group schedule occupies the playoff window', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    [$tournament] = scheduleLegacyRoundRobinPlayoffTournament();
+
+    Livewire::actingAs($organizer)
+        ->test(ScheduleShow::class, ['id' => $tournament->id])
+        ->call('openRemaining')
+        ->assertSet('showPreview', true)
+        ->assertSeeHtml('data-testid="preview-playoff-overlap"')
+        ->assertSee('Published group games still occupy')
+        ->assertSee('Jul 15–Jul 16, 2026');
 });
