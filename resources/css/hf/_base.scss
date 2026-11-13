@@ -30,7 +30,7 @@ a {
 
 a:hover {
   text-decoration: underline;
-  text-decoration-color: var(--hf-primary);
+  text-decoration-color: var(--hf-primary-ink);
   text-underline-offset: 3px;
 }
 
@@ -42,7 +42,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid var(--hf-primary);
+  outline: 3px solid var(--hf-action);
   outline-offset: 2px;
 }
 

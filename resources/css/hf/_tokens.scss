@@ -29,6 +29,48 @@
   --bs-body-bg: var(--hf-ground);
   --bs-body-color: var(--hf-ink);
   --bs-border-color: var(--hf-border);
+
+  /* Action colors (meet 4.5:1 with their text) */
+  --hf-action: #c2410c;
+  --hf-action-hover: #9a3412;
+  --hf-on-action: #ffffff;
+  --hf-primary-ink: #b93d0a;
+  --hf-gold-ink: #7a5200;
+  --hf-success-ink: #0b5f49;
+  --hf-warning-ink: #8a3d07;
+  --hf-danger-ink: #b31632;
+  --hf-info: #1d4f91;
+  --hf-info-ink: #1d4f91;
+
+  /* Layout */
+  --hf-content-max: 1520px;
+
+  /* Radius */
+  --hf-radius-xs: 4px;
+  --hf-radius-md: 8px;
+  --hf-radius-lg: 12px;
+  --hf-radius-xl: 16px;
+
+  /* Spacing */
+  --hf-space-1: 4px;
+  --hf-space-2: 8px;
+  --hf-space-3: 12px;
+  --hf-space-4: 16px;
+  --hf-space-5: 24px;
+  --hf-space-6: 32px;
+  --hf-space-7: 48px;
+  --hf-space-8: 64px;
+
+  /* Depth */
+  --hf-shadow-rest: var(--hf-shadow);
+  --hf-shadow-hover: 0 2px 4px rgba(11, 18, 32, 0.08), 0 14px 32px rgba(11, 18, 32, 0.10);
+  --hf-shadow-overlay: 0 28px 90px rgba(0, 0, 0, 0.38);
+
+  /* Motion */
+  --hf-dur-micro: 120ms;
+  --hf-dur-standard: 180ms;
+  --hf-dur-expressive: 280ms;
+  --hf-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 [data-theme='dark'] {
@@ -50,5 +92,31 @@
   --hf-border-strong: rgba(243, 245, 249, 0.24);
   --hf-rail: #060a12;
   --hf-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --hf-action: #fb7a1e;
+  --hf-action-hover: #ff8f3f;
+  --hf-on-action: #101827;
+  --hf-primary-ink: #fb7a1e;
+  --hf-gold-ink: #f5b301;
+  --hf-success-ink: #34d399;
+  --hf-warning-ink: #fbbf24;
+  --hf-danger-ink: #ff5c7a;
+  --hf-info: #7dd3fc;
+  --hf-info-ink: #7dd3fc;
+  --hf-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.38);
+}
+
+[data-density='compact'] {
+  --hf-card-pad: 14px;
+  --hf-row-pad: 8px;
+  --hf-section-gap: 12px;
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
 

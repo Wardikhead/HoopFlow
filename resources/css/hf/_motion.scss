@@ -9,3 +9,28 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .hf-kpi-value[data-countup],
+  .hf-page-enter,
+  .hf-bracket-path,
+  .hf-skeleton {
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .hf-btn,
+  .hf-card,
+  .hf-chip,
+  .hf-input,
+  .hf-select,
+  .hf-textarea,
+  .hf-dialog {
+    border: 1px solid CanvasText;
+  }
+
+  .hf-rail-link.is-active {
+    outline: 2px solid Highlight;
+  }
+}
