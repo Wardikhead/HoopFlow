@@ -751,6 +751,7 @@ class SchedulingService
             ->where('tournament_id', $tournament->id)
             ->whereIn('status', ['scheduled', 'conditional'])
             ->when($remaining, fn ($query) => $query->whereDoesntHave('matchSlots'))
+            ->with('bracket:id,phase')
             ->get()
             ->reject(fn (MatchModel $match): bool => $match->isByeGame())
             ->filter(fn (MatchModel $match): bool => $match->status === 'scheduled' || $match->series_id !== null)
@@ -768,6 +769,16 @@ class SchedulingService
             ? Carbon::parse($plan['endDate'])->startOfDay()
             : $tournament->end_date?->copy()->startOfDay();
         $weekdays = is_array($plan['weekdays'] ?? null) ? array_map('intval', $plan['weekdays']) : range(1, 7);
+        $windowOptions = ['weekdays' => array_values($weekdays)];
+
+        if ($endDate instanceof Carbon) {
+            $windowOptions['endDate'] = $endDate->format('Y-m-d');
+        }
+
+        $playoffWindow = $this->playoffWindow($tournament, $windowOptions);
+        $groupEndDate = ! $remaining && $playoffWindow !== null && $playoffWindow['groupEndDate'] !== null
+            ? Carbon::parse($playoffWindow['groupEndDate'])->startOfDay()
+            : null;
         $seen = [];
         $rows = [];
 
@@ -821,6 +832,25 @@ class SchedulingService
 
             if ($endDate instanceof Carbon && $start->gt($endDate->copy()->endOfDay())) {
                 $errors[$matchId] = 'The tournament ends '.$endDate->format('M j, Y').'. Choose an earlier date.';
+
+                continue;
+            }
+
+            $scheduledMatch = $schedulable->get($matchId);
+
+            if (
+                $groupEndDate instanceof Carbon
+                && $playoffWindow !== null
+                && $scheduledMatch instanceof MatchModel
+                && $scheduledMatch->bracket?->phase === 'group'
+                && $start->gt($groupEndDate->copy()->endOfDay())
+            ) {
+                $errors[$matchId] = sprintf(
+                    'This game is after the group-stage deadline (%s). Days from %s–%s are reserved for the playoffs. Schedule it earlier.',
+                    $groupEndDate->format('M j, Y'),
+                    Carbon::parse($playoffWindow['startDate'])->format('M j, Y'),
+                    Carbon::parse($playoffWindow['endDate'])->format('M j, Y'),
+                );
 
                 continue;
             }

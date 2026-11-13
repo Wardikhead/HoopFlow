@@ -492,6 +492,38 @@ it('ignores playoff slots when finding group days in the window', function () {
     expect((new SchedulingService)->playoffWindowOverlap($tournament, $window))->toBe([]);
 });
 
+it('rejects a group game moved past the group-stage deadline', function () {
+    $tournament = schedulingConfiguredTournament([
+        'format' => 'round-robin',
+        'playoff_teams' => 4,
+        'best_of_semifinal' => 1,
+        'best_of_final' => 3,
+    ]);
+    (new BracketService)->generate($tournament, 'round-robin');
+
+    $service = new SchedulingService;
+    $plan = $service->plan($tournament);
+    $matchId = (int) $plan['assignments'][0]['matchId'];
+    $plan['assignments'][0]['scheduledAt'] = '2026-07-28 15:00:00';
+
+    $validation = $service->validatePlan($tournament, $plan);
+
+    expect($validation['valid'])->toBeFalse()
+        ->and($validation['errors'][$matchId])->toContain('after the group-stage deadline');
+});
+
+it('allows remaining playoff games inside the reserved window', function () {
+    [$tournament] = schedulingRoundRobinPlayoffTournament();
+
+    $service = app(SchedulingService::class);
+    $plan = $service->planRemaining($tournament);
+    $plan['assignments'][0]['scheduledAt'] = '2026-07-30 15:00:00';
+
+    $validation = $service->validatePlan($tournament, $plan, true);
+
+    expect($validation['valid'])->toBeTrue();
+});
+
 it('keeps full schedule generation locked once group results exist', function () {
     [$tournament] = schedulingRoundRobinPlayoffTournament();
 
