@@ -300,7 +300,7 @@ class SchedulingService
                             ));
                         }
 
-                        if ($groupEndDate instanceof Carbon && $playoffWindow !== null) {
+                        if ($groupEndDate instanceof Carbon) {
                             throw new InvalidArgumentException(sprintf(
                                 'The group stage must finish by %s to keep %s–%s free for the playoffs, but this plan needs through %s. Extend the end date, add match days, or shorten slots/rest.',
                                 $groupEndDate->format('M j, Y'),
@@ -848,7 +848,6 @@ class SchedulingService
 
             if (
                 $groupEndDate instanceof Carbon
-                && $playoffWindow !== null
                 && $scheduledMatch instanceof MatchModel
                 && $scheduledMatch->bracket?->phase === 'group'
                 && $start->gt($groupEndDate->copy()->endOfDay())
@@ -1385,11 +1384,6 @@ class SchedulingService
             ? (int) $rules['playoff_teams']
             : 0;
 
-        if (! in_array($teams, [2, 4, 8, 16], true)) {
-            return null;
-        }
-
-        /** @var list<array{0: string, 1: string|null}> $ladder */
         $ladder = match ($teams) {
             2 => [['Final', 'best_of_final']],
             4 => [['Semifinal', 'best_of_semifinal'], ['Final', 'best_of_final']],
@@ -1404,10 +1398,10 @@ class SchedulingService
                 ['Semifinal', 'best_of_semifinal'],
                 ['Final', 'best_of_final'],
             ],
-            default => [],
+            default => null,
         };
 
-        if ($ladder === []) {
+        if ($ladder === null) {
             return null;
         }
 
@@ -1452,10 +1446,11 @@ class SchedulingService
         }
 
         $tournamentEnd = $tournament->end_date?->copy()->startOfDay();
-        $hasRequestedEnd = isset($options['endDate']) && is_string($options['endDate']) && $options['endDate'] !== '';
+        $requestedEnd = $options['endDate'] ?? null;
+        $hasRequestedEnd = is_string($requestedEnd) && $requestedEnd !== '';
 
         if ($hasRequestedEnd) {
-            $endDate = Carbon::parse($options['endDate'])->startOfDay();
+            $endDate = Carbon::parse($requestedEnd)->startOfDay();
         } elseif ($tournamentEnd instanceof Carbon) {
             $endDate = $tournamentEnd->copy();
         } else {
@@ -1466,8 +1461,9 @@ class SchedulingService
             return null;
         }
 
-        $weekdays = isset($options['weekdays']) && is_array($options['weekdays'])
-            ? array_values(array_unique(array_map('intval', $options['weekdays'])))
+        $requestedWeekdays = $options['weekdays'] ?? null;
+        $weekdays = is_array($requestedWeekdays)
+            ? array_values(array_unique(array_map('intval', $requestedWeekdays)))
             : range(1, 7);
 
         $weekdays = array_values(array_filter($weekdays, fn (int $day): bool => $day >= 1 && $day <= 7));
