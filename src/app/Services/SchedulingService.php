@@ -631,6 +631,7 @@ class SchedulingService
 
             $dates = array_values(array_unique($dates));
             sort($dates);
+            $window = is_array($plan['playoffWindow'] ?? null) ? $plan['playoffWindow'] : null;
 
             app(AuditLogger::class)->log(
                 $auditAction,
@@ -644,6 +645,9 @@ class SchedulingService
                     'matches' => $matches,
                     'weekdays' => $plan['weekdays'] ?? range(1, 7),
                     'endDate' => $plan['endDate'] ?? null,
+                    'playoffWindowStart' => $window['startDate'] ?? null,
+                    'playoffWindowEnd' => $window['endDate'] ?? null,
+                    'playoffReservedDays' => $window['dayCount'] ?? 0,
                     'firstDate' => $dates[0] ?? null,
                     'lastDate' => $dates === [] ? null : $dates[array_key_last($dates)],
                 ],
@@ -700,6 +704,7 @@ class SchedulingService
 
             $dates = array_values(array_unique($dates));
             sort($dates);
+            $window = is_array($plan['playoffWindow'] ?? null) ? $plan['playoffWindow'] : null;
 
             app(AuditLogger::class)->log(
                 'schedule.remaining',
@@ -713,6 +718,9 @@ class SchedulingService
                     'matches' => $matches,
                     'weekdays' => $plan['weekdays'] ?? range(1, 7),
                     'endDate' => $plan['endDate'] ?? null,
+                    'playoffWindowStart' => $window['startDate'] ?? null,
+                    'playoffWindowEnd' => $window['endDate'] ?? null,
+                    'playoffReservedDays' => $window['dayCount'] ?? 0,
                     'firstDate' => $dates[0] ?? null,
                     'lastDate' => $dates === [] ? null : $dates[array_key_last($dates)],
                 ],
