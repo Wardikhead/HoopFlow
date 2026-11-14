@@ -74,7 +74,7 @@
     <span class="hf-small hf-muted">Sorted by start date</span>
 </div>
 
-<div id="tournamentList" data-testid="tournament-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+<div id="tournamentList" data-testid="tournament-list" data-reveal wire:loading.class="is-updating" wire:loading.attr="aria-busy">
     <div class="hf-updating-pill" wire:loading wire:target="search,status,division">
         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
     </div>

@@ -34,3 +34,105 @@
     outline: 2px solid Highlight;
   }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hf-main {
+    animation: hf-page-in var(--hf-dur-expressive) var(--hf-ease-out) both;
+  }
+
+  .hf-reveal {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: hf-reveal-in var(--hf-dur-expressive) var(--hf-ease-out) both;
+    animation-delay: var(--hf-reveal-delay, 0ms);
+  }
+
+  .hf-dialog[open] {
+    animation: hf-dialog-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-dialog[open]::backdrop {
+    animation: hf-backdrop-in var(--hf-dur-standard) linear both;
+  }
+
+  .hf-toast {
+    animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-btn:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .hf-rail-link .bi {
+    transition: transform var(--hf-dur-micro) var(--hf-ease-out);
+  }
+
+  .hf-rail-link:hover .bi {
+    transform: translateX(2px);
+  }
+
+  .hf-card--link .hf-card__arrow {
+    transition: transform var(--hf-dur-standard) var(--hf-ease-out);
+  }
+}
+
+@keyframes hf-page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-reveal-in {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hf-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.hf-theme-transition,
+.hf-theme-transition *,
+.hf-theme-transition *::before,
+.hf-theme-transition *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--hf-dur-standard);
+  transition-timing-function: linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hf-main,
+  .hf-reveal,
+  .hf-dialog[open],
+  .hf-dialog[open]::backdrop,
+  .hf-toast {
+    animation: none !important;
+  }
+
+  .hf-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-motion='reduced'] .hf-main,
+[data-motion='reduced'] .hf-reveal,
+[data-motion='reduced'] .hf-dialog[open],
+[data-motion='reduced'] .hf-dialog[open]::backdrop,
+[data-motion='reduced'] .hf-toast {
+  animation: none !important;
+}
+
+[data-motion='reduced'] .hf-reveal {
+  opacity: 1;
+  transform: none;
+}

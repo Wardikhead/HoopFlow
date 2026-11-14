@@ -102,7 +102,7 @@
         </div>
     </div>
 
-    <div id="announcementFeed" class="hf-announcement-feed" data-testid="announcement-feed" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+    <div id="announcementFeed" class="hf-announcement-feed" data-testid="announcement-feed" data-reveal wire:loading.class="is-updating" wire:loading.attr="aria-busy">
         @if ($announcements->isEmpty())
             <div class="hf-empty" data-testid="announcement-empty">
                 <i class="bi bi-megaphone" aria-hidden="true"></i>

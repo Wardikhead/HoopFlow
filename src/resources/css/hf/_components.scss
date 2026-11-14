@@ -844,7 +844,6 @@
   border-radius: var(--hf-radius-lg);
   background: var(--hf-surface-2);
   box-shadow: var(--hf-shadow-overlay);
-  animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out);
 }
 
 .hf-toast > .bi { margin-top: 1px; color: var(--hf-primary-ink); font-size: 18px; }
@@ -886,17 +885,6 @@
   animation: hf-toast-timer linear forwards;
 }
 .hf-toast.is-paused .hf-toast__timer { animation-play-state: paused; }
-
-@keyframes hf-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes hf-toast-timer {
   from { transform: scaleX(1); }
