@@ -14,8 +14,6 @@
         $tipoff = $slot?->start_at !== null
             ? $slot->start_at->format('M j, Y').' at '.$slot->start_at->format('g:i A')
             : 'Tip-off TBD';
-        $homeWinner = $match !== null && $match->winner_team_id !== null && (int) $match->winner_team_id === (int) $match->home_team_id;
-        $awayWinner = $match !== null && $match->winner_team_id !== null && (int) $match->winner_team_id === (int) $match->away_team_id;
     @endphp
 
     @if ($match === null)
@@ -35,26 +33,52 @@
             ]" />
         @endsection
 
-        <header class="hf-page-head hf-mb-3">
-            <div>
-                <span class="hf-eyebrow">{{ $match->tournament?->divisions?->first()?->name ?? 'Tournament' }} · {{ $match->tournament?->name ?? 'HoopFlow' }}</span>
-                <h1 class="hf-page-title">Game stats</h1>
-                <p class="hf-page-desc">
-                    {{ $match->roundLabel() }} · {{ $court?->name ?? 'Court TBD' }} · {{ $tipoff }}.
-                    @if ($this->seriesAnchor)
-                        · {{ $match->seriesGameLabel() }} · {{ $this->seriesSummary }}
-                    @endif
-                </p>
+        <x-matchday-strip
+            eyebrow="{{ $match->roundLabel() }} · {{ $match->statusLabel() }}"
+            title="Game stats"
+            :status="$match->statusLabel()"
+            :description="$match->matchSlots->first()?->court?->name ?? ($match->tournament?->name ?? 'HoopFlow')"
+            :meta="[
+                ['icon' => 'calendar3', 'label' => $match->matchSlots->first()?->start_at?->format('M d, Y · g:i A') ?? 'Time TBD'],
+                ['icon' => 'geo-alt', 'label' => $match->matchSlots->first()?->court?->name ?? 'Court TBD'],
+                ['icon' => 'trophy', 'label' => $match->tournament?->name ?? 'HoopFlow'],
+            ]"
+            class="hf-mb-3"
+        >
+            <a class="hf-btn" href="{!! route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) !!}" data-testid="stats-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <a class="hf-btn" href="{{ route('schedule', ['id' => $match->tournament_id]) }}" data-testid="stats-schedule"><i class="bi bi-calendar3" aria-hidden="true"></i> Schedule</a>
+            <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="stats-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
+            @if ($canScore)
+                <a class="hf-btn" href="{{ route('gameManage', ['match' => $match->id]) }}" data-testid="stats-in-game"><i class="bi bi-clipboard-pulse" aria-hidden="true"></i> In-game scoring</a>
+            @endif
+            @if ($isOrganizer)
+                <button type="button" class="hf-btn" data-scorekeeper-toggle aria-pressed="false"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Scorekeeper mode</button>
+            @endif
+        </x-matchday-strip>
+
+        <p class="hf-small hf-muted hf-mb-3">
+            {{ $match->roundLabel() }} · {{ $court?->name ?? 'Court TBD' }} · {{ $tipoff }}.
+            @if ($this->seriesAnchor)
+                · {{ $match->seriesGameLabel() }} · {{ $this->seriesSummary }}
+            @endif
+        </p>
+
+        <section class="hf-scoreboard hf-mb-3" data-testid="scoreboard-{{ $match->id }}">
+            <div class="hf-scoreboard__team">
+                <x-team-shield :team="$home" size="lg" />
+                <strong class="hf-team-name">{{ $home?->name ?? 'TBD' }}</strong>
             </div>
-            <div class="hf-page-actions">
-                <a class="hf-btn" href="{!! route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) !!}" data-testid="stats-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-                <a class="hf-btn" href="{{ route('schedule', ['id' => $match->tournament_id]) }}" data-testid="stats-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
-                <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="stats-matches"><i class="bi bi-list-ul"></i> Matchups</a>
-                @if ($canScore)
-                    <a class="hf-btn" href="{{ route('gameManage', ['match' => $match->id]) }}" data-testid="stats-in-game"><i class="bi bi-clipboard-pulse"></i> In-game scoring</a>
-                @endif
+            <div class="hf-scoreboard__score">
+                <span class="hf-score">{{ $match->home_score ?? '–' }}</span>
+                <span class="hf-scoreboard__dash">–</span>
+                <span class="hf-score">{{ $match->away_score ?? '–' }}</span>
+                <span class="hf-scoreboard__meta">{{ $match->roundLabel() }} · {{ $match->statusLabel() }}</span>
             </div>
-        </header>
+            <div class="hf-scoreboard__team hf-scoreboard__team--away">
+                <x-team-shield :team="$away" size="lg" />
+                <strong class="hf-team-name">{{ $away?->name ?? 'TBD' }}</strong>
+            </div>
+        </section>
 
         @if ($this->seriesAnchor)
             <section class="hf-card hf-card--flat hf-mb-3" data-testid="stats-series">
@@ -77,31 +101,6 @@
                 </div>
             </section>
         @endif
-
-        <section class="hf-hero" data-testid="scoreboard-{{ $match->id }}">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $match->roundLabel() }} · {{ $match->status }}</span>
-            <div class="hf-mt-2">
-                <div class="hf-flex hf-items-center hf-between hf-gap-2 {{ $homeWinner ? 'is-winner' : '' }}">
-                    <span class="hf-flex hf-items-center hf-gap-2">
-                        <x-team-shield :team="$home" size="lg" />
-                        <strong class="hf-team-name hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $home?->name ?? 'TBD' }}</strong>
-                    </span>
-                    <span class="hf-score" style="font-size: clamp(34px, 6vw, 64px)">{{ $match->home_score ?? '–' }}</span>
-                </div>
-                <div class="hf-stat-strip">
-                    <div><span>Court</span><strong>{{ $court?->name ?? 'TBD' }}</strong></div>
-                    <div><span>Tip-off</span><strong>{{ $slot?->start_at?->format('g:i A') ?? 'TBD' }}</strong></div>
-                    <div><span>Date</span><strong>{{ $slot?->start_at?->format('M j, Y') ?? 'TBD' }}</strong></div>
-                </div>
-                <div class="hf-flex hf-items-center hf-between hf-gap-2 {{ $awayWinner ? 'is-winner' : '' }}">
-                    <span class="hf-flex hf-items-center hf-gap-2">
-                        <x-team-shield :team="$away" size="lg" />
-                        <strong class="hf-team-name hf-mb-0" style="font-size: clamp(20px, 3vw, 34px)">{{ $away?->name ?? 'TBD' }}</strong>
-                    </span>
-                    <span class="hf-score" style="font-size: clamp(34px, 6vw, 64px)">{{ $match->away_score ?? '–' }}</span>
-                </div>
-            </div>
-        </section>
 
         @if ($this->scoreMismatch !== [])
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-score-mismatch">
@@ -150,17 +149,17 @@
                         @endif
                     </p>
                 </div>
-                <div class="hf-btn-row">
-                    @if ($canScore)
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole" data-testid="stats-enter-score"><i class="bi bi-pencil-square"></i> Enter final score</button>
-                    @endif
-                    @if ($canCorrect)
-                        <button type="button" class="hf-btn hf-btn--danger" wire:click="openCorrection" data-testid="stats-correct-score"><i class="bi bi-arrow-repeat"></i> Correct score</button>
-                    @endif
-                    @if (! $canScore && ! $canCorrect)
-                        <span class="hf-chip hf-chip--slate"><i class="bi bi-eye"></i> Read-only {{ $this->roleLabel }} view</span>
-                    @endif
-                </div>
+            </div>
+            <div class="hf-sticky-actions hf-mt-2">
+                @if ($canScore)
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="openScoreConsole" data-testid="stats-enter-score"><i class="bi bi-pencil-square" aria-hidden="true"></i> Enter final score</button>
+                @endif
+                @if ($canCorrect)
+                    <button type="button" class="hf-btn hf-btn--danger" wire:click="openCorrection" data-testid="stats-correct-score"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Correct score</button>
+                @endif
+                @if (! $canScore && ! $canCorrect)
+                    <span class="hf-chip hf-chip--slate"><i class="bi bi-eye" aria-hidden="true"></i> Read-only {{ $this->roleLabel }} view</span>
+                @endif
             </div>
         </div>
 

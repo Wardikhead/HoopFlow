@@ -1159,3 +1159,45 @@ a.hf-card:hover .hf-card__arrow,
   width: 100%;
 }
 
+.hf-sticky-actions {
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-radius-lg);
+  background: color-mix(in srgb, var(--hf-surface-2) 92%, transparent);
+  box-shadow: var(--hf-shadow-overlay);
+  backdrop-filter: blur(8px);
+}
+
+[data-scorekeeper='on'] .hf-rail,
+[data-scorekeeper='on'] .hf-topbar,
+[data-scorekeeper='on'] .hf-bottom-nav {
+  display: none !important;
+}
+
+[data-scorekeeper='on'] .hf-app {
+  display: block;
+}
+
+[data-scorekeeper='on'] .hf-main {
+  max-width: none;
+  padding: 10px;
+}
+
+[data-scorekeeper='on'] .hf-input,
+[data-scorekeeper='on'] .hf-btn {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+[data-scorekeeper='on'] .hf-sticky-actions {
+  bottom: 0;
+  border-radius: 0;
+}
+

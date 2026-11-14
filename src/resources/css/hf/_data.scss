@@ -683,3 +683,68 @@
 .hf-legend-dot--event { background: var(--hf-success); }
 .hf-legend-dot--reserved { background: var(--hf-gold); }
 
+.hf-scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-radius-xl);
+  background: var(--hf-surface);
+  box-shadow: var(--hf-shadow-rest);
+}
+
+.hf-scoreboard__team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hf-scoreboard__team--away {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.hf-scoreboard__score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0 12px;
+}
+
+.hf-scoreboard__score .hf-score {
+  font-size: clamp(42px, 7vw, 82px);
+}
+
+.hf-scoreboard__dash {
+  color: var(--hf-muted);
+  font-size: clamp(24px, 3vw, 40px);
+  font-weight: 700;
+}
+
+.hf-scoreboard__meta {
+  flex-basis: 100%;
+  color: var(--hf-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 767.98px) {
+  .hf-scoreboard {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .hf-scoreboard__team,
+  .hf-scoreboard__team--away {
+    justify-content: center;
+    text-align: center;
+  }
+}
+

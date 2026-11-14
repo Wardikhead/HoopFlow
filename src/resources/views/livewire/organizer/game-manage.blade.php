@@ -88,9 +88,10 @@
                 </p>
             </div>
             <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) }}" data-testid="ingame-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-                <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="ingame-matches"><i class="bi bi-list-ul"></i> Matchups</a>
-                <a class="hf-btn" href="{{ route('gameManage') }}" data-testid="ingame-change-match"><i class="bi bi-arrow-left-right"></i> Change match</a>
+                <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) }}" data-testid="ingame-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+                <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="ingame-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
+                <a class="hf-btn" href="{{ route('gameManage') }}" data-testid="ingame-change-match"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Change match</a>
+                <button type="button" class="hf-btn" data-scorekeeper-toggle aria-pressed="false"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Scorekeeper mode</button>
             </div>
         </header>
 
@@ -416,14 +417,14 @@
                         Publishing {{ $match->seriesGameLabel() }} locks it and updates the series. The next game opens when you are ready.
                     </p>
                 @endif
-                <div class="hf-btn-row">
+                <div class="hf-sticky-actions">
                     @if ($correctionMode)
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestSaveCorrection" wire:loading.attr="disabled" data-testid="ingame-save-correction"><i class="bi bi-check2-circle"></i> Save correction</button>
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestSaveCorrection" wire:loading.attr="disabled" data-testid="ingame-save-correction"><i class="bi bi-check2-circle" aria-hidden="true"></i> Save correction</button>
                         <button type="button" class="hf-btn" wire:click="cancelCorrection" data-testid="ingame-cancel-correction">Cancel correction</button>
                     @else
-                        <button type="button" class="hf-btn" wire:click="saveDraft" wire:loading.attr="disabled" data-testid="ingame-save"><i class="bi bi-save"></i> Save</button>
+                        <button type="button" class="hf-btn" wire:click="saveDraft" wire:loading.attr="disabled" data-testid="ingame-save"><i class="bi bi-save" aria-hidden="true"></i> Save</button>
                         <button type="button" class="hf-btn hf-btn--primary" wire:click="requestPublish" wire:loading.attr="disabled" data-testid="ingame-publish">
-                            <i class="bi bi-check2-circle"></i>
+                            <i class="bi bi-check2-circle" aria-hidden="true"></i>
                             {{ $this->seriesAnchor ? 'Publish '.$match->seriesGameLabel() : 'Publish result' }}
                         </button>
                         <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id]) }}" data-testid="ingame-cancel">Cancel</a>
