@@ -25,26 +25,28 @@
             ]" />
         @endsection
 
-        <header class="hf-page-head hf-mb-3">
-            <div>
-                <span class="hf-eyebrow">{{ $tournament->divisions?->first()?->name ?? 'Tournament' }} · {{ $this->venueName }}</span>
-                <h1 class="hf-page-title">Court schedule</h1>
-                <p class="hf-page-desc">
-                    {{ $tournament->start_date?->format('M d, Y') ?? 'TBD' }} to {{ $tournament->end_date?->format('M d, Y') ?? 'TBD' }} · {{ $courts->count() }} courts · {{ $this->slotMinutes }}-minute slots with {{ $this->restMinutes }} minutes of rest.
-                </p>
-            </div>
-            <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left"></i> Tournament</a>
-                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-                <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-matches"><i class="bi bi-list-ul"></i> Matchups</a>
-                @if ($this->isOrganizer && $this->hasScheduledGames && $this->resultsCount === 0)
-                    <button type="button" class="hf-btn" wire:click="openRebuild" data-testid="schedule-rebuild" wire:loading.attr="disabled">Rebuild schedule</button>
-                @endif
-                @if ($this->isOrganizer && $this->hasScheduledGames)
-                    <button type="button" class="hf-btn" wire:click="openReschedule" data-testid="schedule-reschedule" wire:loading.attr="disabled">Reschedule match</button>
-                @endif
-            </div>
-        </header>
+        <x-matchday-strip
+            eyebrow="{{ $tournament->divisions?->first()?->name ?? 'Tournament' }} · {{ $this->venueName }}"
+            title="Court schedule"
+            :status="$this->hasScheduledGames ? 'Published' : 'Not published'"
+            :description="$tournament->start_date?->format('M d, Y').' to '.$tournament->end_date?->format('M d, Y').' · '.$courts->count().' courts · '.$this->slotMinutes.'-minute slots with '.$this->restMinutes.' minutes of rest.'"
+            :meta="[
+                ['icon' => 'calendar3', 'label' => $this->matchDayCount.' matchdays'],
+                ['icon' => 'clock', 'label' => $this->slotMinutes.'-minute slots'],
+                ['icon' => 'geo-alt', 'label' => $this->venueName],
+            ]"
+        >
+            <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tournament</a>
+            <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
+            <button type="button" class="hf-btn" data-print-page><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
+            @if ($this->isOrganizer && $this->hasScheduledGames && $this->resultsCount === 0)
+                <button type="button" class="hf-btn" wire:click="openRebuild" data-testid="schedule-rebuild" wire:loading.attr="disabled" wire:loading.class="is-loading">Rebuild schedule</button>
+            @endif
+            @if ($this->isOrganizer && $this->hasScheduledGames)
+                <button type="button" class="hf-btn" wire:click="openReschedule" data-testid="schedule-reschedule" wire:loading.attr="disabled" wire:loading.class="is-loading">Reschedule match</button>
+            @endif
+        </x-matchday-strip>
 
         <div class="hf-grid hf-grid--4 hf-mb-3">
             <x-kpi-tile label="Scheduled" :value="$this->scheduledCount" :hint="'of '.$this->totalMatches.' bracket games'" tone="primary" testid="schedule-kpi-scheduled" />
@@ -72,10 +74,13 @@
                         @endforeach
                         @foreach ($this->monthCells as $cell)
                             <button type="button"
-                                    class="hf-calendar-cell{{ $cell['count'] ? ' has-events' : '' }}{{ $cell['reserved'] ? ' is-reserved' : '' }}{{ $cell['key'] === $this->selectedDay ? ' is-selected' : '' }}"
+                                    class="hf-calendar-cell{{ $cell['count'] ? ' has-events' : '' }}{{ $cell['reserved'] ? ' is-reserved' : '' }}{{ $cell['key'] === $this->selectedDay ? ' is-selected' : '' }}{{ $cell['key'] === now()->toDateString() ? ' is-today' : '' }}"
                                     wire:click="selectDay('{{ $cell['key'] }}')"
                                     data-testid="schedule-day-{{ $cell['key'] }}"
+                                    data-calendar-day
+                                    tabindex="0"
                                     data-reserved="{{ $cell['reserved'] ? 'true' : 'false' }}"
+                                    title="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j') }}{{ $cell['count'] ? ' · '.$cell['count'].' games' : ' · no games' }}{{ $cell['reserved'] ? ' · reserved for playoffs' : '' }}"
                                     aria-label="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['count'] ? ', '.$cell['count'].' games' : '' }}{{ $cell['reserved'] ? ', reserved for playoffs' : '' }}"
                                     style="{{ $cell['outside'] ? 'opacity: .45' : '' }}">
                                 <span>{{ $cell['day'] }}</span>
@@ -84,6 +89,12 @@
                                 @endif
                             </button>
                         @endforeach
+                    </div>
+
+                    <div class="hf-calendar-legend" aria-label="Calendar legend">
+                        <span><i class="hf-legend-dot hf-legend-dot--today" aria-hidden="true"></i> Today</span>
+                        <span><i class="hf-legend-dot hf-legend-dot--event" aria-hidden="true"></i> Games</span>
+                        <span><i class="hf-legend-dot hf-legend-dot--reserved" aria-hidden="true"></i> Playoffs reserved</span>
                     </div>
 
                     <div class="hf-week-strip" data-testid="schedule-week">

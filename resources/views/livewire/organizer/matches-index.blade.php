@@ -17,17 +17,20 @@
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
     @else
-        <header class="hf-page-head hf-mb-3">
-            <div>
-                <span class="hf-eyebrow">{{ $tournament->divisions->first()?->name ?? $tournament->name }} · {{ $tournament->name }}</span>
-                <h1 class="hf-page-title">Matchups</h1>
-                <p class="hf-page-desc">Every bracket game grouped by matchday, with court, status, and a link to the official box score.</p>
-            </div>
-            <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="matches-schedule"><i class="bi bi-calendar3"></i> Schedule</a>
-                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="matches-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-            </div>
-        </header>
+        <x-matchday-strip
+            eyebrow="{{ $tournament->divisions->first()?->name ?? $tournament->name }} · {{ $tournament->name }}"
+            title="Matchups"
+            :status="$tournament->statusLabel()"
+            description="Every bracket game grouped by matchday, with court, status, and a link to the official box score."
+            :meta="[
+                ['icon' => 'calendar3', 'label' => $groups->count().' matchdays'],
+                ['icon' => 'list-ul', 'label' => $matches->count().' games'],
+            ]"
+        >
+            <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="matches-schedule"><i class="bi bi-calendar3" aria-hidden="true"></i> Schedule</a>
+            <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="matches-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <button type="button" class="hf-btn" data-print-page><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
+        </x-matchday-strip>
 
         <div class="hf-card hf-mb-3">
             <div class="hf-form-grid">
