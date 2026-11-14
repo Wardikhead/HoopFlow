@@ -118,6 +118,31 @@
             </div>
         @endif
 
+        @php
+            $nextStep = match (true) {
+                $playerCount < 8 => [
+                    'Add '.max(0, 8 - $playerCount).' more '.($playerCount === 7 ? 'player' : 'players').' to reach the eight-player minimum.',
+                    'Add player',
+                    'openPlayerDialog',
+                ],
+                ! $payment => ['Submit your entry fee reference so the organizer can verify it.', 'Add payment reference', 'openPaymentDialog'],
+                $status === 'rejected' => ['Update the roster using the organizer feedback below, then resubmit.', null, null],
+                $status === 'submitted' => ['Your registration is in the organizer queue. No action needed right now.', null, null],
+                $status === 'approved' => ['Your team is approved. Watch the bracket for the first game.', null, null],
+                default => ['Check the tournament timeline for the next registration step.', null, null],
+            };
+        @endphp
+
+        <x-callout
+            :tone="$status === 'rejected' ? 'danger' : ($status === 'approved' ? 'success' : 'info')"
+            :title="$nextStep[0]"
+            class="hf-next-step"
+        >
+            @if ($nextStep[1])
+                <button type="button" class="hf-btn hf-btn--sm" wire:click="{{ $nextStep[2] }}">{{ $nextStep[1] }}</button>
+            @endif
+        </x-callout>
+
         <div class="hf-grid hf-grid--4 hf-mb-3">
             <x-kpi-tile
                 label="Record"
@@ -161,6 +186,7 @@
                             class="hf-btn hf-btn--sm hf-btn--primary"
                             wire:click="openPlayerDialog"
                             data-testid="my-team-add-player"
+                            wire:loading.class="is-loading"
                             @disabled($playerCount >= 12)
                         >
                             <i class="bi bi-plus-lg"></i> Add player
@@ -177,7 +203,8 @@
                         </div>
                     @else
                         <div class="hf-table-wrap">
-                            <table class="hf-table">
+                            <table class="hf-table hf-table--roster hf-table--stack">
+                                <caption class="hf-sr-only">Team roster</caption>
                                 <thead>
                                     <tr>
                                         <th scope="col">#</th>
@@ -195,14 +222,14 @@
                                     @foreach ($players as $player)
                                         @php $playerName = trim($player->first_name.' '.$player->last_name); @endphp
                                         <tr wire:key="my-team-player-{{ $player->id }}" data-testid="my-team-player-{{ $player->id }}">
-                                            <td>{{ $player->jersey_number }}</td>
-                                            <td><strong>{{ $playerName }}</strong></td>
-                                            <td>{{ $player->position }}</td>
-                                            <td>{{ $ageService->ageAtTournamentStart($player->birthdate, $tournament) ?? '—' }}</td>
-                                            <td><x-status-chip :status="$player->consent_status" /></td>
-                                            <td><x-status-chip :status="app(\App\Services\EligibilityService::class)->documentStatusForPlayer($player)" /></td>
+                                            <td data-label="#">{{ $player->jersey_number }}</td>
+                                            <td data-label="Player"><strong>{{ $playerName }}</strong></td>
+                                            <td data-label="Position">{{ $player->position }}</td>
+                                            <td data-label="Age at start">{{ $ageService->ageAtTournamentStart($player->birthdate, $tournament) ?? '—' }}</td>
+                                            <td data-label="Consent"><x-status-chip :status="$player->consent_status" /></td>
+                                            <td data-label="Documents"><x-status-chip :status="app(\App\Services\EligibilityService::class)->documentStatusForPlayer($player)" /></td>
                                             @unless ($locked)
-                                                <td>
+                                                <td data-label="Actions">
                                                     <div class="hf-flex hf-gap-1">
                                                         <button
                                                             type="button"
@@ -277,7 +304,7 @@
                     </p>
                 </div>
 
-                <div class="hf-card hf-mb-3" data-testid="my-team-payment">
+                <div class="hf-card hf-payment-summary hf-mb-3" data-testid="my-team-payment">
                     <div class="hf-between">
                         <span class="hf-kpi-label">Payment</span>
                         @if ($payment)
@@ -286,9 +313,13 @@
                             <span class="hf-chip hf-chip--slate">No payment</span>
                         @endif
                     </div>
-                    <h3 class="hf-section-title hf-mt-1">{{ $payment?->method ?: 'No method' }}</h3>
-                    <p class="hf-small hf-muted hf-mb-1">{{ $payment?->reference_no ?: 'No reference' }} · ₱{{ number_format($fee, 0) }}</p>
-                    <p class="hf-small hf-muted hf-mb-0">
+                    <dl>
+                        <div><dt>Method</dt><dd>{{ $payment?->method ?: 'No method' }}</dd></div>
+                        <div><dt>Reference</dt><dd>{{ $payment?->reference_no ?: 'No reference' }}</dd></div>
+                        <div><dt>Amount</dt><dd>₱{{ number_format($fee, 0) }}</dd></div>
+                        <div><dt>Status</dt><dd>{{ $paymentStatus }}</dd></div>
+                    </dl>
+                    <p class="hf-small hf-muted hf-mt-2 hf-mb-0">
                         <span class="hf-kpi-label">Send to:</span> {{ $tournament?->payment_method ?: 'GCash' }} · {{ $tournament?->payment_account ?: 'TBD' }}
                     </p>
                     @if ($payment?->paid_at)
@@ -334,7 +365,8 @@
                 wire:key="my-player-dialog-{{ $editingPlayerId ?? 'new' }}"
                 data-testid="my-player-dialog"
             >
-                <form wire:submit="savePlayer" novalidate>
+                <form wire:submit="savePlayer" novalidate wire:loading.attr="aria-busy">
+                    <x-form-errors />
                     <div class="hf-dialog__head">
                         <h2 class="hf-dialog__title">{{ $editingPlayerId !== null ? 'Edit '.$playerName : 'Add player' }}</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePlayerDialog" aria-label="Close dialog" data-testid="dialog-close">
@@ -405,9 +437,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="hf-dialog__foot">
+                    <div class="hf-dialog__foot hf-dialog__foot--sticky">
                         <button type="button" class="hf-btn" wire:click="closePlayerDialog" data-testid="my-player-cancel">Cancel</button>
-                        <button type="submit" class="hf-btn hf-btn--primary" data-testid="my-player-save">
+                        <button type="submit" class="hf-btn hf-btn--primary" data-testid="my-player-save" wire:loading.attr="disabled" wire:loading.class="is-loading">
                             {{ $editingPlayerId !== null ? 'Save player' : 'Add player' }}
                         </button>
                     </div>
@@ -434,7 +466,7 @@
                 <div class="hf-dialog__body">
                     <p class="hf-mb-0">The player is removed from the roster immediately. You can add them again before verification.</p>
                 </div>
-                <div class="hf-dialog__foot">
+                <div class="hf-dialog__foot hf-dialog__foot--sticky">
                     <button type="button" class="hf-btn" wire:click="cancelRemovePlayer" data-testid="confirm-cancel">Cancel</button>
                     <button type="button" class="hf-btn hf-btn--danger" wire:click="removePlayer" data-testid="confirm-ok">Remove player</button>
                 </div>
@@ -451,7 +483,8 @@
                 wire:key="my-payment-dialog"
                 data-testid="my-payment-dialog"
             >
-                <form wire:submit="savePayment" novalidate>
+                <form wire:submit="savePayment" novalidate wire:loading.attr="aria-busy">
+                    <x-form-errors />
                     <div class="hf-dialog__head">
                         <h2 class="hf-dialog__title">Update payment reference</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePaymentDialog" aria-label="Close dialog" data-testid="dialog-close">
@@ -486,9 +519,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="hf-dialog__foot">
+                    <div class="hf-dialog__foot hf-dialog__foot--sticky">
                         <button type="button" class="hf-btn" wire:click="closePaymentDialog" data-testid="my-payment-cancel">Cancel</button>
-                        <button type="submit" class="hf-btn hf-btn--primary" data-testid="my-payment-save">Submit reference</button>
+                        <button type="submit" class="hf-btn hf-btn--primary" data-testid="my-payment-save" wire:loading.attr="disabled" wire:loading.class="is-loading">Submit reference</button>
                     </div>
                 </form>
             </dialog>
