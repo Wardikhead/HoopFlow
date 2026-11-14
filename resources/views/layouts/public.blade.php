@@ -7,6 +7,10 @@
 
     <title>@yield('title', $title ?? config('app.name'))</title>
 
+    @hasSection('meta-description')
+        <meta name="description" content="@yield('meta-description')">
+    @endif
+
     <link rel="icon" type="image/png" href="{{ asset('img/hoopflow icon without background.png') }}">
 
     <script>

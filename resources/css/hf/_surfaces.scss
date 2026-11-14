@@ -474,3 +474,17 @@
 @media (max-width: 767.98px) {
   .hf-milestones { grid-template-columns: 1fr 1fr; }
 }
+
+.hf-team-hero .hf-stat-strip {
+  margin-top: 20px;
+}
+
+.hf-page > .hf-matchday:first-child {
+  margin-top: 4px;
+}
+
+@media (max-width: 767.98px) {
+  .hf-matchday__title {
+    font-size: 2.4rem;
+  }
+}

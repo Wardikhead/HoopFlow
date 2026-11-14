@@ -29,26 +29,27 @@
             ];
         @endphp
 
-        <header class="hf-page-head hf-mb-3">
-            <div>
-                <span class="hf-eyebrow">{{ $divisionName }} · {{ $tournament->name }}</span>
-                <h1 class="hf-page-title">Standings</h1>
-                <p class="hf-page-desc">Wins, losses, point differential, and the playoff cut — computed from every recorded result.</p>
-            </div>
-            <div class="hf-page-actions">
-                <label class="hf-sr-only" for="standingsTournament">Tournament</label>
-                <select class="hf-select" id="standingsTournament"
-                        wire:change="changeTournament($event.target.value)"
-                        style="width: auto; min-width: 210px"
-                        data-testid="standings-tournament">
-                    @foreach ($this->tournaments as $tournamentOption)
-                        <option value="{{ $tournamentOption->id }}" @selected($tournamentOption->id === $tournament->id)>{{ $tournamentOption->name }}</option>
-                    @endforeach
-                </select>
-                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="standings-bracket"><i class="bi bi-diagram-3"></i> Bracket</a>
-                <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="standings-matches"><i class="bi bi-list-ul"></i> Matchups</a>
-            </div>
-        </header>
+        <x-matchday-strip
+            eyebrow="{{ $divisionName }} · {{ $tournament->name }}"
+            title="Standings"
+            :status="$cut ? 'Top '.$cut.' qualify' : null"
+            description="Wins, losses, point differential, and the playoff cut — computed from every recorded result."
+            :meta="[
+                ['icon' => 'trophy', 'label' => $kpis['leader_short'].' leads'],
+                ['icon' => 'bar-chart', 'label' => $kpis['results'].' results'],
+                ['icon' => 'people', 'label' => $kpis['qualified'].' above the cut'],
+            ]"
+            class="hf-mb-3"
+        >
+            <label class="hf-sr-only" for="standingsTournament">Tournament</label>
+            <select class="hf-select" id="standingsTournament" wire:change="changeTournament($event.target.value)" data-testid="standings-tournament">
+                @foreach ($this->tournaments as $tournamentOption)
+                    <option value="{{ $tournamentOption->id }}" @selected($tournamentOption->id === $tournament->id)>{{ $tournamentOption->name }}</option>
+                @endforeach
+            </select>
+            <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="standings-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="standings-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
+        </x-matchday-strip>
 
         <div class="hf-grid hf-grid--4 hf-mb-3" id="standingsKpis" data-testid="standings-kpis">
             @include('components.kpi-tile', [

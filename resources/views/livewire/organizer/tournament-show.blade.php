@@ -20,6 +20,8 @@
     @else
         @section('title', $tournament->name)
 
+        @section('meta-description', $tournament->name.' · '.$tournament->venueName().' · '.($tournament->start_date?->format('M j, Y') ?? 'TBD').' to '.($tournament->end_date?->format('M j, Y') ?? 'TBD').'. Bracket, schedule, standings, and announcements.')
+
         @php
             $division = $tournament->divisions->first();
             $courtCount = $tournament->courtCount();
@@ -49,34 +51,34 @@
             };
         @endphp
 
-        <section class="hf-hero hf-mb-3" data-testid="tournament-hero-{{ $tournament->id }}">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $division?->name ?? 'Division' }} · {{ $tournament->statusLabel() }}</span>
-            <h1>{{ $tournament->name }}</h1>
-            <p>{{ $tournament->description ?? 'Youth basketball tournament managed with HoopFlow.' }}</p>
-            <div class="hf-stat-strip">
-                <div><span>Dates</span><strong>{{ $tournament->start_date?->format('M d, Y') ?? 'TBD' }} – {{ $tournament->end_date?->format('M d, Y') ?? 'TBD' }}</strong></div>
-                <div><span>Venue</span><strong>{{ $tournament->venueName() }}</strong></div>
-                <div><span>Courts</span><strong>{{ $courtCount }}</strong></div>
-                <div><span>Entry</span><strong>{{ $money($tournament->entryFee()) }}</strong></div>
-                <div><span>Format</span><strong>{{ $tournament->formatLabel() }}</strong></div>
-                <div><span>Payment</span><strong>{{ $tournament->payment_method ?: 'GCash' }} · {{ $tournament->payment_account ?: 'TBD' }}</strong></div>
-            </div>
-            <div class="hf-btn-row hf-mt-3">
-                <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="show-bracket">Bracket</a>
-                <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="show-schedule">Schedule</a>
-                <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="show-standings">Standings</a>
-                @if ($role === 'coach')
-                    @if ($coachTeam)
-                        <a class="hf-btn" href="{{ route('myTeam', ['team' => $coachTeam->id, 'tournament' => $tournament->id]) }}" data-testid="show-my-team">My team status</a>
-                    @elseif ($tournament->status === 'registration-open')
-                        <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $tournament->id]) }}" data-testid="show-register">Register team</a>
-                    @endif
+        <x-matchday-strip
+            eyebrow="{{ $division?->name ?? 'Division' }} · {{ $tournament->statusLabel() }}"
+            :title="$tournament->name"
+            :description="$tournament->description ?? 'Youth basketball tournament managed with HoopFlow.'"
+            :meta="[
+                ['icon' => 'calendar3', 'label' => ($tournament->start_date?->format('M d, Y') ?? 'TBD').' - '.($tournament->end_date?->format('M d, Y') ?? 'TBD')],
+                ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
+                ['icon' => 'people', 'label' => $tournament->slotCount().' slots'],
+                ['icon' => 'cash', 'label' => $money($tournament->entryFee()).' entry'],
+                ['icon' => 'diagram-3', 'label' => $tournament->formatLabel()],
+            ]"
+            class="hf-mb-3"
+            data-testid="tournament-hero-{{ $tournament->id }}"
+        >
+            <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="show-bracket">Bracket</a>
+            <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="show-schedule">Schedule</a>
+            <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="show-standings">Standings</a>
+            @if ($role === 'coach')
+                @if ($coachTeam)
+                    <a class="hf-btn" href="{{ route('myTeam', ['team' => $coachTeam->id, 'tournament' => $tournament->id]) }}" data-testid="show-my-team">My team status</a>
+                @elseif ($tournament->status === 'registration-open')
+                    <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $tournament->id]) }}" data-testid="show-register">Register team</a>
                 @endif
-                @if ($role === 'organizer')
-                    <a class="hf-btn" href="{{ route('announcementCreate', ['tournament' => $tournament->id]) }}" data-testid="show-create-announcement">Announce</a>
-                @endif
-            </div>
-        </section>
+            @endif
+            @if ($role === 'organizer')
+                <a class="hf-btn" href="{{ route('announcementCreate', ['tournament' => $tournament->id]) }}" data-testid="show-create-announcement">Announce</a>
+            @endif
+        </x-matchday-strip>
 
         <div class="hf-grid hf-grid--4 hf-mb-3">
             @if ($role === 'fan')

@@ -4,34 +4,32 @@
 
 @section('content')
 <div class="hf-page">
-    <header class="hf-page-head hf-mb-3">
-        <div>
-            <span class="hf-eyebrow">{{ $tournament?->divisions?->first()?->name ?? 'Division' }} · {{ $tournament?->name ?? 'Standings' }}</span>
-            <h1 class="hf-page-title">Standings</h1>
-            <p class="hf-page-desc">Wins, losses, point differential, and the playoff cut — computed from every recorded result.</p>
-        </div>
+    <x-matchday-strip
+        eyebrow="{{ $tournament?->divisions?->first()?->name ?? 'Division' }} · {{ $tournament?->name ?? 'Standings' }}"
+        title="Standings"
+        description="Wins, losses, point differential, and the playoff cut — computed from every recorded result."
+        class="hf-mb-3"
+    >
         @if ($tournament)
-            <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}"><i class="bi bi-diagram-3"></i> Bracket</a>
-                <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}"><i class="bi bi-list-ul"></i> Matchups</a>
-            </div>
+            <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
         @endif
-    </header>
+    </x-matchday-strip>
 
     @if ($tournament)
         <div class="hf-card">
             <div class="hf-table-wrap">
-                <table class="hf-table">
+                <table class="hf-table hf-table--standings">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Team</th>
-                            <th>Played</th>
-                            <th>W</th>
-                            <th>L</th>
-                            <th>PF</th>
-                            <th>PA</th>
-                            <th>Diff</th>
+                            <th scope="col">#</th>
+                            <th scope="col">Team</th>
+                            <th scope="col">Played</th>
+                            <th scope="col">W</th>
+                            <th scope="col">L</th>
+                            <th scope="col">PF</th>
+                            <th scope="col">PA</th>
+                            <th scope="col">Diff</th>
                         </tr>
                     </thead>
                     <tbody>
