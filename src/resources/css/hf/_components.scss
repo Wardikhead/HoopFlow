@@ -1464,3 +1464,57 @@ a.hf-card:hover .hf-card__arrow,
   }
 }
 
+.hf-announcement-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.hf-composer-preview {
+  position: sticky;
+  top: 84px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.hf-announcement-preview h2 {
+  font-size: 26px;
+}
+
+.hf-audit-day {
+  margin-bottom: 18px;
+}
+
+.hf-audit-day__title {
+  margin: 0 0 8px;
+  color: var(--hf-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hf-filter-bar--announcements {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px);
+}
+
+.hf-filter-bar__row {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 991.98px) {
+  .hf-composer-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hf-filter-bar--announcements {
+    grid-template-columns: 1fr;
+  }
+}
+

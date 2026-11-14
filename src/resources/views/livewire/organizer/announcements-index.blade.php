@@ -8,6 +8,13 @@
 
     @section('title', 'Announcements')
 
+    @section('breadcrumbs')
+        <x-breadcrumbs :items="[
+            ['label' => 'Home', 'href' => route('dashboard')],
+            ['label' => 'Announcements'],
+        ]" />
+    @endsection
+
     <header class="hf-page-head hf-mb-3">
         <div>
             <span class="hf-eyebrow">Matchday desk · Bulletin</span>
@@ -60,27 +67,26 @@
         ])
     </div>
 
-    <div class="hf-card hf-mb-3" data-testid="announcement-filters">
-        <div class="hf-form-grid">
-            <div class="hf-field hf-field--full">
-                <label class="hf-label" for="announcementSearch">Search</label>
-                <input class="hf-input" id="announcementSearch" type="search"
-                       placeholder="Headline, message, or author"
-                       wire:model.live.debounce.150ms="search"
-                       data-testid="announcement-search">
-            </div>
-            <div class="hf-field hf-field--full">
-                <label class="hf-label" for="announcementTournament">Tournament</label>
-                <select class="hf-select" id="announcementTournament" wire:model.live="tournament" data-testid="announcement-tournament-filter">
-                    <option value="all">All tournaments</option>
-                    @foreach ($this->tournaments as $tournamentOption)
-                        <option value="{{ $tournamentOption->id }}">{{ $tournamentOption->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+    <div class="hf-filter-bar hf-filter-bar--announcements hf-mb-3" data-testid="announcement-filters">
+        <div class="hf-filter-bar__search">
+            <label class="hf-sr-only" for="announcementSearch">Search announcements</label>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input class="hf-input" id="announcementSearch" type="search"
+                   placeholder="Headline, message, or author"
+                   wire:model.live.debounce.150ms="search"
+                   data-testid="announcement-search">
         </div>
-        <div class="hf-flex hf-wrap hf-items-center hf-gap-2 hf-mt-2">
-            <span class="hf-label">Category</span>
+        <div class="hf-field">
+            <label class="hf-sr-only" for="announcementTournament">Tournament</label>
+            <select class="hf-select hf-select--compact" id="announcementTournament" wire:model.live="tournament" data-testid="announcement-tournament-filter">
+                <option value="all">All tournaments</option>
+                @foreach ($this->tournaments as $tournamentOption)
+                    <option value="{{ $tournamentOption->id }}">{{ $tournamentOption->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="hf-filter-bar__row">
+            <span class="hf-label hf-mb-0">Category</span>
             <div class="hf-filter-row hf-mb-0" data-category-filters>
                 @foreach ($this->categories as $value => $label)
                     <button type="button"
@@ -96,7 +102,7 @@
         </div>
     </div>
 
-    <div id="announcementFeed" data-testid="announcement-feed">
+    <div id="announcementFeed" class="hf-announcement-feed" data-testid="announcement-feed" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
         @if ($announcements->isEmpty())
             <div class="hf-empty" data-testid="announcement-empty">
                 <i class="bi bi-megaphone" aria-hidden="true"></i>
@@ -194,22 +200,26 @@
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
             </div>
-            <div class="hf-dialog__body">
-                <div class="hf-flex hf-wrap hf-gap-2 hf-mb-2">
-                    <span class="hf-chip hf-chip--slate">{{ \App\Models\Announcement::categoryLabel($viewing->category) }}</span>
-                    @if ($viewing->pinned)
-                        <span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>
-                    @endif
-                    <span class="hf-chip hf-chip--slate">Audience: {{ \App\Models\Announcement::audienceLabel($viewing->audience) }}</span>
+            <div class="hf-dialog__body hf-dialog__body--split">
+                <div class="hf-min-w-0">
+                    <div class="hf-flex hf-wrap hf-gap-2 hf-mb-2">
+                        <span class="hf-chip hf-chip--slate">{{ \App\Models\Announcement::categoryLabel($viewing->category) }}</span>
+                        @if ($viewing->pinned)
+                            <span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>
+                        @endif
+                    </div>
+                    <p class="hf-mb-0">{{ $viewing->body }}</p>
                 </div>
-                <p class="hf-small hf-muted hf-mb-2">
-                    {{ $viewing->createdBy?->name ?? 'Unknown' }}
-                    · {{ ($viewing->published_at ?? $viewing->created_at)?->format('M d, Y') ?? '' }}
-                    · {{ $viewing->tournament?->name ?? 'Tournament' }}
-                </p>
-                <p class="hf-mb-0">{{ $viewing->body }}</p>
+                <aside class="hf-min-w-0">
+                    <dl class="hf-summary-list">
+                        <div><dt>Audience</dt><dd>{{ \App\Models\Announcement::audienceLabel($viewing->audience) }}</dd></div>
+                        <div><dt>Author</dt><dd>{{ $viewing->createdBy?->name ?? 'Unknown' }}</dd></div>
+                        <div><dt>Published</dt><dd>{{ ($viewing->published_at ?? $viewing->created_at)?->format('M d, Y') ?? 'TBD' }}</dd></div>
+                        <div><dt>Tournament</dt><dd>{{ $viewing->tournament?->name ?? 'Tournament' }}</dd></div>
+                    </dl>
+                </aside>
             </div>
-            <div class="hf-dialog__foot">
+            <div class="hf-dialog__foot hf-dialog__foot--sticky">
                 @if (auth()->user()?->hasRole('organizer'))
                     <button type="button" class="hf-btn" wire:click="confirmDelete" data-testid="announcement-delete">Delete</button>
                     <button type="button" class="hf-btn" wire:click="togglePin" data-testid="announcement-pin">{{ $viewing->pinned ? 'Unpin' : 'Pin' }}</button>

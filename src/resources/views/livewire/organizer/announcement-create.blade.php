@@ -1,6 +1,14 @@
 <div>
     @section('title', 'New announcement')
 
+    @section('breadcrumbs')
+        <x-breadcrumbs :items="[
+            ['label' => 'Home', 'href' => route('dashboard')],
+            ['label' => 'Announcements', 'href' => route('announcements')],
+            ['label' => 'New announcement'],
+        ]" />
+    @endsection
+
     @if ($this->tournaments->isEmpty())
         <div class="hf-empty" data-testid="announcement-no-tournaments">
             <i class="bi bi-megaphone" aria-hidden="true"></i>
@@ -27,6 +35,7 @@
 
         <div class="hf-split">
             <form wire:submit="save" id="announcementForm" data-testid="announcement-create-form">
+                <x-form-errors />
                 <div class="hf-card hf-mb-3">
                     <div class="hf-form-grid">
                         <div class="hf-field hf-field--full">
@@ -124,38 +133,36 @@
                     </div>
                 </div>
 
-                <div class="hf-btn-row">
+                <div class="hf-sticky-actions">
                     <a class="hf-btn" href="{{ route('announcements') }}" data-testid="announcement-cancel">Cancel</a>
-                    <button type="submit" class="hf-btn hf-btn--primary" wire:loading.attr="disabled" wire:target="save" data-testid="announcement-publish">
-                        <span wire:loading.remove wire:target="save"><i class="bi bi-send-fill"></i> Publish announcement</span>
-                        <span wire:loading wire:target="save">Publishing...</span>
+                    <button type="submit" class="hf-btn hf-btn--primary" wire:loading.attr="disabled" wire:loading.class="is-loading" wire:target="save" data-testid="announcement-publish">
+                        <span wire:loading.remove wire:target="save"><i class="bi bi-send-fill" aria-hidden="true"></i> Publish announcement</span>
+                        <span wire:loading wire:target="save">Publishing…</span>
                     </button>
                 </div>
             </form>
 
-            <aside>
-                <div class="hf-card hf-mb-3">
-                    <span class="hf-kpi-label">Preview</span>
-                    <article class="hf-card hf-card--flat hf-mt-1 {{ $pinned ? 'hf-announcement--pinned' : '' }}" data-preview data-testid="announcement-preview">
-                        <div class="hf-between">
-                            <span class="hf-chip hf-chip--slate">{{ \App\Models\Announcement::categoryLabel($category) }}</span>
-                            @if ($pinned)
-                                <span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>
-                            @endif
-                        </div>
-                        <h3 class="hf-section-title hf-mt-1">{{ trim($title) !== '' ? $title : 'Your headline' }}</h3>
-                        <p class="hf-muted hf-small hf-mb-0">{{ trim($body) !== '' ? $body : 'The message coaches and fans will see.' }}</p>
-                        <div class="hf-match-head hf-mt-2">
-                            <span>{{ $author }}</span>
-                            <span>Just now</span>
-                        </div>
-                        <div class="hf-match-head">
-                            <span>Audience: {{ \App\Models\Announcement::audienceLabel($audience) }}</span>
-                            <span>{{ $selectedTournament?->name ?? 'No tournament' }}</span>
-                        </div>
-                    </article>
-                </div>
-                <div class="hf-card">
+            <aside class="hf-composer-preview" aria-label="Announcement preview">
+                <span class="hf-eyebrow">Live preview</span>
+                <article class="hf-card hf-announcement-preview {{ $pinned ? 'hf-announcement--pinned' : '' }}" data-preview data-testid="announcement-preview">
+                    <div class="hf-between">
+                        <span class="hf-chip hf-chip--slate">{{ \App\Models\Announcement::categoryLabel($category) }}</span>
+                        @if ($pinned)
+                            <span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>
+                        @endif
+                    </div>
+                    <h3 class="hf-section-title hf-mt-1">{{ trim($title) !== '' ? $title : 'Your headline' }}</h3>
+                    <p class="hf-muted hf-small hf-mb-0">{{ trim($body) !== '' ? $body : 'The message coaches and fans will see.' }}</p>
+                    <div class="hf-match-head hf-mt-2">
+                        <span>{{ $author }}</span>
+                        <span>Just now</span>
+                    </div>
+                    <div class="hf-match-head">
+                        <span>Audience: {{ \App\Models\Announcement::audienceLabel($audience) }}</span>
+                        <span>{{ $selectedTournament?->name ?? 'No tournament' }}</span>
+                    </div>
+                </article>
+                <div class="hf-card hf-card--flat">
                     <span class="hf-kpi-label">Before publishing</span>
                     <ul class="hf-small hf-muted hf-mt-1 hf-mb-0">
                         <li>Choose the tournament the notice belongs to.</li>
@@ -163,6 +170,7 @@
                         <li>Pinned notices lead the feed and the dashboard.</li>
                     </ul>
                 </div>
+                <p class="hf-small hf-muted">Published announcements appear in the feed and on the tournament desk.</p>
             </aside>
         </div>
     @endif
