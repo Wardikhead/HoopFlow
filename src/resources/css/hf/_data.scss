@@ -549,10 +549,11 @@
   box-shadow: inset 3px 0 0 var(--hf-gold);
 }
 
-/* Stack action tables into labelled rows on phones so primary actions never
-   scroll offscreen. */
-@media (max-width: 575.98px) {
-  .hf-table--stack thead {
+/* Stack action tables into labelled rows so primary actions never scroll
+   offscreen. Dialog tables stack a little earlier to keep their editable
+   status controls inside the modal. */
+@mixin hf-table-stack {
+  thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -564,24 +565,24 @@
     border: 0;
   }
 
-  .hf-table--stack,
-  .hf-table--stack tbody,
-  .hf-table--stack tr,
-  .hf-table--stack td {
+  &,
+  tbody,
+  tr,
+  td {
     display: block;
     width: 100%;
   }
 
-  .hf-table--stack tr {
+  tr {
     padding: 12px;
     border-top: 1px solid var(--hf-border);
   }
 
-  .hf-table--stack tr:first-child {
+  tr:first-child {
     border-top: 0;
   }
 
-  .hf-table--stack td {
+  td {
     display: grid;
     grid-template-columns: 76px minmax(0, 1fr);
     gap: 8px;
@@ -589,7 +590,7 @@
     border: 0;
   }
 
-  .hf-table--stack td::before {
+  td::before {
     content: attr(data-label);
     color: var(--hf-muted);
     font-size: 10px;
@@ -598,21 +599,37 @@
     text-transform: uppercase;
   }
 
-  .hf-table--stack td:last-child {
+  td[data-label='Action'],
+  td[data-label='Actions'] {
     display: block;
     padding-top: 10px;
   }
 
-  .hf-table--stack td:last-child::before {
+  td[data-label='Action']::before,
+  td[data-label='Actions']::before {
     display: none;
   }
 
-  .hf-table--stack td:last-child .hf-btn-row {
+  td[data-label='Action'] .hf-btn-row,
+  td[data-label='Actions'] .hf-btn-row {
     width: 100%;
   }
 
-  .hf-table--stack td:last-child .hf-btn {
+  td[data-label='Action'] .hf-btn,
+  td[data-label='Actions'] .hf-btn {
     flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hf-dialog .hf-table--stack {
+    @include hf-table-stack;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hf-table--stack {
+    @include hf-table-stack;
   }
 }
 
@@ -795,8 +812,13 @@
   align-items: start;
 }
 
-@media (max-width: 767.98px) {
-  .hf-dialog__body--split {
+.hf-dialog--wide .hf-dialog__body--split {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 240px);
+}
+
+@media (max-width: 991.98px) {
+  .hf-dialog__body--split,
+  .hf-dialog--wide .hf-dialog__body--split {
     grid-template-columns: 1fr;
   }
 }
