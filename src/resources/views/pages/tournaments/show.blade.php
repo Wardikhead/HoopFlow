@@ -2,6 +2,8 @@
 
 @section('title', $tournament->name)
 
+@section('meta-description', $tournament->name.' · '.$tournament->venueName().' · '.($tournament->start_date?->format('M j, Y') ?? 'TBD').' to '.($tournament->end_date?->format('M j, Y') ?? 'TBD').'. Bracket, schedule, standings, and announcements.')
+
 @section('breadcrumbs')
     <x-breadcrumbs :items="[
         ['label' => 'Home', 'href' => route('dashboard')],
@@ -12,25 +14,25 @@
 
 @section('content')
 <div class="hf-page">
-    <section class="hf-hero hf-mb-3">
-        <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $tournament->divisions?->first()?->name ?? 'Division' }} · {{ $tournament->status }}</span>
-        <h1>{{ $tournament->name }}</h1>
-        <p>{{ $tournament->description }}</p>
-        <div class="hf-stat-strip">
-            <div><span>Dates</span><strong>{{ $tournament->start_date }} – {{ $tournament->end_date }}</strong></div>
-            <div><span>Entry</span><strong>{{ number_format($tournament->divisions?->first()?->entry_fee ?? 0, 2) }}</strong></div>
-            <div><span>Format</span><strong>Single elimination</strong></div>
-            <div><span>Slots</span><strong>{{ $tournament->divisions?->first()?->max_teams ?? ($tournament->rules_json['slots'] ?? 0) }}</strong></div>
-        </div>
-        <div class="hf-btn-row hf-mt-3">
-            <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}">Bracket</a>
-            <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}">Schedule</a>
-            <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}">Standings</a>
-            @if(auth()->user()?->hasRole('organizer'))
-                <a class="hf-btn" href="{{ route('announcementCreate', ['id' => $tournament->id]) }}">Announce</a>
-            @endif
-        </div>
-    </section>
+    <x-matchday-strip
+        eyebrow="{{ $tournament->divisions?->first()?->name ?? 'Division' }} · {{ $tournament->statusLabel() }}"
+        :title="$tournament->name"
+        :description="$tournament->description"
+        :meta="[
+            ['icon' => 'calendar3', 'label' => ($tournament->start_date?->format('M j, Y') ?? 'TBD').' – '.($tournament->end_date?->format('M j, Y') ?? 'TBD')],
+            ['icon' => 'cash', 'label' => number_format($tournament->divisions?->first()?->entry_fee ?? 0, 2).' entry'],
+            ['icon' => 'diagram-3', 'label' => 'Single elimination'],
+            ['icon' => 'people', 'label' => ($tournament->divisions?->first()?->max_teams ?? ($tournament->rules_json['slots'] ?? 0)).' slots'],
+        ]"
+        class="hf-mb-3"
+    >
+        <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}">Bracket</a>
+        <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}">Schedule</a>
+        <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}">Standings</a>
+        @if(auth()->user()?->hasRole('organizer'))
+            <a class="hf-btn" href="{{ route('announcementCreate', ['id' => $tournament->id]) }}">Announce</a>
+        @endif
+    </x-matchday-strip>
 
     <div class="hf-grid hf-grid--4 hf-mb-3">
         <div class="hf-card">

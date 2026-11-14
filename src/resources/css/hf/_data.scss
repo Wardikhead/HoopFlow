@@ -527,6 +527,18 @@
   box-shadow: inset 3px 0 0 var(--hf-gold);
 }
 
+.hf-table--standings th:nth-child(2),
+.hf-table--standings td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--hf-surface-2);
+}
+
+.hf-table--standings tr.is-qualified td:first-child {
+  box-shadow: inset 3px 0 0 var(--hf-gold);
+}
+
 /* Stack action tables into labelled rows on phones so primary actions never
    scroll offscreen. */
 @media (max-width: 575.98px) {

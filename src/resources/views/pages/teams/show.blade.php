@@ -2,6 +2,8 @@
 
 @section('title', $team->name)
 
+@section('meta-description', $team->name.' · '.$team->city.' · '.($tournament?->name ?? 'HoopFlow').' team profile, roster, results, and bracket position.')
+
 @section('breadcrumbs')
     <x-breadcrumbs :items="[
         ['label' => 'Home', 'href' => route('dashboard')],
@@ -33,7 +35,7 @@
         </div>
     </header>
 
-    <section class="hf-hero hf-mb-3" data-testid="team-hero-{{ $team->id }}">
+    <section class="hf-hero hf-team-hero hf-mb-3" data-testid="team-hero-{{ $team->id }}">
         <div class="hf-flex hf-items-center hf-gap-3">
             <x-team-shield :team="$team" size="lg" />
             <div>
@@ -74,7 +76,7 @@
                     </div>
                 @else
                     <div class="hf-table-wrap">
-                        <table class="hf-table">
+                        <table class="hf-table hf-table--roster">
                             <thead>
                                 <tr>
                                     <th scope="col">#</th>
