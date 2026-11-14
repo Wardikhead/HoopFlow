@@ -26,6 +26,16 @@
             } catch (e) {
                 document.documentElement.setAttribute('data-theme', 'light');
             }
+
+            try {
+                var nav = localStorage.getItem('hf-nav');
+                if (nav !== 'expanded' && nav !== 'collapsed') {
+                    nav = window.matchMedia('(min-width: 1200px)').matches ? 'expanded' : 'collapsed';
+                }
+                document.documentElement.dataset.nav = nav;
+            } catch (e) {
+                document.documentElement.dataset.nav = window.matchMedia('(min-width: 1200px)').matches ? 'expanded' : 'collapsed';
+            }
         })();
     </script>
 
@@ -164,7 +174,7 @@
         @endphp
 
         <div class="hf-app">
-            <aside class="hf-rail" aria-label="Primary navigation">
+            <aside class="hf-rail" id="hf-rail" aria-label="Primary navigation">
                 <a class="hf-rail-brand" href="{{ route('dashboard') }}" aria-label="HoopFlow dashboard">
                     <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
@@ -177,6 +187,14 @@
             </aside>
 
             <header class="hf-topbar">
+                <button type="button"
+                        class="hf-icon-btn hf-nav-toggle"
+                        data-nav-toggle
+                        aria-controls="hf-rail"
+                        aria-expanded="true"
+                        aria-label="Collapse navigation">
+                    <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
+                </button>
                 <div class="hf-topbar-context">
                     @hasSection('breadcrumbs')
                         @yield('breadcrumbs')

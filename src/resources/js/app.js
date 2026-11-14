@@ -11,7 +11,7 @@ import { initMotion } from './ui/motion';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
 import { initScoreConsole } from './ui/score-console';
 import { initScorekeeper } from './ui/scorekeeper';
-import { initMoreSheet, initShell } from './ui/shell';
+import { initMoreSheet, initNavRail, initShell } from './ui/shell';
 import { registerToasts } from './ui/toasts';
 import { initValidation } from './ui/validation';
 
@@ -24,6 +24,7 @@ initPreferences();
 document.addEventListener('hf:theme-changed', syncPreferenceButtons);
 initScoreConsole();
 initScorekeeper();
+initNavRail();
 initShell();
 initMoreSheet();
 initValidation();
