@@ -143,7 +143,7 @@
                                 <tr class="{{ $row['qualified'] ? 'is-qualified' : '' }}" data-testid="standings-row-{{ $row['team_id'] }}">
                                     <td class="is-num">{{ $row['rank'] }}</td>
                                     <td>
-                                        <a class="hf-flex hf-items-center hf-gap-1" href="{{ route('teamShow', ['team' => $row['team_id']]) }}">
+                                        <a class="hf-flex hf-items-center hf-gap-1" href="{{ route('teamShow', ['team' => $row['team_id'], 'tournament' => $tournament->id]) }}">
                                             <x-team-shield :team="$row['team']" />
                                             <strong>{{ $row['team_name'] ?? 'Team' }}</strong>
                                         </a>
@@ -165,7 +165,7 @@
 
                 <div class="hf-standings-cards">
                     @foreach ($rows as $row)
-                        <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $row['team_id']]) }}" data-testid="standings-card-{{ $row['team_id'] }}">
+                        <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $row['team_id'], 'tournament' => $tournament->id]) }}" data-testid="standings-card-{{ $row['team_id'] }}">
                             <div class="hf-between">
                                 <span class="hf-flex hf-items-center hf-gap-1">
                                     <span class="hf-kpi-label">#{{ $row['rank'] }}</span>

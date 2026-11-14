@@ -39,16 +39,19 @@ class TeamController extends Controller
 
         $registrations = $team->registrations->sortByDesc('id')->values();
         $requestedTournament = $request->query('tournament');
-        $registration = null;
+        $requestedTournamentId = is_numeric($requestedTournament) ? (int) $requestedTournament : null;
+        $requestedRegistration = $requestedTournamentId !== null
+            ? $registrations->firstWhere('tournament_id', $requestedTournamentId)
+            : null;
 
-        if (is_numeric($requestedTournament)) {
-            $registration = $registrations->firstWhere('tournament_id', (int) $requestedTournament);
-        }
+        $registration = $requestedRegistration;
 
         if ($role === 'fan') {
-            $approved = $registrations->firstWhere('status', 'approved');
+            $approved = $requestedTournamentId !== null
+                ? $requestedRegistration
+                : $registrations->firstWhere('status', 'approved');
 
-            if (! $approved instanceof Registration) {
+            if (! $approved instanceof Registration || $approved->status !== 'approved') {
                 return response()->view('pages.teams.unavailable', ['team' => $team], 403);
             }
 

@@ -92,7 +92,7 @@
                 </div>
             </div>
             <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('teamShow', ['team' => $team->id]) }}" data-testid="my-team-public">Public profile</a>
+                <a class="hf-btn" href="{{ route('teamShow', array_filter(['team' => $team->id, 'tournament' => $tournament?->id])) }}" data-testid="my-team-public">Public profile</a>
                 <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="my-team-register-another"><i class="bi bi-plus-lg"></i> Register another team</a>
             </div>
         </header>

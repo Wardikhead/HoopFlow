@@ -162,6 +162,63 @@ it('labels verified payments as paid and submitted registrations as pending', fu
         ->assertSee('Paid');
 });
 
+it('fans see the requested tournament when a team is approved in more than one', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $hoopfest = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $team = Team::where('name', 'San Antonio Vipers')->firstOrFail();
+
+    Registration::create([
+        'tournament_id' => $hoopfest->id,
+        'division_id' => $hoopfest->divisions()->firstOrFail()->id,
+        'team_id' => $team->id,
+        'status' => 'approved',
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($fan)
+        ->get('/teams/'.$team->id.'?tournament='.$summerCup->id)
+        ->assertOk()
+        ->assertSee($summerCup->name)
+        ->assertDontSee($hoopfest->name);
+});
+
+it('fans cannot use an approved registration from another tournament to view a pending one', function () {
+    $fan = User::where('email', 'fan.juan@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $hoopfest = Tournament::where('slug', 'pasig-youth-hoopfest')->firstOrFail();
+    $team = Team::where('name', 'San Antonio Vipers')->firstOrFail();
+
+    Registration::create([
+        'tournament_id' => $hoopfest->id,
+        'division_id' => $hoopfest->divisions()->firstOrFail()->id,
+        'team_id' => $team->id,
+        'status' => 'submitted',
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($fan)
+        ->get('/teams/'.$team->id.'?tournament='.$hoopfest->id)
+        ->assertStatus(403)
+        ->assertSee('Team not available');
+
+    $this->actingAs($fan)
+        ->get('/teams/'.$team->id.'?tournament='.$summerCup->id)
+        ->assertOk()
+        ->assertSee($summerCup->name);
+});
+
+it('tournament team links carry the tournament context', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $summerCup = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $team = Team::where('name', 'San Antonio Vipers')->firstOrFail();
+
+    $this->actingAs($organizer)
+        ->get('/tournaments/'.$summerCup->id)
+        ->assertOk()
+        ->assertSee(route('teamShow', ['team' => $team->id, 'tournament' => $summerCup->id]), false);
+});
+
 it('my-team loads for coach', function () {
     $user = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
     $this->actingAs($user)->get('/my-team')->assertStatus(200);

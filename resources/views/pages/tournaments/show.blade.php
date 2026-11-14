@@ -58,7 +58,7 @@
             <h2 class="hf-section-title">Team list</h2>
             <div class="hf-grid">
                 @forelse($tournament->registrations as $reg)
-                    <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $reg->team_id]) }}">
+                    <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $reg->team_id, 'tournament' => $reg->tournament_id]) }}">
                         <div class="hf-between">
                             <span><strong>{{ $reg->team?->name }}</strong></span>
                             <span class="hf-chip">{{ $reg->status }}</span>
