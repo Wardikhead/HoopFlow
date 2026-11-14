@@ -46,6 +46,8 @@ export function initMoreSheet() {
 }
 
 const NAV_KEY = 'hf-nav';
+const TOOLTIP_GAP = 10;
+const VIEWPORT_GAP = 8;
 
 export function initNavRail() {
     const root = document.documentElement;
@@ -55,6 +57,45 @@ export function initNavRail() {
     if (!toggle || !rail) return;
 
     const desktop = window.matchMedia('(min-width: 1200px)');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'hf-rail-tooltip';
+    tooltip.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tooltip);
+
+    let tooltipTarget = null;
+
+    const hideTooltip = () => {
+        tooltipTarget = null;
+        tooltip.classList.remove('is-visible');
+    };
+
+    const positionTooltip = (link) => {
+        const linkRect = link.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const left = Math.min(
+            linkRect.right + TOOLTIP_GAP,
+            window.innerWidth - tooltipRect.width - VIEWPORT_GAP,
+        );
+        const top = Math.min(
+            window.innerHeight - tooltipRect.height - VIEWPORT_GAP,
+            Math.max(VIEWPORT_GAP, linkRect.top + linkRect.height / 2 - tooltipRect.height / 2),
+        );
+
+        tooltip.style.left = `${Math.max(VIEWPORT_GAP, left)}px`;
+        tooltip.style.top = `${top}px`;
+    };
+
+    const showTooltip = (link) => {
+        if (root.dataset.nav !== 'collapsed' || window.innerWidth < 768) return;
+
+        const label = link.dataset.label;
+        if (!label) return;
+
+        tooltipTarget = link;
+        tooltip.textContent = label;
+        tooltip.classList.add('is-visible');
+        positionTooltip(link);
+    };
 
     const stored = () => {
         try {
@@ -69,6 +110,7 @@ export function initNavRail() {
         root.dataset.nav = state;
         toggle.setAttribute('aria-expanded', state === 'expanded' ? 'true' : 'false');
         toggle.setAttribute('aria-label', state === 'expanded' ? 'Collapse navigation' : 'Expand navigation');
+        hideTooltip();
     };
 
     render(root.dataset.nav === 'expanded' ? 'expanded' : 'collapsed');
@@ -88,4 +130,27 @@ export function initNavRail() {
         if (stored()) return;
         render(event.matches ? 'expanded' : 'collapsed');
     });
+
+    rail.addEventListener('pointerover', (event) => {
+        const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
+        if (link && link !== tooltipTarget) showTooltip(link);
+    });
+
+    rail.addEventListener('pointerout', (event) => {
+        const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
+        if (!link) return;
+        if (!link.contains(event.relatedTarget)) hideTooltip();
+    });
+
+    rail.addEventListener('focusin', (event) => {
+        const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
+        if (link) showTooltip(link);
+    });
+
+    rail.addEventListener('focusout', (event) => {
+        if (event.target instanceof Element && event.target.closest('.hf-rail-link')) hideTooltip();
+    });
+
+    window.addEventListener('scroll', hideTooltip, true);
+    window.addEventListener('resize', hideTooltip);
 }
