@@ -1201,3 +1201,131 @@ a.hf-card:hover .hf-card__arrow,
   border-radius: 0;
 }
 
+.hf-block {
+  display: block;
+}
+
+.hf-min-w-0 {
+  min-width: 0;
+}
+
+.hf-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 220px)) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-radius-lg);
+  background: var(--hf-surface);
+}
+
+.hf-filter-bar__search {
+  position: relative;
+}
+
+.hf-filter-bar__search > .bi {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  color: var(--hf-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.hf-filter-bar__search .hf-input {
+  padding-left: 34px;
+}
+
+.hf-select--compact {
+  min-height: 40px;
+  padding-block: 8px;
+  font-size: 13px;
+}
+
+.hf-results-count {
+  color: var(--hf-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hf-kpi-value--sm {
+  font-size: 30px;
+}
+
+.hf-meter {
+  display: block;
+  width: 100%;
+  height: 6px;
+  accent-color: var(--hf-primary);
+}
+
+.hf-wizard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.hf-wizard__summary {
+  position: sticky;
+  top: 84px;
+  padding: 18px;
+  border: 1px solid var(--hf-border);
+  border-radius: var(--hf-radius-lg);
+  background: var(--hf-surface);
+}
+
+.hf-summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.hf-summary-list div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hf-border);
+}
+
+.hf-summary-list dt {
+  color: var(--hf-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.hf-summary-list dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 991.98px) {
+  .hf-filter-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hf-filter-bar__search {
+    grid-column: 1 / -1;
+  }
+
+  .hf-wizard {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-wizard__summary {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hf-filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+

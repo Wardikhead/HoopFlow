@@ -51,16 +51,24 @@
             };
         @endphp
 
+        @section('breadcrumbs')
+            <x-breadcrumbs :items="[
+                ['label' => 'Home', 'href' => route('dashboard')],
+                ['label' => 'Tournaments', 'href' => route('tournaments')],
+                ['label' => $tournament->name],
+            ]" />
+        @endsection
+
         <x-matchday-strip
             eyebrow="{{ $division?->name ?? 'Division' }} · {{ $tournament->statusLabel() }}"
             :title="$tournament->name"
             :description="$tournament->description ?? 'Youth basketball tournament managed with HoopFlow.'"
+            :status="$tournament->statusLabel()"
             :meta="[
-                ['icon' => 'calendar3', 'label' => ($tournament->start_date?->format('M d, Y') ?? 'TBD').' - '.($tournament->end_date?->format('M d, Y') ?? 'TBD')],
+                ['icon' => 'calendar3', 'label' => ($tournament->start_date?->format('M d, Y') ?? 'TBD').' – '.($tournament->end_date?->format('M d, Y') ?? 'TBD')],
                 ['icon' => 'geo-alt', 'label' => $tournament->venueName()],
-                ['icon' => 'people', 'label' => $tournament->slotCount().' slots'],
+                ['icon' => 'people', 'label' => $approved.' approved · '.$pending.' pending'],
                 ['icon' => 'cash', 'label' => $money($tournament->entryFee()).' entry'],
-                ['icon' => 'diagram-3', 'label' => $tournament->formatLabel()],
             ]"
             class="hf-mb-3"
             data-testid="tournament-hero-{{ $tournament->id }}"
@@ -108,20 +116,23 @@
                             $showMoney = $role === 'organizer' || ($role === 'coach' && $coachTeam?->id === $team?->id);
                             $isPending = in_array($registration->status, ['submitted', 'pending'], true);
                         @endphp
-                        <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $registration->team_id]) }}" data-testid="tournament-team-{{ $team?->id ?? $registration->id }}" wire:key="tournament-team-{{ $registration->id }}">
+                        <a class="hf-card hf-card--flat hf-card--link" href="{{ route('teamShow', ['team' => $registration->team_id]) }}" data-testid="tournament-team-{{ $team?->id ?? $registration->id }}" wire:key="tournament-team-{{ $registration->id }}">
                             <div class="hf-between">
                                 <span class="hf-flex hf-items-center hf-gap-2">
                                     <x-team-shield :team="$team" />
                                     <span>
                                         <strong>{{ $team?->name ?? 'Team' }}</strong>
-                                        <span class="hf-small hf-muted" style="display:block">{{ $team?->coach_name ?? 'Coach TBD' }} · {{ $team?->city ?? 'City TBD' }}</span>
+                                        <span class="hf-small hf-muted hf-block">{{ $team?->coach_name ?? 'Coach TBD' }} · {{ $team?->city ?? 'City TBD' }}</span>
                                     </span>
                                 </span>
-                                <span class="hf-flex hf-wrap hf-gap-1">
-                                    <x-status-chip :status="$registrationLabel($registration->status)" />
-                                    @if ($showMoney)
-                                        <x-status-chip :status="$paymentLabel($payment)" />
-                                    @endif
+                                <span class="hf-flex hf-items-center hf-gap-2">
+                                    <span class="hf-flex hf-wrap hf-gap-1">
+                                        <x-status-chip :status="$registrationLabel($registration->status)" />
+                                        @if ($showMoney)
+                                            <x-status-chip :status="$paymentLabel($payment)" />
+                                        @endif
+                                    </span>
+                                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
                                 </span>
                             </div>
                             @if ($role === 'organizer' && $isPending)
@@ -162,7 +173,7 @@
                             </div>
                         </article>
                     @empty
-                        <div class="hf-empty">
+                        <div class="hf-empty hf-empty--compact">
                             <i class="bi bi-megaphone" aria-hidden="true"></i>
                             <h3>No announcements</h3>
                             <p>Publish a venue or schedule update for this tournament.</p>
@@ -187,7 +198,7 @@
                     @else
                         <p class="hf-small hf-muted">{{ $approved }} approved teams ready to seed.</p>
                         @if ($canGenerateBracket)
-                            <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGenerateBracket" data-testid="tournament-generate-bracket" wire:loading.attr="disabled">
+                            <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGenerateBracket" data-testid="tournament-generate-bracket" wire:loading.attr="disabled" wire:loading.class="is-loading">
                                 <span wire:loading.remove wire:target="requestGenerateBracket,confirm">Generate bracket</span>
                                 <span wire:loading wire:target="requestGenerateBracket,confirm">Seeding...</span>
                             </button>
@@ -207,7 +218,7 @@
                         <p class="hf-small hf-muted hf-mb-0">Generate the bracket before scheduling courts.</p>
                     @elseif ($canGenerateSchedule)
                         <p class="hf-small hf-muted">{{ $courtCount }} courts · {{ $tournament->slotMinutes() }}-minute slots · {{ $tournament->restMinutes() }}-minute rest.</p>
-                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGenerateSchedule" data-testid="tournament-generate-schedule" wire:loading.attr="disabled">
+                        <button type="button" class="hf-btn hf-btn--primary" wire:click="requestGenerateSchedule" data-testid="tournament-generate-schedule" wire:loading.attr="disabled" wire:loading.class="is-loading">
                             <span wire:loading.remove wire:target="requestGenerateSchedule">Preview schedule</span>
                             <span wire:loading wire:target="requestGenerateSchedule">Planning...</span>
                         </button>
@@ -312,7 +323,7 @@
             </div>
             <div class="hf-dialog__foot">
                 <button type="button" class="hf-btn" wire:click="cancelConfirm" data-testid="confirm-cancel">Cancel</button>
-                <button type="button" class="hf-btn hf-btn--{{ $confirmTone }}" wire:click="confirm" data-testid="confirm-ok" wire:loading.attr="disabled">{{ $confirmLabel }}</button>
+                <button type="button" class="hf-btn hf-btn--{{ $confirmTone }}" wire:click="confirm" data-testid="confirm-ok" wire:loading.attr="disabled" wire:loading.class="is-loading">{{ $confirmLabel }}</button>
             </div>
         </dialog>
     @endif

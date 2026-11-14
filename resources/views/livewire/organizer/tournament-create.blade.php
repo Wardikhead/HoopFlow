@@ -1,6 +1,14 @@
 <div>
     @section('title', 'Create tournament')
 
+    @section('breadcrumbs')
+        <x-breadcrumbs :items="[
+            ['label' => 'Home', 'href' => route('dashboard')],
+            ['label' => 'Tournaments', 'href' => route('tournaments')],
+            ['label' => 'Create tournament'],
+        ]" />
+    @endsection
+
     <header class="hf-page-head hf-mb-3">
         <div>
             <span class="hf-eyebrow">Organizer desk · Setup</span>
@@ -8,9 +16,11 @@
             <p class="hf-page-desc">Name the competition, choose the court plan, then publish a registration page in three steps.</p>
         </div>
         <div class="hf-page-actions">
-            <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="create-cancel"><i class="bi bi-arrow-left"></i> Tournaments</a>
+            <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="create-cancel"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tournaments</a>
         </div>
     </header>
+
+    <progress class="hf-meter hf-mb-2" value="{{ $step + 1 }}" max="3">{{ $step + 1 }} of 3</progress>
 
     <ol class="hf-stepper" data-testid="create-stepper">
         @foreach (['Basics', 'Format & courts', 'Review'] as $index => $label)
@@ -23,8 +33,9 @@
         @endforeach
     </ol>
 
-    <form wire:submit="save" class="hf-card" novalidate data-testid="create-form">
-        <x-form-errors />
+    <div class="hf-wizard">
+        <form wire:submit="save" class="hf-card hf-wizard__form" novalidate data-testid="create-form">
+            <x-form-errors />
 
         <section data-step-panel="0" @if ($step !== 0) hidden @endif>
             <div class="hf-form-grid">
@@ -295,20 +306,34 @@
             </p>
         </section>
 
-        <div class="hf-between hf-mt-4">
-            <button type="button" class="hf-btn" wire:click="previousStep" data-testid="create-back" @if ($step === 0) hidden @endif>
-                <i class="bi bi-arrow-left"></i> Back
-            </button>
-            <span></span>
-            <div class="hf-btn-row">
-                <button type="button" class="hf-btn hf-btn--primary" wire:click="nextStep" data-testid="create-next" @if ($step === 2) hidden @endif>
-                    Continue <i class="bi bi-arrow-right"></i>
+            <div class="hf-sticky-actions hf-mt-3">
+                <button type="button" class="hf-btn" wire:click="previousStep" data-testid="create-back" @if ($step === 0) hidden @endif wire:loading.attr="disabled">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
                 </button>
-                <button type="submit" class="hf-btn hf-btn--primary" data-testid="create-publish" @if ($step !== 2) hidden @endif wire:loading.attr="disabled">
-                    <i class="bi bi-broadcast"></i> Publish tournament
+                <button type="button" class="hf-btn hf-btn--primary" wire:click="nextStep" data-testid="create-next" @if ($step === 2) hidden @endif wire:loading.attr="disabled" wire:loading.class="is-loading">
+                    Continue <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </button>
+                <button type="submit" class="hf-btn hf-btn--primary" data-testid="create-publish" @if ($step !== 2) hidden @endif wire:loading.attr="disabled" wire:loading.class="is-loading">
+                    <span wire:loading.remove wire:target="save">Publish tournament</span>
+                    <span wire:loading wire:target="save">Publishing…</span>
                 </button>
             </div>
-        </div>
-    </form>
+        </form>
+
+        <aside class="hf-wizard__summary" aria-label="Tournament summary">
+            <span class="hf-eyebrow">Preview</span>
+            <h2 class="hf-section-title hf-mt-1">{{ $name !== '' ? $name : 'Untitled tournament' }}</h2>
+            <dl class="hf-summary-list">
+                <div><dt>Division</dt><dd>{{ $division_name }}</dd></div>
+                <div><dt>Venue</dt><dd>{{ $venue_name !== '' ? $venue_name : 'Venue TBD' }}</dd></div>
+                <div><dt>Dates</dt><dd>{{ $start_date }} – {{ $end_date }}</dd></div>
+                <div><dt>Format</dt><dd>{{ match ($format) { 'double-elimination' => 'Double elimination', 'round-robin' => 'Round robin', default => 'Single elimination' } }}</dd></div>
+                <div><dt>Slots</dt><dd>{{ $bracketSlots }} teams</dd></div>
+                <div><dt>Entry</dt><dd>₱{{ number_format((float) $fee) }}</dd></div>
+                <div><dt>Courts</dt><dd>{{ count($courts) }}</dd></div>
+            </dl>
+            <p class="hf-small hf-muted hf-mt-2 hf-mb-0">The summary updates as you move between steps.</p>
+        </aside>
+    </div>
 
 </div>
