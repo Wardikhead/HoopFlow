@@ -56,6 +56,13 @@
     @endphp
 
     @if (! $team)
+        <header class="hf-page-head hf-mb-3">
+            <div>
+                <span class="hf-eyebrow">Coach desk</span>
+                <h1 class="hf-page-title">My team</h1>
+                <p class="hf-page-desc">Roster, eligibility, entry fee, and registration status for the team you coach.</p>
+            </div>
+        </header>
         <div class="hf-empty" data-testid="my-team-empty">
             <i class="bi bi-person-plus" aria-hidden="true"></i>
             <h3>No team attached</h3>

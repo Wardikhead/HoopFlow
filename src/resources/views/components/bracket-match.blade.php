@@ -1,4 +1,4 @@
-@props(['match', 'roundLabel'])
+@props(['match', 'roundLabel', 'mobile' => false])
 
 @php
     $home = $match->homeTeam;
@@ -14,23 +14,23 @@
     $decided = in_array($match->status, ['final', 'forfeit'], true);
     $score1 = $isBye ? 'BYE' : ($match->home_score !== null ? (string) $match->home_score : '–');
     $score2 = $match->away_score !== null ? (string) $match->away_score : '–';
+    $suffix = $mobile ? '-mobile' : '';
 @endphp
 
 <div
     class="hf-bracket-match hf-bracket-match--{{ $match->status }}"
     data-match-id="{{ $match->id }}"
-    data-testid="bracket-match-{{ $match->id }}"
+    data-testid="bracket-match-{{ $match->id }}{{ $suffix }}"
     role="button"
     tabindex="0"
-    aria-label="Open {{ $roundLabel }} slot {{ $match->match_number }}"
-    wire:key="bracket-match-{{ $match->id }}"
+    wire:key="bracket-match-{{ $match->id }}{{ $suffix }}"
     wire:click="openMatchDetail({{ $match->id }})"
     wire:keydown.enter.prevent="openMatchDetail({{ $match->id }})"
     wire:keydown.space.prevent="openMatchDetail({{ $match->id }})"
 >
     <div class="hf-bracket-match__slot">{{ $roundLabel }} · Slot {{ $match->match_number }}</div>
     @if ($match->best_of > 1)
-        <div class="hf-bracket-match__series hf-small hf-muted" data-testid="bracket-series-{{ $match->id }}">
+        <div class="hf-bracket-match__series hf-small hf-muted" data-testid="bracket-series-{{ $match->id }}{{ $suffix }}">
             Best of {{ $match->best_of }} · Game {{ $match->game_number }}
             <span>{{ $match->series_home_wins }}–{{ $match->series_away_wins }}</span>
         </div>

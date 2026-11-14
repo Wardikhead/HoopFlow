@@ -83,12 +83,12 @@
                                     tabindex="0"
                                     data-reserved="{{ $cell['reserved'] ? 'true' : 'false' }}"
                                     title="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j') }}{{ $cell['count'] ? ' · '.$cell['count'].' games' : ' · no games' }}{{ $cell['reserved'] ? ' · reserved for playoffs' : '' }}"
-                                    aria-label="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['count'] ? ', '.$cell['count'].' games' : '' }}{{ $cell['reserved'] ? ', reserved for playoffs' : '' }}"
                                     style="{{ $cell['outside'] ? 'opacity: .45' : '' }}">
                                 <span>{{ $cell['day'] }}</span>
                                 @if ($cell['count'])
                                     <span class="hf-calendar-count">{{ $cell['count'] }} games</span>
                                 @endif
+                                <span class="hf-sr-only">{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j, Y') }}{{ $cell['reserved'] ? ', reserved for playoffs' : '' }}</span>
                             </button>
                         @endforeach
                     </div>

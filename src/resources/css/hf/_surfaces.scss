@@ -410,6 +410,7 @@
 
 .hf-error-page {
   min-height: 100vh;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--hf-primary) 16%, transparent), transparent 42%),
     var(--hf-ground);
@@ -435,6 +436,16 @@
   border-radius: 50%;
   transform: translateY(-50%);
   pointer-events: none;
+}
+
+@media (max-width: 1099px) {
+  .hf-error-court {
+    right: 50%;
+    width: min(420px, 100%);
+    height: auto;
+    aspect-ratio: 1;
+    transform: translate(50%, -50%);
+  }
 }
 
 .hf-error-brand { margin-bottom: 32px; }

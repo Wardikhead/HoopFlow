@@ -18,6 +18,8 @@
         $totalRounds = collect($sections)->sum(fn ($section) => count($section['rounds']));
     @endphp
 
+    @section('meta-description', 'Follow the live tournament bracket — every round, series score, court assignment, and final result in one HoopFlow view.')
+
     @if (! $tournament)
         <div class="hf-card">
             <p class="hf-muted hf-mb-0">Tournament not found.</p>
@@ -178,7 +180,7 @@
                 @foreach ($mobileRounds as $index => $round)
                     <div x-show="mobileRound === {{ $index }}" x-cloak>
                         @foreach ($round['matches'] as $match)
-                            <x-bracket-match :match="$match" :round-label="$round['label']" />
+                            <x-bracket-match :match="$match" :round-label="$round['label']" :mobile="true" />
                         @endforeach
                     </div>
                 @endforeach
