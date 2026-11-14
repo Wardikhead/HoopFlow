@@ -50,27 +50,13 @@
     </div>
 </header>
 
-<section class="hf-card hf-profile-head hf-mb-3" data-testid="profile-identity">
-    <span class="hf-avatar hf-avatar--xl">{{ $initials }}</span>
-    <div class="hf-profile-meta">
-        <span class="hf-flex hf-wrap hf-gap-1">
-            <span class="hf-chip hf-chip--primary" style="text-transform: capitalize">{{ $role }}</span>
-        </span>
-        <h2>{{ $user->name }}</h2>
-        <p>{{ $user->email }}</p>
-    </div>
-</section>
-
-<div class="hf-grid hf-grid--2 hf-mb-3">
-    <section class="hf-card" data-testid="profile-role-card">
-        <span class="hf-kpi-label">Role context</span>
-        <h2 class="hf-section-title hf-mt-1" style="text-transform: capitalize">{{ $role }}</h2>
-        <p class="hf-small hf-muted">{{ $roleCopy }}</p>
-        <div class="hf-btn-row hf-mt-2">
-            @foreach ($roleLinks as $index => [$key, $label])
-                <a class="hf-btn hf-btn--sm {{ $index === 0 ? 'hf-btn--primary' : '' }}"
-                   href="{{ route($key) }}" data-testid="profile-link-{{ $key }}">{{ $label }}</a>
-            @endforeach
+<div class="hf-profile-grid">
+    <section class="hf-card hf-profile-head" data-testid="profile-identity">
+        <span class="hf-avatar hf-avatar--xl">{{ $initials }}</span>
+        <div class="hf-profile-meta">
+            <span class="hf-chip hf-chip--primary">{{ ucfirst($role) }}</span>
+            <h2>{{ $user->name }}</h2>
+            <p class="hf-mb-0">{{ $user->email }}</p>
         </div>
     </section>
 
@@ -98,17 +84,29 @@
             @endforeach
         </div>
     </section>
-</div>
 
-<section id="shortcuts" class="hf-card hf-mt-3">
-    <span class="hf-kpi-label">Keyboard</span>
-    <h2 class="hf-section-title hf-mt-1">Shortcuts</h2>
-    <dl class="hf-shortcuts">
-        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Add points to the active team in a score console</dd></div>
-        <div><dt><kbd>U</kbd></dt><dd>Undo the last score</dd></div>
-        <div><dt><kbd>Enter</kbd></dt><dd>Finalize the score dialog</dd></div>
-        <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Switch the active team in a score console</dd></div>
-        <div><dt><kbd>Esc</kbd></dt><dd>Close a dialog or the More sheet</dd></div>
-    </dl>
-</section>
+    <section class="hf-card" data-testid="profile-role-card">
+        <span class="hf-kpi-label">Role context</span>
+        <h2 class="hf-section-title hf-mt-1">{{ ucfirst($role) }}</h2>
+        <p class="hf-small hf-muted">{{ $roleCopy }}</p>
+        <div class="hf-btn-row hf-mt-2">
+            @foreach ($roleLinks as $index => [$key, $label])
+                <a class="hf-btn hf-btn--sm {{ $index === 0 ? 'hf-btn--primary' : '' }}"
+                   href="{{ route($key) }}" data-testid="profile-link-{{ $key }}">{{ $label }}</a>
+            @endforeach
+        </div>
+    </section>
+
+    <section id="shortcuts" class="hf-card">
+        <span class="hf-kpi-label">Keyboard</span>
+        <h2 class="hf-section-title hf-mt-1">Shortcuts</h2>
+        <dl class="hf-shortcuts">
+            <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Add points to the active team in a score console</dd></div>
+            <div><dt><kbd>U</kbd></dt><dd>Undo the last score</dd></div>
+            <div><dt><kbd>Enter</kbd></dt><dd>Finalize the score dialog</dd></div>
+            <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Switch the active team in a score console</dd></div>
+            <div><dt><kbd>Esc</kbd></dt><dd>Close a dialog or the More sheet</dd></div>
+        </dl>
+    </section>
+</div>
 @endsection
