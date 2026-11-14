@@ -147,6 +147,16 @@
                 return $currentRoute === $routeName;
             };
 
+            $navGroups = [
+                ['label' => 'Matchday', 'keys' => $matchdayKeys],
+                ['label' => 'Workspace', 'keys' => $roleTools],
+            ];
+
+            $activeKeys = collect(array_merge($matchdayKeys, $roleTools))
+                ->filter(fn (string $key): bool => $isActive($key))
+                ->values()
+                ->all();
+
             $initials = collect(preg_split('/\s+/', $authUser->name))
                 ->map(fn ($part) => mb_substr($part, 0, 1))
                 ->slice(0, 2)
@@ -159,33 +169,7 @@
                     <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
 
-                <span class="hf-rail-label">Matchday</span>
-                @foreach ($matchdayKeys as $key)
-                    @php $item = $navItems[$key]; @endphp
-                    <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}"
-                       href="{{ route($item['route']) }}"
-                       data-testid="nav-{{ $key }}"
-                       data-label="{{ $item['label'] }}"
-                       @if ($isActive($key)) aria-current="page" @endif>
-                        <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>
-                        <span>{{ $item['label'] }}</span>
-                    </a>
-                @endforeach
-
-                @if (count($roleTools))
-                    <span class="hf-rail-label">Workspace</span>
-                    @foreach ($roleTools as $key)
-                        @php $item = $navItems[$key]; @endphp
-                        <a class="hf-rail-link{{ $isActive($key) ? ' is-active' : '' }}"
-                           href="{{ route($item['route']) }}"
-                           data-testid="nav-{{ $key }}"
-                           data-label="{{ $item['label'] }}"
-                           @if ($isActive($key)) aria-current="page" @endif>
-                            <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>
-                            <span>{{ $item['label'] }}</span>
-                        </a>
-                    @endforeach
-                @endif
+                <x-app-nav variant="rail" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" />
 
                 <div class="hf-rail-footer">
                     <x-user-menu />
@@ -256,27 +240,7 @@
                         </div>
                     </details>
 
-                    <div class="hf-sheet__group">
-                        <span class="hf-rail-label">Matchday</span>
-                        @foreach ($matchdayKeys as $key)
-                            @php $item = $navItems[$key]; @endphp
-                            <a href="{{ route($item['route']) }}" data-more-link="{{ $key }}">
-                                <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}
-                            </a>
-                        @endforeach
-                    </div>
-
-                    @if (count($roleTools))
-                        <div class="hf-sheet__group">
-                            <span class="hf-rail-label">Workspace</span>
-                            @foreach ($roleTools as $key)
-                                @php $item = $navItems[$key]; @endphp
-                                <a href="{{ route($item['route']) }}" data-more-link="{{ $key }}">
-                                    <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}
-                                </a>
-                            @endforeach
-                        </div>
-                    @endif
+                    <x-app-nav variant="sheet" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" />
 
                     <div class="hf-sheet__group">
                         <span class="hf-rail-label">Account</span>
