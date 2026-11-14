@@ -360,11 +360,11 @@
 .hf-matchday__meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; color: var(--hf-rail-muted); font-size: 13px; }
 .hf-matchday__meta span { display: inline-flex; align-items: center; gap: 6px; }
 .hf-matchday__next { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.14); color: var(--hf-rail-ink); font-size: 13px; }
-.hf-matchday__actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.hf-matchday__actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; max-width: 420px; }
 
 @media (max-width: 900px) {
   .hf-matchday { grid-template-columns: 1fr; padding: 18px; }
-  .hf-matchday__actions { align-items: stretch; }
+  .hf-matchday__actions { max-width: none; align-items: stretch; }
 }
 
 .hf-hero__name {
