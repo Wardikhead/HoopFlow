@@ -28,9 +28,9 @@
                             @case('coach')
                                 <div class="hf-lp-role__panel">
                                     <div class="hf-lp-role__meta"><span>Roster</span><strong>12/12</strong></div>
-                                    <div class="hf-lp-role__progress"><span style="width: 100%"></span></div>
+                                    <div class="hf-lp-role__progress"><span class="is-100"></span></div>
                                     <div class="hf-lp-role__meta"><span>Consent</span><strong>11/12</strong></div>
-                                    <div class="hf-lp-role__progress"><span style="width: 92%"></span></div>
+                                    <div class="hf-lp-role__progress"><span class="is-92"></span></div>
                                     <div class="hf-lp-role__next">Next: Sat 1:00 PM <strong>vs Vipers</strong></div>
                                 </div>
                                 @break

@@ -21,7 +21,7 @@
                     <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                 </a>
             @endauth
-            <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">Explore the demo</a>
+            <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">See how it runs</a>
         </div>
     </div>
 </section>

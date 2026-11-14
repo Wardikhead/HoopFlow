@@ -158,9 +158,9 @@
                     ['value' => 'missing', 'label' => 'Missing', 'description' => 'No birth certificate on file', 'tone' => 'danger', 'icon' => 'file-earmark-x'],
                 ];
             @endphp
-            <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeReview()" x-on:click="if ($event.target === $el) $wire.closeReview()" wire:key="submission-review-dialog" data-testid="submission-review-dialog">
+            <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeReview()" x-on:click="if ($event.target === $el) $wire.closeReview()" wire:key="submission-review-dialog" data-testid="submission-review-dialog" aria-labelledby="submissionReviewDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $review->team?->name ?? 'Team' }}</h2>
+                    <h2 class="hf-dialog__title" id="submissionReviewDialogTitle">{{ $review->team?->name ?? 'Team' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeReview()" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
                 <div class="hf-dialog__body hf-dialog__body--split">
@@ -175,6 +175,7 @@
                         </div>
                         <div class="hf-table-wrap hf-mt-1">
                             <table class="hf-table hf-table--stack">
+                                <caption class="hf-sr-only">Submitted players</caption>
                                 <thead>
                                     <tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age at start</th><th scope="col">Consent</th><th scope="col">Documents</th></tr>
                                 </thead>
@@ -291,9 +292,9 @@
                 $ageBlockers = $approveIssues->filter(fn (array $issue): bool => $issue['ageIssue'] !== null);
                 $overrideIssues = $approveIssues->reject(fn (array $issue): bool => $issue['ageIssue'] !== null);
             @endphp
-            <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelApprove()" x-on:click="if ($event.target === $el) $wire.cancelApprove()" wire:key="submission-approve-confirm-dialog" data-testid="submission-approve-confirm-dialog">
+            <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelApprove()" x-on:click="if ($event.target === $el) $wire.cancelApprove()" wire:key="submission-approve-confirm-dialog" data-testid="submission-approve-confirm-dialog" aria-labelledby="submissionApproveConfirmDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Approve {{ $approveReg->team?->name ?? 'team' }}?</h2>
+                    <h2 class="hf-dialog__title" id="submissionApproveConfirmDialogTitle">Approve {{ $approveReg->team?->name ?? 'team' }}?</h2>
                     <button type="button" class="hf-icon-btn" wire:click="cancelApprove()" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
                 <div class="hf-dialog__body">
@@ -317,12 +318,12 @@
                                 @endforeach
                             </ul>
                             <label class="hf-check">
-                                <input type="checkbox" wire:model="approveAnyway" data-testid="submission-approve-anyway">
+                                <input type="checkbox" wire:model="approveAnyway" data-testid="submission-approve-anyway" @error('approveAnyway') aria-invalid="true" aria-describedby="approveAnyway-error" @enderror>
                                 Approve anyway
                             </label>
                         </div>
                     @endif
-                    @error('approveAnyway') <p class="hf-field-error hf-mt-1">{{ $message }}</p> @enderror
+                    @error('approveAnyway') <p class="hf-field-error hf-mt-1" id="approveAnyway-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-dialog__foot hf-dialog__foot--sticky">
                     <button type="button" class="hf-btn" wire:click="cancelApprove()" data-testid="submission-approve-cancel">Cancel</button>
@@ -335,9 +336,9 @@
     @if ($rejectingId !== null)
         @php $rejectReg = $this->findRegistration($rejectingId); @endphp
         @if ($rejectReg)
-            <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelReject()" x-on:click="if ($event.target === $el) $wire.cancelReject()" wire:key="submission-reject-dialog" data-testid="submission-reject-dialog">
+            <dialog class="hf-dialog" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.cancelReject()" x-on:click="if ($event.target === $el) $wire.cancelReject()" wire:key="submission-reject-dialog" data-testid="submission-reject-dialog" aria-labelledby="submissionRejectDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Reject {{ $rejectReg->team?->name ?? 'team' }}</h2>
+                    <h2 class="hf-dialog__title" id="submissionRejectDialogTitle">Reject {{ $rejectReg->team?->name ?? 'team' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="cancelReject()" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
                 <div class="hf-dialog__body hf-dialog__body--split">

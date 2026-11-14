@@ -41,14 +41,14 @@
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="announcementTournament">Tournament</label>
                             <select class="hf-select" id="announcementTournament" wire:model.live="tournament_id"
-                                    @error('tournament_id') aria-invalid="true" @enderror
+                                    @error('tournament_id') aria-invalid="true" aria-describedby="tournament_id-error" @enderror
                                     data-testid="announcement-tournament">
                                 @foreach ($this->tournaments as $tournamentOption)
                                     <option value="{{ $tournamentOption->id }}">{{ $tournamentOption->name }}@if ($tournamentOption->divisions->isNotEmpty()) · {{ $tournamentOption->divisions->first()->name }}@endif</option>
                                 @endforeach
                             </select>
                             @error('tournament_id')
-                                <span class="hf-field-error">{{ $message }}</span>
+                                <span class="hf-field-error" id="tournament_id-error">{{ $message }}</span>
                             @enderror
                         </div>
 
@@ -57,11 +57,11 @@
                             <input class="hf-input" id="announcementTitle" type="text" maxlength="90"
                                    placeholder="Championship week moves to Court 1"
                                    wire:model.live.debounce.150ms="title"
-                                   @error('title') aria-invalid="true" @enderror
+                                   @error('title') aria-invalid="true" aria-describedby="title-error" @enderror
                                    data-testid="announcement-title">
                             <span class="hf-help">Keep it short enough for the top of the feed.</span>
                             @error('title')
-                                <span class="hf-field-error">{{ $message }}</span>
+                                <span class="hf-field-error" id="title-error">{{ $message }}</span>
                             @enderror
                         </div>
 
@@ -70,55 +70,55 @@
                             <textarea class="hf-textarea" id="announcementBody" rows="5" maxlength="320"
                                       placeholder="Gate opens 45 minutes before tip-off. All semifinals and finals are on Court 1."
                                       wire:model.live.debounce.150ms="body"
-                                      @error('body') aria-invalid="true" @enderror
+                                      @error('body') aria-invalid="true" aria-describedby="body-error" @enderror
                                       data-testid="announcement-body"></textarea>
                             <span class="hf-help">Up to 320 characters. Coaches and fans see plain text.</span>
                             @error('body')
-                                <span class="hf-field-error">{{ $message }}</span>
+                                <span class="hf-field-error" id="body-error">{{ $message }}</span>
                             @enderror
                         </div>
 
                         <div class="hf-field">
                             <label class="hf-label" for="announcementCategory">Category</label>
                             <select class="hf-select" id="announcementCategory" wire:model.live="category"
-                                    @error('category') aria-invalid="true" @enderror
+                                    @error('category') aria-invalid="true" aria-describedby="category-error" @enderror
                                     data-testid="announcement-category">
                                 @foreach (\App\Models\Announcement::CATEGORIES as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                             @error('category')
-                                <span class="hf-field-error">{{ $message }}</span>
+                                <span class="hf-field-error" id="category-error">{{ $message }}</span>
                             @enderror
                         </div>
 
                         <div class="hf-field">
                             <label class="hf-label" for="announcementAudience">Audience</label>
                             <select class="hf-select" id="announcementAudience" wire:model.live="audience"
-                                    @error('audience') aria-invalid="true" @enderror
+                                    @error('audience') aria-invalid="true" aria-describedby="audience-error" @enderror
                                     data-testid="announcement-audience">
                                 @foreach (\App\Models\Announcement::AUDIENCES as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                             @error('audience')
-                                <span class="hf-field-error">{{ $message }}</span>
+                                <span class="hf-field-error" id="audience-error">{{ $message }}</span>
                             @enderror
                         </div>
 
                         @if ($audience === 'specific')
-                            <div class="hf-field hf-field--full" id="announcementTargetUsers" data-testid="announcement-target-users">
-                                <label class="hf-label">Target users</label>
-                                <div class="hf-card hf-card--flat" style="max-height: 180px; overflow: auto;">
+                            <div class="hf-field hf-field--full" id="announcementTargetUsers" role="group" aria-labelledby="announcementTargetUsersLabel" @error('target_user_ids') aria-describedby="target_user_ids-error" @enderror data-testid="announcement-target-users">
+                                <label class="hf-label" id="announcementTargetUsersLabel">Target users</label>
+                                <div class="hf-card hf-card--flat hf-target-list">
                                     @foreach ($this->users as $targetUser)
-                                        <label class="hf-flex hf-items-center hf-gap-2 hf-small" style="padding: 4px 0;" wire:key="target-user-{{ $targetUser->id }}">
+                                        <label class="hf-flex hf-items-center hf-gap-2 hf-small hf-check-row" wire:key="target-user-{{ $targetUser->id }}">
                                             <input type="checkbox" value="{{ $targetUser->id }}" wire:model.live="target_user_ids">
                                             <span>{{ $targetUser->name }} <span class="hf-muted">({{ $targetUser->roles->first()?->key ?? 'member' }})</span></span>
                                         </label>
                                     @endforeach
                                 </div>
                                 @error('target_user_ids')
-                                    <span class="hf-field-error">{{ $message }}</span>
+                                    <span class="hf-field-error" id="target_user_ids-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         @endif
@@ -127,7 +127,7 @@
                             <input type="checkbox" id="announcementPinned" wire:model.live="pinned" data-testid="announcement-pinned">
                             <span>
                                 <strong>Pin to the top</strong>
-                                <span class="hf-help" style="display:block">Pinned notices lead the feed and the dashboard.</span>
+                                <span class="hf-help hf-block">Pinned notices lead the feed and the dashboard.</span>
                             </span>
                         </label>
                     </div>

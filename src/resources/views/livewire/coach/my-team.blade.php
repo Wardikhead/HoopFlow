@@ -66,7 +66,8 @@
         <header class="hf-page-head hf-mb-3">
             <div>
                 <span class="hf-eyebrow">{{ $tournament?->name ?? 'Tournament' }} · {{ $registration?->division?->name ?? '' }}</span>
-                <h1 class="hf-page-title">{{ $team->name }}</h1>
+                <h1 class="hf-page-title">My team</h1>
+                <h2 class="hf-hero__name">{{ $team->name }}</h2>
                 <p class="hf-page-desc">
                     {{ implode(' · ', array_filter([$this->coachName(), $team->city, $this->venueName])) }}
                 </p>
@@ -111,7 +112,7 @@
         @endif
 
         @if ($status === 'rejected')
-            <div class="hf-card hf-card--flat hf-mb-3" style="border-color: var(--hf-alert)">
+            <div class="hf-card hf-card--flat hf-card--alert hf-mb-3">
                 <span class="hf-chip hf-chip--danger">Rejected</span>
                 <h3 class="hf-section-title hf-mt-1">Organizer feedback</h3>
                 <p class="hf-small hf-muted hf-mb-0">{{ $registration?->rejection_reason ?: 'Contact the tournament committee for details.' }}</p>
@@ -364,11 +365,11 @@
                 x-on:click="if ($event.target === $el) $wire.closePlayerDialog()"
                 wire:key="my-player-dialog-{{ $editingPlayerId ?? 'new' }}"
                 data-testid="my-player-dialog"
-            >
+                aria-labelledby="myPlayerDialogTitle">
                 <form wire:submit="savePlayer" novalidate wire:loading.attr="aria-busy">
                     <x-form-errors />
                     <div class="hf-dialog__head">
-                        <h2 class="hf-dialog__title">{{ $editingPlayerId !== null ? 'Edit '.$playerName : 'Add player' }}</h2>
+                        <h2 class="hf-dialog__title" id="myPlayerDialogTitle">{{ $editingPlayerId !== null ? 'Edit '.$playerName : 'Add player' }}</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePlayerDialog" aria-label="Close dialog" data-testid="dialog-close">
                             <i class="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
@@ -383,10 +384,10 @@
                                     type="text"
                                     wire:model="playerName"
                                     autocomplete="off"
-                                    @error('playerName') aria-invalid="true" @enderror
+                                    @error('playerName') aria-invalid="true" aria-describedby="playerName-error" @enderror
                                     data-testid="my-player-name"
                                 >
-                                @error('playerName') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('playerName') <p class="hf-field-error" id="playerName-error">{{ $message }}</p> @enderror
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="myPlayerNumber">Jersey number</label>
@@ -397,10 +398,10 @@
                                     min="1"
                                     max="99"
                                     wire:model="playerNumber"
-                                    @error('playerNumber') aria-invalid="true" @enderror
+                                    @error('playerNumber') aria-invalid="true" aria-describedby="playerNumber-error" @enderror
                                     data-testid="my-player-number"
                                 >
-                                @error('playerNumber') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('playerNumber') <p class="hf-field-error" id="playerNumber-error">{{ $message }}</p> @enderror
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="myPlayerPosition">Position</label>
@@ -409,7 +410,7 @@
                                         <option value="{{ $position }}">{{ $position }}</option>
                                     @endforeach
                                 </select>
-                                @error('playerPosition') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('playerPosition') <p class="hf-field-error" id="playerPosition-error">{{ $message }}</p> @enderror
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="myPlayerBirthdate">Birthdate</label>
@@ -419,10 +420,10 @@
                                     type="date"
                                     max="{{ now()->format('Y-m-d') }}"
                                     wire:model="playerBirthdate"
-                                    @error('playerBirthdate') aria-invalid="true" @enderror
+                                    @error('playerBirthdate') aria-invalid="true" aria-describedby="playerBirthdate-error" @enderror
                                     data-testid="my-player-birthdate"
                                 >
-                                @error('playerBirthdate') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('playerBirthdate') <p class="hf-field-error" id="playerBirthdate-error">{{ $message }}</p> @enderror
                                 <p class="hf-help" data-testid="my-player-age-range">
                                     @if ($division)
                                         Eligible age {{ $ageRange['min'] }}–{{ $ageRange['max'] }} at tournament start
@@ -456,9 +457,9 @@
                 x-on:click="if ($event.target === $el) $wire.cancelRemovePlayer()"
                 wire:key="my-team-remove-dialog"
                 data-testid="my-team-remove-dialog"
-            >
+                aria-labelledby="myTeamRemoveDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Remove {{ $removingPlayerName }}?</h2>
+                    <h2 class="hf-dialog__title" id="myTeamRemoveDialogTitle">Remove {{ $removingPlayerName }}?</h2>
                     <button type="button" class="hf-icon-btn" wire:click="cancelRemovePlayer" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -482,11 +483,11 @@
                 x-on:click="if ($event.target === $el) $wire.closePaymentDialog()"
                 wire:key="my-payment-dialog"
                 data-testid="my-payment-dialog"
-            >
+                aria-labelledby="myPaymentDialogTitle">
                 <form wire:submit="savePayment" novalidate wire:loading.attr="aria-busy">
                     <x-form-errors />
                     <div class="hf-dialog__head">
-                        <h2 class="hf-dialog__title">Update payment reference</h2>
+                        <h2 class="hf-dialog__title" id="myPaymentDialogTitle">Update payment reference</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePaymentDialog" aria-label="Close dialog" data-testid="dialog-close">
                             <i class="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
@@ -501,7 +502,7 @@
                                         <option value="{{ $method }}">{{ $method }}</option>
                                     @endforeach
                                 </select>
-                                @error('paymentMethod') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('paymentMethod') <p class="hf-field-error" id="paymentMethod-error">{{ $message }}</p> @enderror
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="myPaymentRef">Reference</label>
@@ -512,10 +513,10 @@
                                     wire:model="paymentReference"
                                     placeholder="GCASH-9283746"
                                     autocomplete="off"
-                                    @error('paymentReference') aria-invalid="true" @enderror
+                                    @error('paymentReference') aria-invalid="true" aria-describedby="paymentReference-error" @enderror
                                     data-testid="my-payment-ref"
                                 >
-                                @error('paymentReference') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                @error('paymentReference') <p class="hf-field-error" id="paymentReference-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>

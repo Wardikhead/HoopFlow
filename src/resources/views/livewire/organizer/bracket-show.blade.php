@@ -77,7 +77,7 @@
                             <x-team-shield :team="$registration->team" />
                             <span>
                                 <strong>{{ $registration->team?->name ?? 'Team' }}</strong>
-                                <span class="hf-small hf-muted" style="display:block">{{ $registration->team?->city ?? 'City TBD' }} · seed {{ $registration->seed ?? 'TBD' }}</span>
+                                <span class="hf-small hf-muted hf-block">{{ $registration->team?->city ?? 'City TBD' }} · seed {{ $registration->seed ?? 'TBD' }}</span>
                             </span>
                         </div>
                     @empty
@@ -208,9 +208,9 @@
             x-on:click="if ($event.target === $el) $wire.closeEditSlots()"
             wire:key="bracket-edit-slots-dialog"
             data-testid="bracket-edit-slots-dialog"
-        >
+            aria-labelledby="bracketEditSlotsDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">Edit bracket slots</h2>
+                <h2 class="hf-dialog__title" id="bracketEditSlotsDialogTitle">Edit bracket slots</h2>
                 <button type="button" class="hf-icon-btn" wire:click="closeEditSlots" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
@@ -222,6 +222,7 @@
                 @enderror
                 <div class="hf-table-wrap">
                     <table class="hf-table">
+                        <caption class="hf-sr-only">Bracket seeds</caption>
                         <thead>
                             <tr>
                                 <th scope="col">Seed</th>
@@ -276,10 +277,11 @@
                 x-on:cancel.prevent="$wire.closeMatchDetail()"
                 x-on:click="if ($event.target === $el) $wire.closeMatchDetail()"
                 wire:key="bracket-match-dialog-{{ $detailMatch->id }}"
+                aria-labelledby="hfDialogTitle1"
                 data-testid="bracket-match-detail-dialog"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $this->selectedRoundLabel }} · Slot {{ $detailMatch->match_number }}</h2>
+                    <h2 class="hf-dialog__title" id="hfDialogTitle1">{{ $this->selectedRoundLabel }} · Slot {{ $detailMatch->match_number }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeMatchDetail" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -326,6 +328,7 @@
                             <h3 class="hf-section-title">Series games</h3>
                             <div class="hf-table-wrap">
                                 <table class="hf-table hf-table--stack" data-testid="bracket-series-table">
+                                    <caption class="hf-sr-only">Series games</caption>
                                     <thead>
                                         <tr>
                                             <th scope="col">Game</th>
@@ -359,7 +362,7 @@
                                                         <span class="hf-chip hf-chip--{{ $this->seriesGameStatusTone($game) }}">{{ $this->seriesGameStatusLabel($game) }}</span>
                                                     </span>
                                                 </td>
-                                                <td>
+                                                <td data-label="Action">
                                                     <div class="hf-btn-row">
                                                         @if ($isOrganizer)
                                                             @if ($seriesActive && $gameStatus === 'scheduled')
@@ -458,9 +461,9 @@
             x-on:click="if ($event.target === $el) $wire.closeGameChooser()"
             wire:key="bracket-game-chooser"
             data-testid="bracket-game-chooser"
-        >
+            aria-labelledby="bracketGameChooserTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">Choose game · {{ $this->chooserSummary }}</h2>
+                <h2 class="hf-dialog__title" id="bracketGameChooserTitle">Choose game · {{ $this->chooserSummary }}</h2>
                 <button type="button" class="hf-icon-btn" wire:click="closeGameChooser" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
@@ -522,12 +525,13 @@
                 x-on:cancel.prevent="$wire.closeScoreConsole()"
                 x-on:click="if ($event.target === $el) $wire.closeScoreConsole()"
                 wire:key="bracket-score-dialog-{{ $scoreMatch->id }}"
+                aria-labelledby="hfDialogTitle2"
                 data-testid="bracket-score-dialog"
                 data-score-console
                 tabindex="-1"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $scoreHome?->shortLabel() ?? 'TBD' }} vs {{ $scoreAway?->shortLabel() ?? 'TBD' }}</h2>
+                    <h2 class="hf-dialog__title" id="hfDialogTitle2">{{ $scoreHome?->shortLabel() ?? 'TBD' }} vs {{ $scoreAway?->shortLabel() ?? 'TBD' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeScoreConsole" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -540,9 +544,9 @@
                                 <x-team-shield :team="$scoreHome" />
                                 <strong>{{ $scoreHome?->name ?? 'TBD' }}</strong>
                             </span>
-                            <div class="hf-score" data-score-display="1" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display1 }}</div>
+                            <div class="hf-score hf-score--xl" data-score-display="1">{{ $display1 }}</div>
                             <label class="hf-label" for="scoreInput1">Final score</label>
-                            <input id="scoreInput1" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score1" value="{{ $display1 }}" data-score-input="1" data-testid="score-input-1" @disabled($forfeitSide !== 0)>
+                            <input id="scoreInput1" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score1" value="{{ $display1 }}" data-score-input="1" data-testid="score-input-1" @if ($errors->has('score1') || $errors->has('score2')) aria-invalid="true" aria-describedby="bracketScoreError" @endif @disabled($forfeitSide !== 0)>
                             <div class="hf-btn-row">
                                 @foreach ([1, 2, 3] as $points)
                                     <button type="button" class="hf-btn" wire:click="addScore(1, {{ $points }})" data-add-score data-team="1" data-points="{{ $points }}" data-testid="score-add-1-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
@@ -554,9 +558,9 @@
                                 <x-team-shield :team="$scoreAway" />
                                 <strong>{{ $scoreAway?->name ?? 'TBD' }}</strong>
                             </span>
-                            <div class="hf-score" data-score-display="2" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display2 }}</div>
+                            <div class="hf-score hf-score--xl" data-score-display="2">{{ $display2 }}</div>
                             <label class="hf-label" for="scoreInput2">Final score</label>
-                            <input id="scoreInput2" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score2" value="{{ $display2 }}" data-score-input="2" data-testid="score-input-2" @disabled($forfeitSide !== 0)>
+                            <input id="scoreInput2" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score2" value="{{ $display2 }}" data-score-input="2" data-testid="score-input-2" @if ($errors->has('score1') || $errors->has('score2')) aria-invalid="true" aria-describedby="bracketScoreError" @endif @disabled($forfeitSide !== 0)>
                             <div class="hf-btn-row">
                                 @foreach ([1, 2, 3] as $points)
                                     <button type="button" class="hf-btn" wire:click="addScore(2, {{ $points }})" data-add-score data-team="2" data-points="{{ $points }}" data-testid="score-add-2-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
@@ -575,7 +579,7 @@
                             <p class="hf-small hf-muted hf-mt-1 hf-mb-0">FIBA forfeit score is 20–0. Score buttons are disabled while a forfeit is selected.</p>
                         @endif
                         @if ($errors->has('score1') || $errors->has('score2'))
-                            <p class="hf-field-error hf-mt-1">{{ $errors->first('score1') ?: $errors->first('score2') }}</p>
+                            <p class="hf-field-error hf-mt-1" id="bracketScoreError">{{ $errors->first('score1') ?: $errors->first('score2') }}</p>
                         @endif
                     </div>
                 </div>
@@ -603,10 +607,11 @@
                 x-on:cancel.prevent="$wire.closeCorrection()"
                 x-on:click="if ($event.target === $el) $wire.closeCorrection()"
                 wire:key="bracket-correction-dialog-{{ $correctionMatch->id }}"
+                aria-labelledby="hfDialogTitle3"
                 data-testid="bracket-correction-dialog"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Correct score · {{ $correctionHome?->shortLabel() ?? 'Home' }} vs {{ $correctionAway?->shortLabel() ?? 'Away' }}</h2>
+                    <h2 class="hf-dialog__title" id="hfDialogTitle3">Correct score · {{ $correctionHome?->shortLabel() ?? 'Home' }} vs {{ $correctionAway?->shortLabel() ?? 'Away' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeCorrection" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -616,19 +621,19 @@
                     <div class="hf-form-grid">
                         <div class="hf-field">
                             <label class="hf-label" for="correctionScore1">{{ $correctionHome?->name ?? 'Home' }}</label>
-                            <input class="hf-input" id="correctionScore1" type="number" min="0" wire:model.blur="score1" data-testid="correction-score-1">
+                            <input class="hf-input" id="correctionScore1" type="number" min="0" wire:model.blur="score1" data-testid="correction-score-1" @if ($errors->any()) aria-invalid="true" aria-describedby="bracketCorrectionError" @endif>
                         </div>
                         <div class="hf-field">
                             <label class="hf-label" for="correctionScore2">{{ $correctionAway?->name ?? 'Away' }}</label>
-                            <input class="hf-input" id="correctionScore2" type="number" min="0" wire:model.blur="score2" data-testid="correction-score-2">
+                            <input class="hf-input" id="correctionScore2" type="number" min="0" wire:model.blur="score2" data-testid="correction-score-2" @if ($errors->any()) aria-invalid="true" aria-describedby="bracketCorrectionError" @endif>
                         </div>
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="correctionReason">Reason</label>
-                            <textarea class="hf-textarea" id="correctionReason" rows="3" placeholder="Shot-clock correction after referee review." wire:model.blur="reason" data-testid="correction-reason"></textarea>
+                            <textarea class="hf-textarea" id="correctionReason" rows="3" placeholder="Shot-clock correction after referee review." wire:model.blur="reason" data-testid="correction-reason" @if ($errors->any()) aria-invalid="true" aria-describedby="bracketCorrectionError" @endif></textarea>
                         </div>
                     </div>
                     @if ($errors->any())
-                        <p class="hf-field-error hf-mt-1">{{ $errors->first() }}</p>
+                        <p class="hf-field-error hf-mt-1" id="bracketCorrectionError">{{ $errors->first() }}</p>
                     @endif
                 </div>
                 <div class="hf-dialog__foot">
@@ -648,9 +653,9 @@
             x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
             wire:key="bracket-confirm-dialog"
             data-testid="bracket-confirm-dialog"
-        >
+            aria-labelledby="bracketConfirmDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                <h2 class="hf-dialog__title" id="bracketConfirmDialogTitle">{{ $confirmTitle }}</h2>
                 <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>

@@ -70,6 +70,10 @@ textarea {
   color: var(--hf-alert);
 }
 
+.hf-text-gold {
+  color: var(--hf-gold);
+}
+
 .hf-small {
   font-size: 12px;
 }
@@ -77,6 +81,19 @@ textarea {
 .hf-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
+}
+
+.hf-clickable {
+  cursor: pointer;
+}
+
+.hf-check-row {
+  padding: 4px 0;
+}
+
+.hf-target-list {
+  max-height: 180px;
+  overflow: auto;
 }
 
 .hf-nowrap {

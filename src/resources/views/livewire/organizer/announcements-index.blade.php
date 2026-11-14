@@ -121,8 +121,7 @@
                 </div>
                 <div class="hf-grid hf-grid--2 hf-mb-3">
                     @foreach ($pinned as $announcement)
-                        <article class="hf-card hf-card--flat hf-announcement--pinned"
-                                 style="cursor: pointer"
+                        <article class="hf-card hf-card--flat hf-announcement--pinned hf-clickable"
                                  role="button"
                                  tabindex="0"
                                  wire:key="announcement-pinned-{{ $announcement->id }}"
@@ -155,8 +154,7 @@
                 </div>
                 <div class="hf-grid hf-grid--2">
                     @foreach ($rest as $announcement)
-                        <article class="hf-card hf-card--flat"
-                                 style="cursor: pointer"
+                        <article class="hf-card hf-card--flat hf-clickable"
                                  role="button"
                                  tabindex="0"
                                  wire:key="announcement-{{ $announcement->id }}"
@@ -193,9 +191,10 @@
                 x-on:cancel.prevent="$wire.closeAnnouncement()"
                 x-on:click="if ($event.target === $el) $wire.closeAnnouncement()"
                 wire:key="announcement-dialog-{{ $viewing->id }}"
+                aria-labelledby="hfDialogTitle1"
                 data-testid="announcement-dialog">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">{{ $viewing->title }}</h2>
+                <h2 class="hf-dialog__title" id="hfDialogTitle1">{{ $viewing->title }}</h2>
                 <button type="button" class="hf-icon-btn" wire:click="closeAnnouncement()" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
@@ -236,9 +235,10 @@
                 x-on:cancel.prevent="$wire.cancelDelete()"
                 x-on:click="if ($event.target === $el) $wire.cancelDelete()"
                 wire:key="announcement-delete-dialog"
-                data-testid="confirm-dialog">
+                data-testid="confirm-dialog"
+                aria-labelledby="confirmDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">Delete announcement?</h2>
+                <h2 class="hf-dialog__title" id="confirmDialogTitle">Delete announcement?</h2>
                 <button type="button" class="hf-icon-btn" wire:click="cancelDelete()" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>

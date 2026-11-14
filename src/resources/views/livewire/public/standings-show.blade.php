@@ -29,6 +29,8 @@
             ];
         @endphp
 
+        @section('meta-description', $tournament->name.' · '.$divisionName.' standings, wins, losses, point differential, and the playoff cut.')
+
         <x-matchday-strip
             eyebrow="{{ $divisionName }} · {{ $tournament->name }}"
             title="Standings"
@@ -123,6 +125,7 @@
             @else
                 <div class="hf-table-wrap">
                     <table class="hf-table hf-table--standings">
+                        <caption class="hf-sr-only">Standings</caption>
                         <thead>
                             <tr>
                                 <th scope="col">#</th>

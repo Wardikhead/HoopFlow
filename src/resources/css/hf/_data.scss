@@ -73,6 +73,16 @@
   font-size: 18px;
 }
 
+.hf-score--xl {
+  font-size: clamp(48px, 9vw, 78px);
+  line-height: 1;
+}
+
+.hf-score--lg {
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1;
+}
+
 .hf-shield {
   display: inline-flex;
   align-items: center;

@@ -103,7 +103,7 @@
                                         {{ $log->created_at?->format('M j, Y · g:i A') ?? 'TBD' }}
                                     </span>
                                     <span>{{ $author?->name ?? 'System' }}</span>
-                                    <span class="hf-chip hf-chip--slate" style="text-transform: capitalize">{{ $this->actorRole($log) }}</span>
+                                    <span class="hf-chip hf-chip--slate">{{ ucfirst($this->actorRole($log)) }}</span>
                                 </div>
                                 <h3>{{ $this->actionLabel($log) }}</h3>
                                 <p>{{ $this->summary($log) }}</p>
