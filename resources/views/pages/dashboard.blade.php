@@ -2,6 +2,8 @@
 
 @section('title', 'Dashboard')
 
+@section('meta-description', 'HoopFlow dashboard — matchday status, approvals, payments, brackets, and the next actions for your tournament in one organizer workspace.')
+
 @section('content')
 @php
     $tournament = $tournament ?? null;

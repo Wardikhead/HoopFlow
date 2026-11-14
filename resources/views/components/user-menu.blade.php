@@ -8,7 +8,8 @@
 @endphp
 
 <details class="hf-user-menu">
-    <summary class="hf-user-chip" aria-label="Account menu for {{ $user?->name }}">
+    <summary class="hf-user-chip">
+        <span class="hf-sr-only">Account menu for</span>
         <span class="hf-avatar">{{ $initials }}</span>
         <span class="hf-user-meta">
             <strong>{{ $user?->name }}</strong>

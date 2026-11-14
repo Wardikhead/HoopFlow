@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('title', 'Sign in')
+@section('meta-description', 'Sign in to HoopFlow to manage tournaments, rosters, brackets, schedules, scores, and payments in one organizer workspace.')
 @section('body-class', 'hf-auth')
 @section('main-class', 'hf-auth-main')
 

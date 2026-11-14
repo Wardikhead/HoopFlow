@@ -41,7 +41,6 @@
   }
 
   .hf-reveal {
-    opacity: 0;
     transform: translateY(8px);
     animation: hf-reveal-in var(--hf-dur-expressive) var(--hf-ease-out) both;
     animation-delay: var(--hf-reveal-delay, 0ms);
@@ -77,12 +76,13 @@
 }
 
 @keyframes hf-page-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(4px); }
+  to { transform: none; }
 }
 
 @keyframes hf-reveal-in {
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(8px); }
+  to { transform: none; }
 }
 
 @keyframes hf-dialog-in {

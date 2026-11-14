@@ -237,7 +237,8 @@
                 </div>
                 <div class="hf-sheet__body">
                     <details class="hf-user-menu hf-sheet__account" open>
-                        <summary class="hf-user-chip" aria-label="Account menu for {{ $authUser->name }}">
+                        <summary class="hf-user-chip">
+                            <span class="hf-sr-only">Account menu for</span>
                             <span class="hf-avatar">{{ $initials }}</span>
                             <span class="hf-user-meta">
                                 <strong>{{ $authUser->name }}</strong>
@@ -279,7 +280,6 @@
 
                     <div class="hf-sheet__group">
                         <span class="hf-rail-label">Account</span>
-                        <a href="{{ route('myTeam') }}" data-more-link="myTeam"><i class="bi bi-people" aria-hidden="true"></i> My team</a>
                         <a href="{{ route('profile') }}" data-more-link="profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
                     </div>
                 </div>

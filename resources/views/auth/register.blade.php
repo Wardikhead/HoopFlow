@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('title', 'Create account')
+@section('meta-description', 'Create a HoopFlow account to register a team, build a roster, and follow the tournament from registration to the final buzzer.')
 @section('body-class', 'hf-auth')
 @section('main-class', 'hf-auth-main')
 

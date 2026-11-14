@@ -184,6 +184,9 @@
 }
 
 .hf-section-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--hf-muted);
   font-size: 12px;
   font-weight: 700;
@@ -922,7 +925,7 @@
   font-size: 34px;
 }
 
-.hf-empty h3 {
+.hf-empty :is(h1, h3) {
   margin: 0;
   font-family: var(--hf-font-display);
   font-size: 24px;
@@ -942,7 +945,7 @@
 }
 
 .hf-empty--compact .bi { font-size: 24px; }
-.hf-empty--compact h3 { font-size: 18px; }
+.hf-empty--compact :is(h1, h3) { font-size: 18px; }
 
 [data-score-team] {
   cursor: pointer;

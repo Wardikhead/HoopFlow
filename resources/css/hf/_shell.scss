@@ -276,7 +276,7 @@
   height: 34px;
   border-radius: 50%;
   background: var(--hf-action);
-  color: #fff;
+  color: var(--hf-on-action);
   font-family: var(--hf-font-display);
   font-size: 14px;
   font-weight: 800;
@@ -477,7 +477,7 @@
 }
 
 .hf-eyebrow {
-  color: var(--hf-primary);
+  color: var(--hf-primary-ink);
   font-family: var(--hf-font-display);
   font-size: 12px;
   font-weight: 700;

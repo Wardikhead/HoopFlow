@@ -19,7 +19,7 @@
     @if ($match === null)
         <div class="hf-empty">
             <i class="bi bi-graph-up" aria-hidden="true"></i>
-            <h3>Game not found</h3>
+            <h1>Game not found</h1>
             <p>Open a game from the bracket, schedule, or matchup list.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('matches') }}">Browse matchups</a>
         </div>
