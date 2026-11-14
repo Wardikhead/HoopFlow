@@ -1,0 +1,45 @@
+@media print {
+  .hf-rail,
+  .hf-topbar,
+  .hf-bottom-nav,
+  .hf-toast-region,
+  .hf-progress,
+  .hf-offline,
+  .hf-page-actions,
+  .hf-matchday__actions,
+  .hf-btn,
+  .hf-calendar,
+  .hf-week-strip,
+  .hf-filter-row {
+    display: none !important;
+  }
+
+  .hf-app,
+  .hf-main {
+    display: block !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .hf-card,
+  .hf-matchday,
+  .hf-bracket,
+  .hf-table {
+    border-color: #bbb !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .hf-bracket {
+    overflow: visible !important;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+}

@@ -4,6 +4,7 @@
 // Bootstrap's JavaScript is intentionally not imported (ADR-0001).
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { initBracketZoom } from './ui/bracket';
+import { initCalendar } from './ui/calendar';
 import { initCountUp } from './ui/countup';
 import { initFeedback } from './ui/feedback';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
@@ -13,6 +14,7 @@ import { registerToasts } from './ui/toasts';
 import { initValidation } from './ui/validation';
 
 initBracketZoom();
+initCalendar();
 initCountUp();
 initFeedback();
 initPreferences();
