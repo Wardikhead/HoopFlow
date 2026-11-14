@@ -122,7 +122,7 @@
             <span class="hf-small hf-muted">Sorted by name</span>
         </div>
 
-        <div id="teamList" data-testid="team-list" wire:loading.class="is-updating" wire:loading.attr="aria-busy">
+        <div id="teamList" data-testid="team-list" data-reveal wire:loading.class="is-updating" wire:loading.attr="aria-busy">
             @if ($this->teams->isEmpty())
                 <div class="hf-empty">
                     <i class="bi bi-people" aria-hidden="true"></i>

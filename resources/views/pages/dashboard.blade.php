@@ -62,6 +62,7 @@
     @endphp
 
     <x-matchday-strip
+        data-reveal
         eyebrow="Matchday desk · organizer"
         title="Run the tournament"
         :status="$tournament?->statusLabel()"
@@ -77,7 +78,7 @@
         <a class="hf-btn" href="{{ route('submissions') }}" data-testid="dashboard-open-submissions">Review queue</a>
     </x-matchday-strip>
 
-    <div class="hf-grid hf-grid--4 hf-mb-3">
+    <div class="hf-grid hf-grid--4 hf-mb-3" data-reveal>
         <x-kpi-tile label="Tournaments" :value="$tournamentsCount" :hint="$tournamentsCount.' in the workspace'" tone="primary" :href="route('tournaments')" testid="kpi-tournaments" :countup="true" />
         <x-kpi-tile label="Pending teams" :value="$pending" hint="Waiting for review" tone="gold" :href="route('submissions', ['status' => 'pending'])" testid="kpi-pending" :countup="true" />
         <x-kpi-tile label="Uncollected" :value="$money($uncollected)" :hint="$unpaidTeams.' teams unpaid'" tone="alert" :href="route('payments', ['status' => 'pending'])" testid="kpi-uncollected" :countup="true" />
@@ -90,7 +91,7 @@
                 <h2 class="hf-section-title">Next actions</h2>
                 <a class="hf-section-link" href="{{ route('submissions') }}">Open queue</a>
             </div>
-            <div class="hf-grid hf-grid--3 hf-mb-3">
+            <div class="hf-grid hf-grid--3 hf-mb-3" data-reveal>
                 <a class="hf-card hf-card--flat hf-card--link" href="{{ route('submissions', ['status' => 'pending']) }}" data-testid="dashboard-action-review">
                     <span class="hf-chip hf-chip--warning">Review</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $pending }} pending teams</h3>
@@ -212,6 +213,7 @@
     @endphp
 
     <x-matchday-strip
+        data-reveal
         eyebrow="Matchday desk · coach"
         title="Coach corner"
         :status="$team ? $registrationLabel : null"
@@ -246,7 +248,7 @@
             </div>
         </section>
 
-        <div class="hf-grid hf-grid--3 hf-mb-3">
+        <div class="hf-grid hf-grid--3 hf-mb-3" data-reveal>
             <div class="hf-card">
                 <span class="hf-kpi-label">Roster readiness</span>
                 <strong class="hf-kpi-value">{{ $coachRosterReady }}/{{ $coachRosterTotal }}</strong>
@@ -272,7 +274,7 @@
             <h2 class="hf-section-title">Open tournaments</h2>
             <a class="hf-section-link" href="{{ route('tournaments') }}">All tournaments</a>
         </div>
-        <div class="hf-grid hf-grid--2">
+        <div class="hf-grid hf-grid--2" data-reveal>
             @forelse ($openTournaments as $item)
                 @php
                     $joinedTeam = $item->registrations->first()?->team;
@@ -309,6 +311,7 @@
     @endphp
 
     <x-matchday-strip
+        data-reveal
         eyebrow="Courtside pass · fan"
         title="Courtside pass"
         :status="$tournament ? $statusLabel($tournament->status) : null"
@@ -340,7 +343,7 @@
                 <h2 class="hf-section-title">Up next</h2>
                 <a class="hf-section-link" href="{{ route('schedule', $tournament ? ['id' => $tournament->id] : []) }}">Full schedule</a>
             </div>
-            <div class="hf-grid hf-grid--2 hf-mb-3">
+            <div class="hf-grid hf-grid--2 hf-mb-3" data-reveal>
                 @forelse ($upcomingMatches as $match)
                     <x-match-card :match="$match" :href="route('gameStats', ['match' => $match->id])" :compact="true" />
                 @empty
