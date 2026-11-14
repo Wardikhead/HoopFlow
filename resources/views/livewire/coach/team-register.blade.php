@@ -64,33 +64,33 @@
                 <div class="hf-between hf-mb-2">
                     <p class="hf-small hf-muted hf-mb-0">Coach account: {{ auth()->user()?->name }}</p>
                     <button type="button" class="hf-btn hf-btn--sm" wire:click="fillDemo" data-testid="register-fill-demo">
-                        <i class="bi bi-magic"></i> Fill demo data
+                        <i class="bi bi-magic"></i> Fill sample data
                     </button>
                 </div>
                 <div class="hf-form-grid">
                     <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerTeamName">Team name</label>
                         <input class="hf-input" id="registerTeamName" type="text" wire:model="name" placeholder="San Antonio Vipers U17"
-                               @error('name') aria-invalid="true" @enderror data-testid="register-team-name">
-                        @error('name') <p class="hf-field-error">{{ $message }}</p> @enderror
+                               @error('name') aria-invalid="true" aria-describedby="name-error" @enderror data-testid="register-team-name">
+                        @error('name') <p class="hf-field-error" id="name-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerShortName">Short name (2–3 letters)</label>
                         <input class="hf-input" id="registerShortName" type="text" wire:model="shortName" maxlength="3" placeholder="VPR"
-                               @error('shortName') aria-invalid="true" @enderror data-testid="register-short-name">
-                        @error('shortName') <p class="hf-field-error">{{ $message }}</p> @enderror
+                               @error('shortName') aria-invalid="true" aria-describedby="shortName-error" @enderror data-testid="register-short-name">
+                        @error('shortName') <p class="hf-field-error" id="shortName-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerCity">City</label>
                         <input class="hf-input" id="registerCity" type="text" wire:model="city" placeholder="Pasig City"
-                               @error('city') aria-invalid="true" @enderror data-testid="register-city">
-                        @error('city') <p class="hf-field-error">{{ $message }}</p> @enderror
+                               @error('city') aria-invalid="true" aria-describedby="city-error" @enderror data-testid="register-city">
+                        @error('city') <p class="hf-field-error" id="city-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerCoach">Coach</label>
                         <input class="hf-input" id="registerCoach" type="text" wire:model="coach"
-                               @error('coach') aria-invalid="true" @enderror data-testid="register-coach">
-                        @error('coach') <p class="hf-field-error">{{ $message }}</p> @enderror
+                               @error('coach') aria-invalid="true" aria-describedby="coach-error" @enderror data-testid="register-coach">
+                        @error('coach') <p class="hf-field-error" id="coach-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field hf-field--full">
                         <span class="hf-label">Team color</span>
@@ -103,7 +103,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        @error('avatarColor') <p class="hf-field-error">{{ $message }}</p> @enderror
+                        @error('avatarColor') <p class="hf-field-error" id="avatarColor-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </section>
@@ -118,7 +118,7 @@
                         <i class="bi bi-plus-lg"></i> Add player
                     </button>
                 </div>
-                @error('players') <p class="hf-field-error">{{ $message }}</p> @enderror
+                @error('players') <p class="hf-field-error" id="players-error">{{ $message }}</p> @enderror
                 <div data-testid="register-roster">
                     @foreach ($players as $index => $player)
                         <div class="hf-card hf-card--flat hf-mb-2" wire:key="player-row-{{ $index }}" data-player-row="{{ $index }}" data-testid="register-player-{{ $index }}">
@@ -133,14 +133,14 @@
                                 <div class="hf-field hf-field--full">
                                     <label class="hf-label" for="playerName{{ $index }}">Player name</label>
                                     <input class="hf-input" id="playerName{{ $index }}" type="text" wire:model="players.{{ $index }}.name" placeholder="Full name"
-                                           @error('players.'.$index.'.name') aria-invalid="true" @enderror data-testid="register-player-name-{{ $index }}">
-                                    @error('players.'.$index.'.name') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                           @error('players.'.$index.'.name') aria-invalid="true" aria-describedby="players-{{$index}}-name-error" @enderror data-testid="register-player-name-{{ $index }}">
+                                    @error('players.'.$index.'.name') <p class="hf-field-error" id="players-{{$index}}-name-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerNumber{{ $index }}">Jersey number</label>
                                     <input class="hf-input" id="playerNumber{{ $index }}" type="number" min="1" max="99" wire:model="players.{{ $index }}.number"
-                                           @error('players.'.$index.'.number') aria-invalid="true" @enderror data-testid="register-player-number-{{ $index }}">
-                                    @error('players.'.$index.'.number') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                           @error('players.'.$index.'.number') aria-invalid="true" aria-describedby="players-{{$index}}-number-error" @enderror data-testid="register-player-number-{{ $index }}">
+                                    @error('players.'.$index.'.number') <p class="hf-field-error" id="players-{{$index}}-number-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerPosition{{ $index }}">Position</label>
@@ -149,13 +149,13 @@
                                             <option value="{{ $position }}">{{ $position }}</option>
                                         @endforeach
                                     </select>
-                                    @error('players.'.$index.'.position') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                    @error('players.'.$index.'.position') <p class="hf-field-error" id="players-{{$index}}-position-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerBirthdate{{ $index }}">Birthdate</label>
                                     <input class="hf-input" id="playerBirthdate{{ $index }}" type="date" max="{{ now()->format('Y-m-d') }}" wire:model="players.{{ $index }}.birthdate"
-                                           @error('players.'.$index.'.birthdate') aria-invalid="true" @enderror data-testid="register-player-birthdate-{{ $index }}">
-                                    @error('players.'.$index.'.birthdate') <p class="hf-field-error">{{ $message }}</p> @enderror
+                                           @error('players.'.$index.'.birthdate') aria-invalid="true" aria-describedby="players-{{$index}}-birthdate-error" @enderror data-testid="register-player-birthdate-{{ $index }}">
+                                    @error('players.'.$index.'.birthdate') <p class="hf-field-error" id="players-{{$index}}-birthdate-error">{{ $message }}</p> @enderror
                                 </div>
                             </div>
                         </div>
@@ -176,11 +176,11 @@
                     </div>
                     <div class="hf-card hf-card--flat">
                         <span class="hf-eyebrow">Entry fee</span>
-                        <strong class="hf-kpi-value" style="font-size: 34px">{{ $money($tournament->entryFee()) }}</strong>
+                        <strong class="hf-kpi-value hf-kpi-value--lg">{{ $money($tournament->entryFee()) }}</strong>
                         <p class="hf-small hf-muted hf-mb-0">Submit a reference now; the organizer verifies the payment before seeding.</p>
                         <div class="hf-mt-2 hf-card hf-card--flat">
                             <span class="hf-kpi-label">Send payment to</span>
-                            <strong style="display:block">{{ $tournament->payment_method ?: 'GCash' }} · {{ $tournament->payment_account ?: 'TBD' }}</strong>
+                            <strong class="hf-block">{{ $tournament->payment_method ?: 'GCash' }} · {{ $tournament->payment_account ?: 'TBD' }}</strong>
                         </div>
                     </div>
                 </div>
@@ -188,19 +188,19 @@
                     <div class="hf-field">
                         <label class="hf-label" for="registerMethod">Payment method</label>
                         <select class="hf-select" id="registerMethod" wire:model="paymentMethod"
-                                @error('paymentMethod') aria-invalid="true" @enderror data-testid="register-payment-method">
+                                @error('paymentMethod') aria-invalid="true" aria-describedby="paymentMethod-error" @enderror data-testid="register-payment-method">
                             <option value="GCash">GCash</option>
                             <option value="Maya">Maya</option>
                             <option value="Bank transfer">Bank transfer</option>
                             <option value="Cash">Cash</option>
                         </select>
-                        @error('paymentMethod') <p class="hf-field-error">{{ $message }}</p> @enderror
+                        @error('paymentMethod') <p class="hf-field-error" id="paymentMethod-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerRef">Reference</label>
                         <input class="hf-input" id="registerRef" type="text" wire:model="paymentRef" placeholder="GCASH-9283746"
-                               @error('paymentRef') aria-invalid="true" @enderror data-testid="register-payment-ref">
-                        @error('paymentRef') <p class="hf-field-error">{{ $message }}</p> @enderror
+                               @error('paymentRef') aria-invalid="true" aria-describedby="paymentRef-error" @enderror data-testid="register-payment-ref">
+                        @error('paymentRef') <p class="hf-field-error" id="paymentRef-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </section>
@@ -217,7 +217,7 @@
                     </div>
                     <div class="hf-card hf-card--flat">
                         <span class="hf-kpi-label">Roster</span>
-                        <strong class="hf-kpi-value" style="font-size: 34px">{{ $filledPlayers->count() }}</strong>
+                        <strong class="hf-kpi-value hf-kpi-value--lg">{{ $filledPlayers->count() }}</strong>
                         <p class="hf-small hf-muted hf-mb-0">players · consent and documents pending organizer review</p>
                     </div>
                     <div class="hf-card hf-card--flat">
@@ -229,6 +229,7 @@
                 <div class="hf-card hf-card--flat">
                     <div class="hf-table-wrap">
                         <table class="hf-table">
+                            <caption class="hf-sr-only">Players added to this team</caption>
                             <thead>
                                 <tr>
                                     <th scope="col">#</th>

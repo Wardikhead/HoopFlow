@@ -173,6 +173,7 @@
                 </div>
                 <div class="hf-table-wrap" data-testid="stats-quarter-breakdown">
                     <table class="hf-table">
+                        <caption class="hf-sr-only">Quarter scores</caption>
                         <thead>
                             <tr>
                                 <th scope="col">Team</th>
@@ -306,6 +307,7 @@
                                 </div>
                                 <div class="hf-table-wrap">
                                     <table class="hf-table">
+                                        <caption class="hf-sr-only">Player box score</caption>
                                         <thead>
                                             <tr>
                                                 <th scope="col" class="is-num">#</th>
@@ -355,7 +357,7 @@
                                                     <td class="is-num">{{ $row['number'] ?? '–' }}</td>
                                                     <td>
                                                         <strong>{{ $row['name'] }}</strong>
-                                                        <span class="hf-small hf-muted" style="display: block">{{ $row['position'] ?: 'Player' }}</span>
+                                                        <span class="hf-small hf-muted hf-block">{{ $row['position'] ?: 'Player' }}</span>
                                                     </td>
                                                     <td class="is-num">{{ $row['fgm'] }}/{{ $row['fga'] }}</td>
                                                     <td class="is-num">{{ $row['tpm'] }}/{{ $row['tpa'] }}</td>
@@ -412,12 +414,13 @@
                 x-on:cancel.prevent="$wire.closeScoreConsole()"
                 x-on:click="if ($event.target === $el) $wire.closeScoreConsole()"
                 wire:key="stats-score-dialog-{{ $match->id }}"
+                aria-labelledby="hfDialogTitle1"
                 data-testid="stats-score-dialog"
                 data-score-console
                 tabindex="-1"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $home?->shortLabel() ?? 'TBD' }} vs {{ $away?->shortLabel() ?? 'TBD' }}</h2>
+                    <h2 class="hf-dialog__title" id="hfDialogTitle1">{{ $home?->shortLabel() ?? 'TBD' }} vs {{ $away?->shortLabel() ?? 'TBD' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeScoreConsole" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -430,9 +433,9 @@
                                 <x-team-shield :team="$home" />
                                 <strong>{{ $home?->name ?? 'TBD' }}</strong>
                             </span>
-                            <div class="hf-score" data-score-display="1" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display1 }}</div>
+                            <div class="hf-score hf-score--xl" data-score-display="1">{{ $display1 }}</div>
                             <label class="hf-label" for="scoreInput1">Final score</label>
-                            <input id="scoreInput1" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score1" value="{{ $display1 }}" data-score-input="1" data-testid="score-input-1" @disabled($forfeitSide !== 0)>
+                            <input id="scoreInput1" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score1" value="{{ $display1 }}" data-score-input="1" data-testid="score-input-1" @if ($errors->has('score1') || $errors->has('score2')) aria-invalid="true" aria-describedby="statsScoreError" @endif @disabled($forfeitSide !== 0)>
                             <div class="hf-btn-row">
                                 @foreach ([1, 2, 3] as $points)
                                     <button type="button" class="hf-btn" wire:click="addScore(1, {{ $points }})" data-add-score data-team="1" data-points="{{ $points }}" data-testid="score-add-1-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
@@ -444,9 +447,9 @@
                                 <x-team-shield :team="$away" />
                                 <strong>{{ $away?->name ?? 'TBD' }}</strong>
                             </span>
-                            <div class="hf-score" data-score-display="2" style="font-size: clamp(48px, 9vw, 78px); line-height: 1">{{ $display2 }}</div>
+                            <div class="hf-score hf-score--xl" data-score-display="2">{{ $display2 }}</div>
                             <label class="hf-label" for="scoreInput2">Final score</label>
-                            <input id="scoreInput2" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score2" value="{{ $display2 }}" data-score-input="2" data-testid="score-input-2" @disabled($forfeitSide !== 0)>
+                            <input id="scoreInput2" type="number" min="0" max="199" inputmode="numeric" class="hf-input hf-mb-2" wire:model.blur="score2" value="{{ $display2 }}" data-score-input="2" data-testid="score-input-2" @if ($errors->has('score1') || $errors->has('score2')) aria-invalid="true" aria-describedby="statsScoreError" @endif @disabled($forfeitSide !== 0)>
                             <div class="hf-btn-row">
                                 @foreach ([1, 2, 3] as $points)
                                     <button type="button" class="hf-btn" wire:click="addScore(2, {{ $points }})" data-add-score data-team="2" data-points="{{ $points }}" data-testid="score-add-2-{{ $points }}" @disabled($forfeitSide !== 0) wire:loading.attr="disabled">+{{ $points }}</button>
@@ -465,7 +468,7 @@
                             <p class="hf-small hf-muted hf-mt-1 hf-mb-0">FIBA forfeit score is 20–0. Score buttons are disabled while a forfeit is selected.</p>
                         @endif
                         @if ($errors->has('score1') || $errors->has('score2'))
-                            <p class="hf-field-error hf-mt-1">{{ $errors->first('score1') ?: $errors->first('score2') }}</p>
+                            <p class="hf-field-error hf-mt-1" id="statsScoreError">{{ $errors->first('score1') ?: $errors->first('score2') }}</p>
                         @endif
                     </div>
                 </div>
@@ -485,10 +488,11 @@
                 x-on:cancel.prevent="$wire.closeCorrection()"
                 x-on:click="if ($event.target === $el) $wire.closeCorrection()"
                 wire:key="stats-correction-dialog-{{ $match->id }}"
+                aria-labelledby="hfDialogTitle2"
                 data-testid="stats-correction-dialog"
             >
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Correct score · {{ $home?->shortLabel() ?? 'Home' }} vs {{ $away?->shortLabel() ?? 'Away' }}</h2>
+                    <h2 class="hf-dialog__title" id="hfDialogTitle2">Correct score · {{ $home?->shortLabel() ?? 'Home' }} vs {{ $away?->shortLabel() ?? 'Away' }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeCorrection" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -498,19 +502,19 @@
                     <div class="hf-form-grid">
                         <div class="hf-field">
                             <label class="hf-label" for="correctionScore1">{{ $home?->name ?? 'Home' }}</label>
-                            <input class="hf-input" id="correctionScore1" type="number" min="0" wire:model.blur="score1" data-testid="correction-score-1">
+                            <input class="hf-input" id="correctionScore1" type="number" min="0" wire:model.blur="score1" data-testid="correction-score-1" @if ($errors->any()) aria-invalid="true" aria-describedby="statsCorrectionError" @endif>
                         </div>
                         <div class="hf-field">
                             <label class="hf-label" for="correctionScore2">{{ $away?->name ?? 'Away' }}</label>
-                            <input class="hf-input" id="correctionScore2" type="number" min="0" wire:model.blur="score2" data-testid="correction-score-2">
+                            <input class="hf-input" id="correctionScore2" type="number" min="0" wire:model.blur="score2" data-testid="correction-score-2" @if ($errors->any()) aria-invalid="true" aria-describedby="statsCorrectionError" @endif>
                         </div>
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="correctionReason">Reason</label>
-                            <textarea class="hf-textarea" id="correctionReason" rows="3" placeholder="Shot-clock correction after referee review." wire:model.blur="reason" data-testid="correction-reason"></textarea>
+                            <textarea class="hf-textarea" id="correctionReason" rows="3" placeholder="Shot-clock correction after referee review." wire:model.blur="reason" data-testid="correction-reason" @if ($errors->any()) aria-invalid="true" aria-describedby="statsCorrectionError" @endif></textarea>
                         </div>
                     </div>
                     @if ($errors->any())
-                        <p class="hf-field-error hf-mt-1">{{ $errors->first() }}</p>
+                        <p class="hf-field-error hf-mt-1" id="statsCorrectionError">{{ $errors->first() }}</p>
                     @endif
                 </div>
                 <div class="hf-dialog__foot">
@@ -529,9 +533,9 @@
                 x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
                 wire:key="stats-confirm-dialog"
                 data-testid="stats-confirm-dialog"
-            >
+                aria-labelledby="statsConfirmDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                    <h2 class="hf-dialog__title" id="statsConfirmDialogTitle">{{ $confirmTitle }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>

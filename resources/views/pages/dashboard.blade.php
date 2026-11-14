@@ -125,11 +125,11 @@
                             @if ($divisionName)
                                 <span class="hf-chip hf-chip--primary">{{ $divisionName }}</span>
                             @endif
-                            <h3 class="hf-page-title hf-mt-1 hf-mb-0" style="font-size: 30px">{{ $tournament->name }}</h3>
+                            <h3 class="hf-entity-title hf-mt-1 hf-mb-0">{{ $tournament->name }}</h3>
                         </div>
                         <div class="hf-text-right">
                             <span class="hf-kpi-label">Bracket progress</span>
-                            <strong class="hf-kpi-value" style="font-size: 32px">{{ $matchesPlayed }}/{{ $totalMatches }}</strong>
+                            <strong class="hf-kpi-value hf-kpi-value--md">{{ $matchesPlayed }}/{{ $totalMatches }}</strong>
                         </div>
                     </div>
                     <div class="hf-milestones hf-mt-2" aria-label="Tournament progress">
@@ -237,7 +237,7 @@
         </div>
     @else
         <section class="hf-hero hf-mb-3" data-testid="coach-hero">
-            <span class="hf-eyebrow" style="color: var(--hf-gold)">{{ $coachTournament?->name ?? 'Tournament' }} · {{ $registrationLabel }}</span>
+            <span class="hf-eyebrow hf-text-gold">{{ $coachTournament?->name ?? 'Tournament' }} · {{ $registrationLabel }}</span>
             <h2 class="hf-hero__name">{{ $team->name }}</h2>
             <p>{{ $team->coachUser?->name ?? $team->coach_name ?? 'Coach' }} · {{ $team->city }} · {{ $divisionName ?? '' }}</p>
             <div class="hf-stat-strip">
@@ -327,7 +327,7 @@
     </x-matchday-strip>
 
     <section class="hf-hero hf-mb-3" data-testid="fan-hero">
-        <span class="hf-eyebrow" style="color: var(--hf-gold)">Courtside pass · {{ $statusLabel($tournament?->status) }}</span>
+        <span class="hf-eyebrow hf-text-gold">Courtside pass · {{ $statusLabel($tournament?->status) }}</span>
         <h2 class="hf-hero__name">{{ $tournament?->name ?? 'HoopFlow' }}</h2>
         <p>{{ $tournament?->divisions?->first()?->name ?? '' }} · {{ $tournament?->venueName() ?? '' }} · {{ $tournament?->start_date?->format('M d, Y') ?? 'TBD' }} to {{ $tournament?->end_date?->format('M d, Y') ?? 'TBD' }}</p>
         <div class="hf-btn-row hf-mt-3">

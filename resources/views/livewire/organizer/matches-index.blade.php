@@ -17,6 +17,8 @@
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
     @else
+        @section('meta-description', $tournament->name.' matchups · every scheduled game, court, and result in one place.')
+
         <x-matchday-strip
             eyebrow="{{ $tournament->divisions->first()?->name ?? $tournament->name }} · {{ $tournament->name }}"
             title="Matchups"

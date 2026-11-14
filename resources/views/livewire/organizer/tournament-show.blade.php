@@ -258,9 +258,9 @@
             x-on:click="if ($event.target === $el) $wire.closeSchedulePreview()"
             wire:key="tournament-schedule-preview"
             data-testid="schedule-preview-dialog"
-        >
+            aria-labelledby="schedulePreviewDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">Schedule preview</h2>
+                <h2 class="hf-dialog__title" id="schedulePreviewDialogTitle">Schedule preview</h2>
                 <button type="button" class="hf-icon-btn" wire:click="closeSchedulePreview" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
@@ -271,6 +271,7 @@
                 </p>
                 <div class="hf-table-wrap">
                     <table class="hf-table">
+                        <caption class="hf-sr-only">Scheduled matches</caption>
                         <thead>
                             <tr>
                                 <th scope="col">Round</th>
@@ -311,9 +312,9 @@
             x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
             wire:key="tournament-confirm-dialog"
             data-testid="tournament-confirm-dialog"
-        >
+            aria-labelledby="tournamentConfirmDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                <h2 class="hf-dialog__title" id="tournamentConfirmDialogTitle">{{ $confirmTitle }}</h2>
                 <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>

@@ -113,6 +113,10 @@
   border-color: var(--hf-ink);
 }
 
+.hf-card--alert {
+  border-color: var(--hf-alert);
+}
+
 .hf-grid {
   display: grid;
   gap: 14px;
@@ -1240,6 +1244,14 @@ a.hf-card:hover .hf-card__arrow,
 
 .hf-kpi-value--sm {
   font-size: 30px;
+}
+
+.hf-kpi-value--md {
+  font-size: 32px;
+}
+
+.hf-kpi-value--lg {
+  font-size: 34px;
 }
 
 .hf-meter {

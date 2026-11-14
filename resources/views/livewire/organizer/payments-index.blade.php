@@ -141,9 +141,9 @@
                 $verifyTournament = $payment->registration->tournament;
                 $verifyFee = (float) ($verifyTournament?->rules_json['fee'] ?? $payment->registration->division?->entry_fee ?? 0);
             @endphp
-            <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeVerify()" x-on:click="if ($event.target === $el) $wire.closeVerify()" wire:key="payment-verify-dialog" data-testid="payment-verify-dialog">
+            <dialog class="hf-dialog hf-dialog--wide" x-data x-init="if (! $el.open) $el.showModal()" x-on:cancel.prevent="$wire.closeVerify()" x-on:click="if ($event.target === $el) $wire.closeVerify()" wire:key="payment-verify-dialog" data-testid="payment-verify-dialog" aria-labelledby="paymentVerifyDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Verify payment · {{ $payment->registration->team->name }}</h2>
+                    <h2 class="hf-dialog__title" id="paymentVerifyDialogTitle">Verify payment · {{ $payment->registration->team->name }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeVerify()" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
                 <div class="hf-dialog__body hf-dialog__body--split">

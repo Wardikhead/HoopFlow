@@ -34,7 +34,7 @@
                 @foreach ($this->tournaments as $tournamentOption)
                     <a class="hf-card hf-card--flat" href="{{ route('teams', ['tournament' => $tournamentOption->id]) }}" data-testid="team-tournament-{{ $tournamentOption->id }}">
                         <strong>{{ $tournamentOption->name }}</strong>
-                        <span class="hf-small hf-muted" style="display:block">
+                        <span class="hf-small hf-muted hf-block">
                             {{ $tournamentOption->divisions->first()?->name ?? 'Division' }} · {{ $tournamentOption->status }}
                         </span>
                     </a>
@@ -74,7 +74,7 @@
                 <x-kpi-tile label="Public teams" :value="$this->scopedTeams->count()" hint="Approved and visible" tone="primary" testid="team-kpi-teams" />
                 <x-kpi-tile label="Divisions" :value="count($this->divisions)" hint="Age groups" tone="slate" testid="team-kpi-divisions" />
                 <x-kpi-tile label="Cities" :value="$this->kpis['cities']" hint="Clubs represented" tone="gold" testid="team-kpi-cities" />
-                <x-kpi-tile label="Tournaments" :value="$this->tournaments->count()" hint="Seeded venues" tone="success" testid="team-kpi-tournaments" />
+                <x-kpi-tile label="Tournaments" :value="$this->tournaments->count()" hint="In the workspace" tone="success" testid="team-kpi-tournaments" />
             @else
                 <x-kpi-tile label="Registered" :value="$this->scopedTeams->count()" :hint="$this->tournaments->count().' tournaments'" tone="primary" testid="team-kpi-registered" />
                 <x-kpi-tile label="Approved" :value="$this->kpis['approved']" hint="Eligible for seeding" tone="success" testid="team-kpi-approved" />

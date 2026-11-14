@@ -111,6 +111,9 @@
   background: var(--hf-role-accent);
 }
 
+.hf-lp-role__progress span.is-100 { width: 100%; }
+.hf-lp-role__progress span.is-92 { width: 92%; }
+
 .hf-lp-role__next {
   margin-top: 4px;
   padding-top: 8px;

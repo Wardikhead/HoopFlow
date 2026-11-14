@@ -16,6 +16,8 @@
             $daySlots = $this->daySlots;
         @endphp
 
+        @section('meta-description', $tournament->name.' court schedule · dates, courts, and tip-off times for every matchup.')
+
         @section('breadcrumbs')
             <x-breadcrumbs :items="[
                 ['label' => 'Home', 'href' => route('dashboard')],
@@ -235,9 +237,9 @@
                 x-on:click="if ($event.target === $el) $wire.closePreview()"
                 wire:key="schedule-preview-dialog"
                 data-testid="schedule-preview-dialog"
-            >
+                aria-labelledby="schedulePreviewDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $previewMode === 'rebuild' ? 'Rebuild schedule' : ($previewMode === 'remaining' ? 'Schedule remaining games' : 'Schedule preview') }}</h2>
+                    <h2 class="hf-dialog__title" id="schedulePreviewDialogTitle">{{ $previewMode === 'rebuild' ? 'Rebuild schedule' : ($previewMode === 'remaining' ? 'Schedule remaining games' : 'Schedule preview') }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closePreview" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -341,6 +343,7 @@
 
                     <div class="hf-table-wrap">
                         <table class="hf-table">
+                            <caption class="hf-sr-only">Scheduled matches</caption>
                             <thead>
                                 <tr>
                                     <th scope="col">Round</th>
@@ -363,6 +366,8 @@
                                         <td>
                                             <select
                                                 class="hf-select"
+                                                aria-label="Court for {{ $row['match'] }}"
+                                                @if ($row['error']) aria-invalid="true" aria-describedby="preview-error-{{ $row['matchId'] }}" @endif
                                                 wire:change="updatePreviewAssignment({{ $row['matchId'] }}, $event.target.value, null)"
                                                 data-testid="preview-court-{{ $row['matchId'] }}"
                                             >
@@ -375,6 +380,8 @@
                                             <input
                                                 class="hf-input"
                                                 type="datetime-local"
+                                                aria-label="Start time for {{ $row['match'] }}"
+                                                @if ($row['error']) aria-invalid="true" aria-describedby="preview-error-{{ $row['matchId'] }}" @endif
                                                 value="{{ $row['scheduledAt'] }}"
                                                 wire:change="updatePreviewAssignment({{ $row['matchId'] }}, null, $event.target.value)"
                                                 data-testid="preview-time-{{ $row['matchId'] }}"
@@ -382,7 +389,7 @@
                                         </td>
                                         <td>
                                             @if ($row['error'])
-                                                <span class="hf-field-error">{{ $row['error'] }}</span>
+                                                <span class="hf-field-error" id="preview-error-{{ $row['matchId'] }}">{{ $row['error'] }}</span>
                                             @elseif ($row['warning'])
                                                 <span class="hf-chip hf-chip--gold">{{ $row['warning'] }}</span>
                                             @else
@@ -421,9 +428,9 @@
                 x-on:click="if ($event.target === $el) $wire.closeReschedule()"
                 wire:key="schedule-reschedule-dialog"
                 data-testid="schedule-reschedule-dialog"
-            >
+                aria-labelledby="scheduleRescheduleDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">Reschedule match</h2>
+                    <h2 class="hf-dialog__title" id="scheduleRescheduleDialogTitle">Reschedule match</h2>
                     <button type="button" class="hf-icon-btn" wire:click="closeReschedule" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
@@ -469,11 +476,11 @@
                         </div>
                         <div class="hf-field">
                             <label class="hf-label" for="rescheduleTime">Date &amp; time</label>
-                            <input id="rescheduleTime" class="hf-input" type="datetime-local" wire:model="rescheduleScheduledAt" x-ref="rescheduleTime" data-testid="reschedule-time">
+                            <input id="rescheduleTime" class="hf-input" type="datetime-local" wire:model="rescheduleScheduledAt" x-ref="rescheduleTime" data-testid="reschedule-time" @error('rescheduleScheduledAt') aria-invalid="true" aria-describedby="rescheduleTimeError" @enderror>
                         </div>
                     </div>
                     @error('rescheduleScheduledAt')
-                        <p class="hf-field-error hf-mt-1">{{ $message }}</p>
+                        <p class="hf-field-error hf-mt-1" id="rescheduleTimeError">{{ $message }}</p>
                     @enderror
                 </div>
                 <div class="hf-dialog__foot">
@@ -492,9 +499,9 @@
                 x-on:click="if ($event.target === $el) $wire.cancelConfirm()"
                 wire:key="schedule-confirm-dialog"
                 data-testid="schedule-confirm-dialog"
-            >
+                aria-labelledby="scheduleConfirmDialogTitle">
                 <div class="hf-dialog__head">
-                    <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                    <h2 class="hf-dialog__title" id="scheduleConfirmDialogTitle">{{ $confirmTitle }}</h2>
                     <button type="button" class="hf-icon-btn" wire:click="cancelConfirm" aria-label="Close dialog" data-testid="dialog-close">
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>

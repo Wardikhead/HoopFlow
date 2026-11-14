@@ -24,7 +24,7 @@
     <header class="hf-page-head hf-mb-3">
         <div>
             <span class="hf-eyebrow">{{ $divisionName }} · {{ $tournament?->name ?? 'Tournament' }}</span>
-            <h1 class="hf-page-title">{{ $team->name }}</h1>
+            <h1 class="hf-page-title">Team profile</h1>
             <p class="hf-page-desc">{{ $team->coachUser?->name ?? $team->coach_name ?? 'Coach' }} · {{ $team->city }}</p>
         </div>
         <div class="hf-page-actions">

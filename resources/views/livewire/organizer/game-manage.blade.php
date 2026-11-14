@@ -233,7 +233,7 @@
                         <x-team-shield :team="$home" />
                         <strong>{{ $home?->shortLabel() ?? 'TBD' }}</strong>
                     </div>
-                    <div class="hf-score" style="font-size: clamp(28px, 5vw, 40px); line-height: 1" data-testid="ingame-live-score">
+                    <div class="hf-score hf-score--lg" data-testid="ingame-live-score">
                         {{ array_sum($this->quarters['team1']) }} – {{ array_sum($this->quarters['team2']) }}
                     </div>
                     <div class="hf-flex hf-items-center hf-gap-2">
@@ -340,10 +340,11 @@
                             <x-team-shield :team="$block['team']" />
                             <h2 class="hf-section-title hf-mb-0">{{ $block['team']?->name ?? 'TBD' }}</h2>
                         </div>
-                        <input class="hf-input" type="search" placeholder="Search player" wire:model.live.debounce.300ms="{{ $block['search'] }}" data-testid="ingame-player-search-{{ $block['side'] }}">
+                        <input class="hf-input" type="search" placeholder="Search player" aria-label="Search {{ $block['team']?->name ?? 'team' }} players" wire:model.live.debounce.300ms="{{ $block['search'] }}" data-testid="ingame-player-search-{{ $block['side'] }}">
                     </div>
                     <div class="hf-table-wrap">
                         <table class="hf-table">
+                            <caption class="hf-sr-only">Player box score</caption>
                             <thead>
                                 <tr>
                                     <th scope="col">Player</th>
@@ -371,7 +372,7 @@
                                     <tr wire:key="ingame-stat-row-{{ $block['side'] }}-{{ $row['id'] }}-{{ $activeQuarter }}" data-testid="ingame-stat-row-{{ $block['side'] }}-{{ $loop->index }}" data-player-name="{{ mb_strtolower($row['name']) }}">
                                         <td>
                                             <strong>#{{ $row['number'] ?? '–' }} {{ $row['name'] }}</strong>
-                                            <span class="hf-small hf-muted" style="display: block">{{ $row['position'] ?: 'Player' }}</span>
+                                            <span class="hf-small hf-muted hf-block">{{ $row['position'] ?: 'Player' }}</span>
                                         </td>
                                         @foreach (array_keys(\App\Services\GameStatsService::FIELDS) as $field)
                                             <td class="is-num">
@@ -405,9 +406,9 @@
                 @if ($correctionMode)
                     <div class="hf-field hf-mb-2">
                         <label class="hf-label" for="ingameCorrectionReason">Correction reason</label>
-                        <textarea class="hf-textarea" id="ingameCorrectionReason" rows="3" placeholder="Why is this result being corrected?" wire:model.blur="correctionReason" data-testid="ingame-correction-reason"></textarea>
+                        <textarea class="hf-textarea" id="ingameCorrectionReason" rows="3" placeholder="Why is this result being corrected?" wire:model.blur="correctionReason" data-testid="ingame-correction-reason" @error('correctionReason') aria-invalid="true" aria-describedby="ingameCorrectionReasonError" @enderror></textarea>
                         @error('correctionReason')
-                            <p class="hf-field-error">{{ $message }}</p>
+                            <p class="hf-field-error" id="ingameCorrectionReasonError">{{ $message }}</p>
                         @enderror
                     </div>
                 @endif
@@ -443,9 +444,9 @@
             x-on:click="if ($event.target === $el) $wire.closeConfirm()"
             wire:key="ingame-confirm-dialog"
             data-testid="ingame-confirm-dialog"
-        >
+            aria-labelledby="ingameConfirmDialogTitle">
             <div class="hf-dialog__head">
-                <h2 class="hf-dialog__title">{{ $confirmTitle }}</h2>
+                <h2 class="hf-dialog__title" id="ingameConfirmDialogTitle">{{ $confirmTitle }}</h2>
                 <button type="button" class="hf-icon-btn" wire:click="closeConfirm" aria-label="Close dialog" data-testid="dialog-close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
             </div>
             <div class="hf-dialog__body">

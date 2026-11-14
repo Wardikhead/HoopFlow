@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('title', 'Standings')
+@section('meta-description', ($tournament?->name ?? 'HoopFlow').' standings · wins, losses, point differential, and the playoff cut, computed from every recorded result.')
 
 @section('content')
 <div class="hf-page">
@@ -20,6 +21,7 @@
         <div class="hf-card">
             <div class="hf-table-wrap">
                 <table class="hf-table hf-table--standings">
+                    <caption class="hf-sr-only">Standings</caption>
                     <thead>
                         <tr>
                             <th scope="col">#</th>

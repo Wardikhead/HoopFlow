@@ -47,7 +47,7 @@
                     </a>
                 @endauth
                 <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">
-                    Explore the demo
+                    See how it runs
                     <i class="bi bi-arrow-down" aria-hidden="true"></i>
                 </a>
             </div>

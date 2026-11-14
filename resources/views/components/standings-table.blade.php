@@ -18,6 +18,7 @@
 @else
     <div class="hf-table-wrap">
         <table class="hf-table hf-table--standings">
+            <caption class="hf-sr-only">Tournament standings</caption>
             <thead>
                 <tr>
                     <th scope="col">#</th>
