@@ -44,6 +44,8 @@
             </div>
         </header>
 
+        <p class="hf-small hf-muted hf-mb-2">Step {{ $step + 1 }} of 4 · {{ ['Team', 'Roster', 'Eligibility & payment', 'Review'][$step] }}</p>
+
         <ol class="hf-stepper" data-testid="register-stepper">
             @foreach (['Team', 'Roster', 'Eligibility & payment', 'Review'] as $index => $label)
                 <li class="hf-step {{ $step === $index ? 'is-active' : '' }} {{ $step > $index ? 'is-done' : '' }}"
@@ -55,7 +57,9 @@
             @endforeach
         </ol>
 
-        <form wire:submit="save" class="hf-card" novalidate data-testid="register-form">
+        <div class="hf-wizard">
+            <form wire:submit="save" class="hf-card hf-wizard__form" novalidate data-testid="register-form">
+                <x-form-errors />
             <section data-step-panel="0" @if ($step !== 0) hidden @endif>
                 <div class="hf-between hf-mb-2">
                     <p class="hf-small hf-muted hf-mb-0">Coach account: {{ auth()->user()?->name }}</p>
@@ -251,21 +255,32 @@
                 </div>
             </section>
 
-            <div class="hf-between hf-mt-4">
-                <button type="button" class="hf-btn" wire:click="previousStep" data-testid="register-back" @if ($step === 0) hidden @endif>
-                    <i class="bi bi-arrow-left"></i> Back
+            <div class="hf-sticky-actions hf-mt-3">
+                <button type="button" class="hf-btn" wire:click="previousStep" data-testid="register-back" @if ($step === 0) hidden @endif wire:loading.attr="disabled">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
                 </button>
-                <span></span>
-                <div class="hf-btn-row">
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="nextStep" data-testid="register-next" @if ($step === 3) hidden @endif>
-                        Continue <i class="bi bi-arrow-right"></i>
-                    </button>
-                    <button type="submit" class="hf-btn hf-btn--primary" data-testid="register-submit" @if ($step !== 3) hidden @endif wire:loading.attr="disabled">
-                        <i class="bi bi-send"></i> Submit registration
-                    </button>
-                </div>
+                <button type="button" class="hf-btn hf-btn--primary" wire:click="nextStep" data-testid="register-next" @if ($step === 3) hidden @endif wire:loading.attr="disabled" wire:loading.class="is-loading">
+                    Continue <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </button>
+                <button type="submit" class="hf-btn hf-btn--primary" data-testid="register-submit" @if ($step !== 3) hidden @endif wire:loading.attr="disabled" wire:loading.class="is-loading">
+                    <i class="bi bi-send" aria-hidden="true"></i> Submit registration
+                </button>
             </div>
-        </form>
+            </form>
+
+            <aside class="hf-wizard__summary" aria-label="Registration summary">
+                <span class="hf-eyebrow">Registration</span>
+                <h2 class="hf-section-title hf-mt-1">{{ $name !== '' ? $name : 'Your team' }}</h2>
+                <dl class="hf-summary-list">
+                    <div><dt>Tournament</dt><dd>{{ $tournament->name }}</dd></div>
+                    <div><dt>Division</dt><dd>{{ $division?->name ?? 'Division' }}</dd></div>
+                    <div><dt>Venue</dt><dd>{{ $tournament->venueName() }}</dd></div>
+                    <div><dt>Entry</dt><dd>{{ $money($tournament->entryFee()) }}</dd></div>
+                    <div><dt>Roster</dt><dd>{{ count($players) }} players</dd></div>
+                </dl>
+                <p class="hf-small hf-muted hf-mt-2 hf-mb-0">You can edit the roster until the organizer verifies it.</p>
+            </aside>
+        </div>
     @endif
 
 </div>

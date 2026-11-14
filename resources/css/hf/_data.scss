@@ -760,3 +760,21 @@
   }
 }
 
+.hf-table--roster th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--hf-surface-2);
+}
+
+.hf-table--roster tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--hf-ink) 2%, transparent);
+}
+
+.hf-dialog__foot--sticky {
+  position: sticky;
+  bottom: 0;
+  background: var(--hf-surface-2);
+  border-top: 1px solid var(--hf-border);
+}
+

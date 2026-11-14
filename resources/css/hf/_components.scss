@@ -1329,3 +1329,44 @@ a.hf-card:hover .hf-card__arrow,
   }
 }
 
+.hf-filter-bar--one {
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto;
+}
+
+.hf-team-card__meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.hf-team-card__meta dt {
+  color: var(--hf-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hf-team-card__meta dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 991.98px) {
+  .hf-filter-bar--one {
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hf-filter-bar--one {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-team-card__meta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+

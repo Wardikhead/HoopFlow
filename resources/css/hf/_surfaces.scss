@@ -500,3 +500,34 @@
 .hf-wizard__form .hf-card {
   box-shadow: none;
 }
+
+.hf-team-hero {
+  border-top: 3px solid var(--hf-primary);
+}
+
+.hf-next-step {
+  margin-bottom: 16px;
+}
+
+.hf-payment-summary dl {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.hf-payment-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.hf-payment-summary dt {
+  color: var(--hf-muted);
+}
+
+.hf-payment-summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}

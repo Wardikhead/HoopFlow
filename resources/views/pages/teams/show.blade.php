@@ -5,11 +5,11 @@
 @section('meta-description', $team->name.' · '.$team->city.' · '.($tournament?->name ?? 'HoopFlow').' team profile, roster, results, and bracket position.')
 
 @section('breadcrumbs')
-    <x-breadcrumbs :items="[
+    <x-breadcrumbs :items="array_values(array_filter([
         ['label' => 'Home', 'href' => route('dashboard')],
-        ['label' => 'Teams', 'href' => route('teams')],
+        ['label' => 'Teams', 'href' => route('teams', $tournament ? ['tournament' => $tournament->id] : [])],
         ['label' => $team->name],
-    ]" />
+    ]))" />
 @endsection
 
 @section('content')
@@ -76,7 +76,8 @@
                     </div>
                 @else
                     <div class="hf-table-wrap">
-                        <table class="hf-table hf-table--roster">
+                        <table class="hf-table hf-table--roster hf-table--stack">
+                            <caption class="hf-sr-only">Team roster</caption>
                             <thead>
                                 <tr>
                                     <th scope="col">#</th>
@@ -94,21 +95,21 @@
                             <tbody>
                                 @foreach ($team->players as $player)
                                     <tr>
-                                        <td>{{ $player->jersey_number }}</td>
-                                        <td><strong>{{ $player->first_name }} {{ $player->last_name }}</strong></td>
-                                        <td>{{ $player->position }}</td>
+                                        <td data-label="#">{{ $player->jersey_number }}</td>
+                                        <td data-label="Player"><strong>{{ $player->first_name }} {{ $player->last_name }}</strong></td>
+                                        <td data-label="Position">{{ $player->position }}</td>
                                         @if ($role !== 'fan')
-                                            <td>{{ $player->birthdate?->age ?? '—' }}</td>
+                                            <td data-label="Age">{{ $player->birthdate?->age ?? '—' }}</td>
                                         @endif
                                         @if ($canSeePrivate)
-                                            <td>
+                                            <td data-label="Consent">
                                                 @if ($player->consent_at)
                                                     <span class="hf-chip hf-chip--success">On file</span>
                                                 @else
                                                     <span class="hf-chip hf-chip--danger">Missing</span>
                                                 @endif
                                             </td>
-                                            <td><x-status-chip :status="$player->eligibility_status" /></td>
+                                            <td data-label="Documents"><x-status-chip :status="$player->eligibility_status" /></td>
                                         @endif
                                     </tr>
                                 @endforeach
