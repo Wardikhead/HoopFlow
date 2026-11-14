@@ -124,7 +124,7 @@
                                     {{ $pstatus === 'verified' ? 'Review record' : 'Verify payment' }}
                                 </button>
                                 @if ($team)
-                                    <a class="hf-btn hf-btn--sm" href="{{ route('teamShow', ['team' => $team->id]) }}" data-testid="payment-team-{{ $payment->id }}">Team detail</a>
+                                    <a class="hf-btn hf-btn--sm" href="{{ route('teamShow', array_filter(['team' => $team->id, 'tournament' => $tournament?->id])) }}" data-testid="payment-team-{{ $payment->id }}">Team detail</a>
                                 @endif
                             </div>
                         </div>

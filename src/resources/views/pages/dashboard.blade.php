@@ -178,7 +178,7 @@
                 <a class="hf-section-link" href="{{ route('standings', $tournament ? ['id' => $tournament->id] : []) }}">Full table</a>
             </div>
             <div class="hf-mb-3">
-                <x-standings-table :rows="$standings" :limit="4" />
+                <x-standings-table :rows="$standings" :limit="4" :tournament-id="$tournament?->id" />
             </div>
 
             <div class="hf-section-head">
@@ -379,7 +379,7 @@
                 <a class="hf-section-link" href="{{ route('standings', $tournament ? ['id' => $tournament->id] : []) }}">Full table</a>
             </div>
             <div class="hf-mb-3">
-                <x-standings-table :rows="$standings" :limit="5" />
+                <x-standings-table :rows="$standings" :limit="5" :tournament-id="$tournament?->id" />
             </div>
 
             <div class="hf-section-head">

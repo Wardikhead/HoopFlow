@@ -1,4 +1,4 @@
-@props(['rows' => collect(), 'limit' => null, 'qualificationLine' => null])
+@props(['rows' => collect(), 'limit' => null, 'qualificationLine' => null, 'tournamentId' => null])
 
 @php
     $allRows = collect($rows);
@@ -36,7 +36,7 @@
                     <tr class="{{ ($row['qualified'] ?? false) ? 'is-qualified' : '' }}" data-testid="standings-row-{{ $row['team_id'] }}">
                         <td class="is-num">{{ $row['rank'] }}</td>
                         <td>
-                            <a class="hf-flex hf-items-center hf-gap-1" href="{{ route('teamShow', ['team' => $row['team_id']]) }}">
+                            <a class="hf-flex hf-items-center hf-gap-1" href="{{ route('teamShow', array_filter(['team' => $row['team_id'], 'tournament' => $tournamentId])) }}">
                                 <x-team-shield :team="$row['team'] ?? null" />
                                 <strong>{{ $row['team_name'] ?? 'Team' }}</strong>
                             </a>
@@ -58,7 +58,7 @@
 
     <div class="hf-standings-cards">
         @foreach ($visible as $row)
-            <a class="hf-card hf-card--flat" href="{{ route('teamShow', ['team' => $row['team_id']]) }}" data-testid="standings-card-{{ $row['team_id'] }}">
+            <a class="hf-card hf-card--flat" href="{{ route('teamShow', array_filter(['team' => $row['team_id'], 'tournament' => $tournamentId])) }}" data-testid="standings-card-{{ $row['team_id'] }}">
                 <div class="hf-between">
                     <span class="hf-flex hf-items-center hf-gap-1">
                         <span class="hf-kpi-label">#{{ $row['rank'] }}</span>

@@ -116,7 +116,7 @@
                             $showMoney = $role === 'organizer' || ($role === 'coach' && $coachTeam?->id === $team?->id);
                             $isPending = in_array($registration->status, ['submitted', 'pending'], true);
                         @endphp
-                        <a class="hf-card hf-card--flat hf-card--link" href="{{ route('teamShow', ['team' => $registration->team_id]) }}" data-testid="tournament-team-{{ $team?->id ?? $registration->id }}" wire:key="tournament-team-{{ $registration->id }}">
+                        <a class="hf-card hf-card--flat hf-card--link" href="{{ route('teamShow', ['team' => $registration->team_id, 'tournament' => $registration->tournament_id]) }}" data-testid="tournament-team-{{ $team?->id ?? $registration->id }}" wire:key="tournament-team-{{ $registration->id }}">
                             <div class="hf-between">
                                 <span class="hf-flex hf-items-center hf-gap-2">
                                     <x-team-shield :team="$team" />
