@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use App\Rules\NotCommonPassword;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:6', 'max:255'],
+            'password' => ['required', 'string', 'min:8', 'max:255', new NotCommonPassword],
             'role' => ['required', 'in:coach,fan'],
             'organization' => ['nullable', 'string', 'max:120'],
         ], [
@@ -67,8 +68,9 @@ class AuthController extends Controller
             'email.required' => 'Enter a valid email address.',
             'email.email' => 'Enter a valid email address.',
             'email.unique' => 'An account with this email already exists.',
-            'password.required' => 'Use at least 6 characters.',
-            'password.min' => 'Use at least 6 characters.',
+            'password.required' => 'Use at least 8 characters.',
+            'password.min' => 'Use at least 8 characters.',
+            'password.max' => 'Keep the password under 255 characters.',
             'role.in' => 'Choose a valid role.',
             'organization.max' => 'Keep the organization name under 120 characters.',
         ]);

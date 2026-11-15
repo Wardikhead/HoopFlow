@@ -18,7 +18,7 @@
             </ul>
         </aside>
 
-        <div class="hf-auth-card" data-testid="register-card">
+        <div class="hf-auth-card" data-testid="register-card" x-data="hfPasswordMeter">
             <span class="hf-eyebrow">New account</span>
             <h1 class="hf-auth-title">Create account</h1>
             <p class="hf-auth-sub">Create your HoopFlow account to register teams and follow tournaments.</p>
@@ -73,24 +73,70 @@
                         @enderror
                     </div>
 
-                    <div class="hf-field">
+                    <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerPassword">Password</label>
-                        <input
-                            class="hf-input"
-                            id="registerPassword"
-                            name="password"
-                            type="password"
-                            autocomplete="new-password"
-                            data-testid="register-password"
-                            required
-                            @error('password') aria-invalid="true" aria-describedby="registerPassword-error" @enderror
-                        >
+                        <div class="hf-inline-form">
+                            <input
+                                class="hf-input"
+                                id="registerPassword"
+                                name="password"
+                                type="password"
+                                x-bind:type="showPassword ? 'text' : 'password'"
+                                x-model="password"
+                                x-init="$el.value && (password = $el.value)"
+                                x-on:focus="focused = true"
+                                x-on:blur="focused = false"
+                                autocomplete="new-password"
+                                data-testid="register-password"
+                                required
+                                @error('password') aria-invalid="true" aria-describedby="registerPassword-error" @enderror
+                            >
+                            <button
+                                type="button"
+                                class="hf-btn hf-btn--sm"
+                                x-on:click="toggle()"
+                                x-bind:aria-pressed="showPassword ? 'true' : 'false'"
+                                x-text="showPassword ? 'Hide' : 'Show'"
+                                data-testid="register-password-toggle"
+                            >Show</button>
+                        </div>
                         @error('password')
                             <div class="hf-field-error" id="registerPassword-error">{{ $message }}</div>
                         @enderror
+
+                        <div class="hf-password-meter" :class="'hf-score-'+evaluation.score" x-show="focused || password.length > 0" x-cloak>
+                            <div
+                                class="hf-password-bars"
+                                role="meter"
+                                aria-label="Password strength"
+                                aria-valuemin="0"
+                                aria-valuemax="4"
+                                :aria-valuenow="evaluation.score"
+                                :aria-valuetext="evaluation.label || 'Empty'">
+                                <template x-for="index in 4" :key="index">
+                                    <span class="hf-password-bar" :class="{ 'is-filled': index <= evaluation.score }"></span>
+                                </template>
+                            </div>
+                            <p class="hf-password-hint" role="status" aria-live="polite" x-text="evaluation.hint"></p>
+                            <ul class="hf-password-checks" aria-label="Password requirements">
+                                @foreach ([
+                                    'length' => 'At least 8 characters',
+                                    'lowercase' => 'A lowercase letter',
+                                    'uppercase' => 'An uppercase letter',
+                                    'number' => 'A number',
+                                    'symbol' => 'A symbol',
+                                ] as $key => $label)
+                                    <li class="hf-password-check" :class="{ 'is-met': evaluation.checks['{{ $key }}'] }">
+                                        <span class="hf-sr-only" x-text="evaluation.checks['{{ $key }}'] ? 'Met: ' : 'Not met: '"></span>
+                                        <i class="bi" :class="evaluation.checks['{{ $key }}'] ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>
+                                        <span>{{ $label }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
                     </div>
 
-                    <div class="hf-field">
+                    <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerRole">Role</label>
                         <select
                             class="hf-select"

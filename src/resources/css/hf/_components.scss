@@ -1350,6 +1350,71 @@ a.hf-card:hover .hf-card__arrow,
   accent-color: var(--hf-primary);
 }
 
+.hf-password-meter {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hf-password-bars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.hf-password-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--hf-border);
+  transition: background-color 120ms ease;
+}
+
+.hf-password-bar.is-filled {
+  background: var(--hf-danger-ink);
+}
+
+.hf-score-2 .hf-password-bar.is-filled {
+  background: var(--hf-warning-ink);
+}
+
+.hf-score-3 .hf-password-bar.is-filled,
+.hf-score-4 .hf-password-bar.is-filled {
+  background: var(--hf-success-ink);
+}
+
+.hf-password-hint {
+  margin: 0;
+  color: var(--hf-muted);
+  font-size: 12px;
+}
+
+.hf-password-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hf-password-check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--hf-muted);
+  font-size: 12px;
+}
+
+.hf-password-check.is-met {
+  color: var(--hf-success-ink);
+}
+
+@media (max-width: 520px) {
+  .hf-password-checks {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hf-wizard {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
