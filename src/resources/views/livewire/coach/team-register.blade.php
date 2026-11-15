@@ -1,5 +1,6 @@
 <div>
     @section('title', 'Register team')
+    @section('meta-description', 'Register a team - division, roster, and eligibility documents for the next HoopFlow tournament.')
 
     @php
         $tournament = $this->tournament;

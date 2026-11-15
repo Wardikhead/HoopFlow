@@ -1,5 +1,6 @@
 <div>
     @section('title', 'New announcement')
+    @section('meta-description', 'Compose a league announcement - category, audience, pinning, and a live preview before publishing.')
 
     @section('breadcrumbs')
         <x-breadcrumbs :items="[

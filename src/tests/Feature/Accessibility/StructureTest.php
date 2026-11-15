@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
@@ -152,6 +153,16 @@ it('announces the selected schedule day to assistive technology', function () {
     }
 
     expect($selected)->toHaveCount(1);
+});
+
+it('keeps heading order valid when a coach has no team', function () {
+    $coach = User::factory()->create();
+    $coach->roles()->attach(Role::firstOrCreate(['key' => 'coach'], ['name' => 'Coach']));
+
+    $response = $this->actingAs($coach)->get('/my-team');
+    $response->assertStatus(200);
+    $response->assertSee('No team attached');
+    structureExpectSingleH1($response->getContent(), 'my-team empty');
 });
 
 it('gives every rendered table a caption', function () {

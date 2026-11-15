@@ -65,6 +65,8 @@
             $teamsReady = $home !== null && $away !== null;
         @endphp
 
+        @section('meta-description', 'In-game scoring - live quarters, player box score, and final confirmation for the current HoopFlow matchup.')
+
         @section('breadcrumbs')
             <x-breadcrumbs :items="[
                 ['label' => 'Home', 'href' => route('dashboard')],

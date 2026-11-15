@@ -1,5 +1,6 @@
 <div>
     @section('title', 'Audit log')
+    @section('meta-description', 'Audit log - every approval, payment, result, and schedule change recorded across your HoopFlow league.')
 
     @section('breadcrumbs')
         <x-breadcrumbs :items="[
