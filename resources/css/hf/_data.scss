@@ -301,6 +301,10 @@
   background: color-mix(in srgb, var(--hf-primary) 8%, transparent);
 }
 
+.hf-calendar-cell.is-outside:not(.is-selected) {
+  color: var(--hf-muted);
+}
+
 .hf-calendar-cell.is-blank {
   cursor: default;
   opacity: 0.3;
@@ -444,9 +448,9 @@
 }
 
 .hf-period-nav__btn.is-active {
-  background: var(--hf-primary);
+  background: var(--hf-action);
   box-shadow: 0 2px 0 var(--hf-primary-pressed);
-  color: #fff;
+  color: var(--hf-on-action);
 }
 
 .hf-period-nav__btn:focus-visible {
@@ -467,9 +471,9 @@
 }
 
 .hf-filter.is-active {
-  border-color: var(--hf-primary);
-  background: var(--hf-primary);
-  color: #fff;
+  border-color: var(--hf-action);
+  background: var(--hf-action);
+  color: var(--hf-on-action);
 }
 
 /* Standings */

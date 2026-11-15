@@ -7,6 +7,7 @@
     @endphp
 
     @section('title', 'Announcements')
+    @section('meta-description', 'League announcements - pinned notices, schedule changes, and tournament updates in one HoopFlow feed.')
 
     @section('breadcrumbs')
         <x-breadcrumbs :items="[
@@ -106,7 +107,7 @@
         @if ($announcements->isEmpty())
             <div class="hf-empty" data-testid="announcement-empty">
                 <i class="bi bi-megaphone" aria-hidden="true"></i>
-                <h3>No announcements match</h3>
+                <h2>No announcements match</h2>
                 <p>Try another tournament, category, or search term.</p>
                 @if (auth()->user()?->hasRole('organizer'))
                     <a class="hf-btn hf-btn--primary" href="{{ $createUrl }}" data-testid="announcement-empty-create">Write an announcement</a>

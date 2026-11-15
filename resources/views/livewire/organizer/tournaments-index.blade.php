@@ -136,7 +136,7 @@
     @empty
         <div class="hf-empty">
             <i class="bi bi-search" aria-hidden="true"></i>
-            <h3>No tournaments match</h3>
+            <h2>No tournaments match</h2>
             <p>Clear the search or choose another status/division.</p>
             <button type="button" class="hf-btn" wire:click="clearFilters" wire:loading.class="is-loading" data-testid="tournament-clear-filters">Clear filters</button>
         </div>

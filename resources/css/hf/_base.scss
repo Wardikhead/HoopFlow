@@ -12,6 +12,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keep keyboard focus and in-page anchors below the sticky workspace topbar. */
+html:has(body:not(.hf-lp)) {
+  scroll-padding-top: 84px;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

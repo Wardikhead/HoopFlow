@@ -1,5 +1,6 @@
 <div>
     @section('title', 'Submissions')
+    @section('meta-description', 'Review team registration submissions - eligibility documents, roster checks, and approval status in one HoopFlow queue.')
 
     @section('breadcrumbs')
         <x-breadcrumbs :items="[
@@ -74,7 +75,7 @@
         @if ($this->registrations->isEmpty())
             <div class="hf-empty" data-testid="submission-empty">
                 <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                <h3>No submissions match</h3>
+                <h2>No submissions match</h2>
                 <p>Try another status, tournament, or search term.</p>
                 <div class="hf-btn-row hf-mt-2">
                     <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="submission-clear-filters">Clear filters</button>

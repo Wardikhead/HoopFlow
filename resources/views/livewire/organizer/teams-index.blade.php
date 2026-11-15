@@ -26,7 +26,7 @@
         @if ($this->tournaments->isEmpty())
             <div class="hf-empty">
                 <i class="bi bi-trophy" aria-hidden="true"></i>
-                <h3>No tournaments yet</h3>
+                <h2>No tournaments yet</h2>
                 <p>The organizer has not created a tournament.</p>
             </div>
         @else
@@ -126,7 +126,7 @@
             @if ($this->teams->isEmpty())
                 <div class="hf-empty">
                     <i class="bi bi-people" aria-hidden="true"></i>
-                    <h3>No teams match</h3>
+                    <h2>No teams match</h2>
                     <p>Try another status, division, or search term.</p>
                     <button type="button" class="hf-btn" wire:click="clearFilters" wire:loading.class="is-loading" data-testid="team-clear-filters">Clear filters</button>
                 </div>

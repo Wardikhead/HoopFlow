@@ -77,7 +77,7 @@
         @if ($entries->isEmpty())
             <div class="hf-empty" data-testid="audit-empty">
                 <i class="bi bi-clock-history" aria-hidden="true"></i>
-                <h3>No audit entries match</h3>
+                <h2>No audit entries match</h2>
                 <p>Try another entity, actor, or search term.</p>
                 <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="audit-clear-inline">Clear filters</button>
             </div>

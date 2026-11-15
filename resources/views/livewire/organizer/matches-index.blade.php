@@ -72,7 +72,7 @@
             @if ($matches->isEmpty())
                 <div class="hf-empty">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <h3>No matchups match</h3>
+                    <h2>No matchups match</h2>
                     <p>Clear the day, court, or status filter and try again.</p>
                     <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="match-clear-filters">Clear filters</button>
                 </div>
