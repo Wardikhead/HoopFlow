@@ -149,6 +149,7 @@
                 <div class="hf-dialog__body hf-dialog__body--split">
                     <div class="hf-min-w-0">
                         <x-form-errors />
+                        <x-required-note class="hf-mb-2" />
                         <p class="hf-small hf-muted">Entry fee is {{ '₱'.number_format($verifyFee) }}. A saved verification updates collected totals and writes an audit entry.</p>
                         <div class="hf-form-grid">
                             <div class="hf-field">
@@ -168,11 +169,11 @@
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="verifyRef">Reference</label>
-                                <input class="hf-input" id="verifyRef" type="text" wire:model="verifyRef" placeholder="GCASH-9283746" data-testid="payment-verify-ref">
+                                <input class="hf-input" id="verifyRef" type="text" wire:model="verifyRef" placeholder="GCASH-9283746" required data-testid="payment-verify-ref">
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="verifyAmount">Amount (PHP)</label>
-                                <input class="hf-input" id="verifyAmount" type="number" min="1" step="100" wire:model="verifyAmount" data-testid="payment-verify-amount">
+                                <input class="hf-input" id="verifyAmount" type="number" min="1" step="100" wire:model="verifyAmount" required data-testid="payment-verify-amount">
                             </div>
                         </div>
                     </div>

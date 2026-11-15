@@ -9,6 +9,33 @@
         ]" />
     @endsection
 
+    @php
+        $errorTargets = [
+            'name' => 'createName',
+            'division_name' => 'createDivision',
+            'venue_name' => 'createVenue',
+            'start_date' => 'createStart',
+            'end_date' => 'createEnd',
+            'description' => 'createDescription',
+            'format' => 'createFormatElimination',
+            'bracketSlots' => 'createSlots',
+            'roundRobinLegs' => 'createLegs',
+            'playoffTeams' => 'createPlayoffTeams',
+            'bestOfQuarterfinal' => 'createBestOfQuarterfinal',
+            'bestOfSemifinal' => 'createBestOfSemifinal',
+            'bestOfFinal' => 'createBestOfFinal',
+            'fee' => 'createFee',
+            'paymentMethod' => 'createPaymentMethod',
+            'paymentAccount' => 'createPaymentAccount',
+            'courts' => 'createCourt0',
+            'slotMinutes' => 'createSlotMinutes',
+            'restMinutes' => 'createRestMinutes',
+        ];
+        foreach ($courts as $index => $court) {
+            $errorTargets["courts.$index"] = "createCourt$index";
+        }
+    @endphp
+
     <header class="hf-page-head hf-mb-3">
         <div>
             <span class="hf-eyebrow">Organizer desk · Setup</span>
@@ -35,19 +62,20 @@
 
     <div class="hf-wizard">
         <form wire:submit="save" class="hf-card hf-wizard__form" novalidate data-testid="create-form">
-            <x-form-errors />
+            <x-form-errors :targets="$errorTargets" />
+            <x-required-note class="hf-mb-2" />
 
         <section data-step-panel="0" @if ($step !== 0) hidden @endif>
             <div class="hf-form-grid">
                 <div class="hf-field hf-field--full">
                     <label class="hf-label" for="createName">Tournament name</label>
-                    <input class="hf-input" id="createName" type="text" wire:model="name" placeholder="HoopFlow Summer Cup"
+                    <input class="hf-input" id="createName" type="text" wire:model="name" placeholder="HoopFlow Summer Cup" required
                            @error('name') aria-invalid="true" aria-describedby="name-error" @enderror data-testid="create-name">
                     @error('name') <p class="hf-field-error" id="name-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createDivision">Division</label>
-                    <select class="hf-select" id="createDivision" wire:model="division_name" data-testid="create-division"
+                    <select class="hf-select" id="createDivision" wire:model="division_name" required data-testid="create-division"
                             @error('division_name') aria-invalid="true" aria-describedby="division_name-error" @enderror>
                         @foreach (['Under 12 (U12)', 'Under 14 (U14)', 'Under 15 (U15)', 'Under 17 (U17)', 'Open'] as $divisionOption)
                             <option value="{{ $divisionOption }}">{{ $divisionOption }}</option>
@@ -57,19 +85,19 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createVenue">Venue</label>
-                    <input class="hf-input" id="createVenue" type="text" wire:model="venue_name" placeholder="Ynares Sports Arena"
+                    <input class="hf-input" id="createVenue" type="text" wire:model="venue_name" placeholder="Ynares Sports Arena" required
                            @error('venue_name') aria-invalid="true" aria-describedby="venue_name-error" @enderror data-testid="create-venue">
                     @error('venue_name') <p class="hf-field-error" id="venue_name-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createStart">Start date</label>
-                    <input class="hf-input" id="createStart" type="date" wire:model="start_date"
+                    <input class="hf-input" id="createStart" type="date" wire:model="start_date" required
                            @error('start_date') aria-invalid="true" aria-describedby="start_date-error" @enderror data-testid="create-start-date">
                     @error('start_date') <p class="hf-field-error" id="start_date-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createEnd">End date</label>
-                    <input class="hf-input" id="createEnd" type="date" wire:model="end_date"
+                    <input class="hf-input" id="createEnd" type="date" wire:model="end_date" required
                            @error('end_date') aria-invalid="true" aria-describedby="end_date-error" @enderror data-testid="create-end-date">
                     @error('end_date') <p class="hf-field-error" id="end_date-error">{{ $message }}</p> @enderror
                 </div>
@@ -88,21 +116,21 @@
                     <span class="hf-label">Format</span>
                     <div class="hf-grid hf-grid--3">
                         <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
-                            <input type="radio" wire:model.live="format" value="single-elimination" data-testid="create-format-elimination">
+                            <input type="radio" id="createFormatElimination" wire:model.live="format" value="single-elimination" required data-testid="create-format-elimination">
                             <span>
                                 <strong>Single elimination</strong>
                                 <span class="hf-small hf-muted hf-block">One loss ends the run.</span>
                             </span>
                         </label>
                         <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
-                            <input type="radio" wire:model.live="format" value="double-elimination" data-testid="create-format-double-elimination">
+                            <input type="radio" id="createFormatDouble" wire:model.live="format" value="double-elimination" data-testid="create-format-double-elimination">
                             <span>
                                 <strong>Double elimination</strong>
                                 <span class="hf-small hf-muted hf-block">Two losses to be eliminated.</span>
                             </span>
                         </label>
                         <label class="hf-card hf-card--flat hf-flex hf-items-center hf-gap-2">
-                            <input type="radio" wire:model.live="format" value="round-robin" data-testid="create-format-round-robin">
+                            <input type="radio" id="createFormatRoundRobin" wire:model.live="format" value="round-robin" data-testid="create-format-round-robin">
                             <span>
                                 <strong>Round robin</strong>
                                 <span class="hf-small hf-muted hf-block">Everyone plays everyone.</span>
@@ -114,7 +142,7 @@
 
                 <div class="hf-field">
                     <label class="hf-label" for="createSlots">Bracket slots</label>
-                    <select class="hf-select" id="createSlots" wire:model="bracketSlots"
+                    <select class="hf-select" id="createSlots" wire:model="bracketSlots" required
                             @error('bracketSlots') aria-invalid="true" aria-describedby="bracketSlots-error" @enderror data-testid="create-slots">
                         @if ($format === 'round-robin')
                             @foreach (range(2, 16) as $slotOption)
@@ -133,14 +161,14 @@
                 @if ($format === 'round-robin')
                     <div class="hf-field">
                         <label class="hf-label" for="createLegs">Meetings per pair</label>
-                        <input class="hf-input" id="createLegs" type="number" min="1" max="10" wire:model="roundRobinLegs"
+                        <input class="hf-input" id="createLegs" type="number" min="1" max="10" wire:model="roundRobinLegs" required
                                @error('roundRobinLegs') aria-invalid="true" aria-describedby="roundRobinLegs-error" @enderror data-testid="create-round-robin-legs">
                         <p class="hf-small hf-muted hf-mb-0">Each pair meets 1–10 times. Even legs swap home and away.</p>
                         @error('roundRobinLegs') <p class="hf-field-error" id="roundRobinLegs-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="createPlayoffTeams">Playoff teams</label>
-                        <select class="hf-select" id="createPlayoffTeams" wire:model="playoffTeams"
+                        <select class="hf-select" id="createPlayoffTeams" wire:model="playoffTeams" required
                                 @error('playoffTeams') aria-invalid="true" aria-describedby="playoffTeams-error" @enderror data-testid="create-playoff-teams">
                             <option value="0">No playoffs</option>
                             @foreach ([2, 4, 8, 16] as $playoffOption)
@@ -153,7 +181,7 @@
 
                 <div class="hf-field">
                     <label class="hf-label" for="createBestOfQuarterfinal">Quarterfinal series</label>
-                    <select class="hf-select" id="createBestOfQuarterfinal" wire:model="bestOfQuarterfinal"
+                    <select class="hf-select" id="createBestOfQuarterfinal" wire:model="bestOfQuarterfinal" required
                             @error('bestOfQuarterfinal') aria-invalid="true" aria-describedby="bestOfQuarterfinal-error" @enderror data-testid="create-best-of-quarterfinal">
                         @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
                             <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
@@ -163,7 +191,7 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createBestOfSemifinal">Semifinal series</label>
-                    <select class="hf-select" id="createBestOfSemifinal" wire:model="bestOfSemifinal"
+                    <select class="hf-select" id="createBestOfSemifinal" wire:model="bestOfSemifinal" required
                             @error('bestOfSemifinal') aria-invalid="true" aria-describedby="bestOfSemifinal-error" @enderror data-testid="create-best-of-semifinal">
                         @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
                             <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
@@ -173,7 +201,7 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createBestOfFinal">Final series</label>
-                    <select class="hf-select" id="createBestOfFinal" wire:model.live="bestOfFinal"
+                    <select class="hf-select" id="createBestOfFinal" wire:model.live="bestOfFinal" required
                             @error('bestOfFinal') aria-invalid="true" aria-describedby="bestOfFinal-error" @enderror data-testid="create-best-of-final">
                         @foreach ([1, 3, 5, 7, 9] as $bestOfOption)
                             <option value="{{ $bestOfOption }}">Best of {{ $bestOfOption }}</option>
@@ -192,14 +220,14 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createFee">Entry fee (PHP)</label>
-                    <input class="hf-input" id="createFee" type="number" min="0" step="100" wire:model="fee"
+                    <input class="hf-input" id="createFee" type="number" min="0" step="100" wire:model="fee" required
                            @error('fee') aria-invalid="true" aria-describedby="fee-error" @enderror data-testid="create-fee">
                     @error('fee') <p class="hf-field-error" id="fee-error">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="hf-field">
                     <label class="hf-label" for="createPaymentMethod">Payment method</label>
-                    <select class="hf-select" id="createPaymentMethod" wire:model="paymentMethod"
+                    <select class="hf-select" id="createPaymentMethod" wire:model="paymentMethod" required
                             @error('paymentMethod') aria-invalid="true" aria-describedby="paymentMethod-error" @enderror data-testid="create-payment-method">
                         <option value="GCash">GCash</option>
                         <option value="Maya">Maya</option>
@@ -210,7 +238,7 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createPaymentAccount">Payment account</label>
-                    <input class="hf-input" id="createPaymentAccount" type="text" wire:model="paymentAccount" placeholder="09489666136"
+                    <input class="hf-input" id="createPaymentAccount" type="text" wire:model="paymentAccount" placeholder="09489666136" required
                            @error('paymentAccount') aria-invalid="true" aria-describedby="paymentAccount-error" @enderror data-testid="create-payment-account">
                     @error('paymentAccount') <p class="hf-field-error" id="paymentAccount-error">{{ $message }}</p> @enderror
                 </div>
@@ -220,8 +248,8 @@
                     <div>
                         @foreach ($courts as $index => $court)
                             <div class="hf-flex hf-items-center hf-gap-2 hf-mt-1" wire:key="court-row-{{ $index }}" data-court-row>
-                                <input class="hf-input" type="text" wire:model="courts.{{ $index }}" value="{{ $court }}" placeholder="Court name"
-                                       aria-label="Court {{ $index + 1 }} name"
+                                <input class="hf-input" id="createCourt{{ $index }}" type="text" wire:model="courts.{{ $index }}" value="{{ $court }}" placeholder="Court name"
+                                       aria-label="Court {{ $index + 1 }} name" @if ($index === 0) required @endif
                                        data-testid="create-court-{{ $index }}">
                                 <button type="button" class="hf-icon-btn" wire:click="removeCourt({{ $index }})"
                                         aria-label="Remove court {{ $index + 1 }}" data-testid="create-remove-court-{{ $index }}">
@@ -239,13 +267,13 @@
 
                 <div class="hf-field">
                     <label class="hf-label" for="createSlotMinutes">Slot length (minutes)</label>
-                    <input class="hf-input" id="createSlotMinutes" type="number" min="10" step="5" wire:model="slotMinutes"
+                    <input class="hf-input" id="createSlotMinutes" type="number" min="10" step="5" wire:model="slotMinutes" required
                            @error('slotMinutes') aria-invalid="true" aria-describedby="slotMinutes-error" @enderror data-testid="create-slot-minutes">
                     @error('slotMinutes') <p class="hf-field-error" id="slotMinutes-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="createRestMinutes">Rest between games (minutes)</label>
-                    <input class="hf-input" id="createRestMinutes" type="number" min="0" step="5" wire:model="restMinutes"
+                    <input class="hf-input" id="createRestMinutes" type="number" min="0" step="5" wire:model="restMinutes" required
                            @error('restMinutes') aria-invalid="true" aria-describedby="restMinutes-error" @enderror data-testid="create-rest-minutes">
                     @error('restMinutes') <p class="hf-field-error" id="restMinutes-error">{{ $message }}</p> @enderror
                 </div>

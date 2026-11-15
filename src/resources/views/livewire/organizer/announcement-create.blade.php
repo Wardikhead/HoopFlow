@@ -34,13 +34,21 @@
         </header>
 
         <div class="hf-split">
-            <form wire:submit="save" id="announcementForm" data-testid="announcement-create-form">
-                <x-form-errors />
+            <form wire:submit="save" id="announcementForm" novalidate data-testid="announcement-create-form">
+                <x-form-errors :targets="[
+                    'tournament_id' => 'announcementTournament',
+                    'title' => 'announcementTitle',
+                    'body' => 'announcementBody',
+                    'category' => 'announcementCategory',
+                    'audience' => 'announcementAudience',
+                    'target_user_ids' => 'announcementTargetUsers',
+                ]" />
+                <x-required-note class="hf-mb-2" />
                 <div class="hf-card hf-mb-3">
                     <div class="hf-form-grid">
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="announcementTournament">Tournament</label>
-                            <select class="hf-select" id="announcementTournament" wire:model.live="tournament_id"
+                            <select class="hf-select" id="announcementTournament" wire:model.live="tournament_id" required
                                     @error('tournament_id') aria-invalid="true" aria-describedby="tournament_id-error" @enderror
                                     data-testid="announcement-tournament">
                                 @foreach ($this->tournaments as $tournamentOption)
@@ -54,7 +62,7 @@
 
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="announcementTitle">Headline</label>
-                            <input class="hf-input" id="announcementTitle" type="text" maxlength="90"
+                            <input class="hf-input" id="announcementTitle" type="text" maxlength="90" required
                                    placeholder="Championship week moves to Court 1"
                                    wire:model.live.debounce.150ms="title"
                                    @error('title') aria-invalid="true" aria-describedby="title-error" @enderror
@@ -67,7 +75,7 @@
 
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="announcementBody">Message</label>
-                            <textarea class="hf-textarea" id="announcementBody" rows="5" maxlength="320"
+                            <textarea class="hf-textarea" id="announcementBody" rows="5" maxlength="320" required
                                       placeholder="Gate opens 45 minutes before tip-off. All semifinals and finals are on Court 1."
                                       wire:model.live.debounce.150ms="body"
                                       @error('body') aria-invalid="true" aria-describedby="body-error" @enderror
@@ -80,7 +88,7 @@
 
                         <div class="hf-field">
                             <label class="hf-label" for="announcementCategory">Category</label>
-                            <select class="hf-select" id="announcementCategory" wire:model.live="category"
+                            <select class="hf-select" id="announcementCategory" wire:model.live="category" required
                                     @error('category') aria-invalid="true" aria-describedby="category-error" @enderror
                                     data-testid="announcement-category">
                                 @foreach (\App\Models\Announcement::CATEGORIES as $value => $label)
@@ -94,7 +102,7 @@
 
                         <div class="hf-field">
                             <label class="hf-label" for="announcementAudience">Audience</label>
-                            <select class="hf-select" id="announcementAudience" wire:model.live="audience"
+                            <select class="hf-select" id="announcementAudience" wire:model.live="audience" required
                                     @error('audience') aria-invalid="true" aria-describedby="audience-error" @enderror
                                     data-testid="announcement-audience">
                                 @foreach (\App\Models\Announcement::AUDIENCES as $value => $label)
@@ -107,12 +115,12 @@
                         </div>
 
                         @if ($audience === 'specific')
-                            <div class="hf-field hf-field--full" id="announcementTargetUsers" role="group" aria-labelledby="announcementTargetUsersLabel" @error('target_user_ids') aria-describedby="target_user_ids-error" @enderror data-testid="announcement-target-users">
+                            <div class="hf-field hf-field--full" id="announcementTargetUsers" role="group" aria-labelledby="announcementTargetUsersLabel" tabindex="-1" @error('target_user_ids') aria-describedby="target_user_ids-error" @enderror data-testid="announcement-target-users">
                                 <label class="hf-label" id="announcementTargetUsersLabel">Target users</label>
                                 <div class="hf-card hf-card--flat hf-target-list">
                                     @foreach ($this->users as $targetUser)
                                         <label class="hf-flex hf-items-center hf-gap-2 hf-small hf-check-row" wire:key="target-user-{{ $targetUser->id }}">
-                                            <input type="checkbox" value="{{ $targetUser->id }}" wire:model.live="target_user_ids">
+                                            <input type="checkbox" value="{{ $targetUser->id }}" wire:model.live="target_user_ids" @if ($loop->first) required @endif>
                                             <span>{{ $targetUser->name }} <span class="hf-muted">({{ $targetUser->roles->first()?->key ?? 'member' }})</span></span>
                                         </label>
                                     @endforeach

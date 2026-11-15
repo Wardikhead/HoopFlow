@@ -7,7 +7,10 @@ export function initScoreConsole() {
     document.addEventListener('keydown', (event) => {
         const dialog = document.querySelector('dialog[data-score-console][open]');
         if (!dialog) return;
-        if (event.target.matches('input, select, textarea')) return;
+
+        // Never steal keys from a control the user is operating: Enter on
+        // "Undo" or "Close" must do what the button says, not finalize.
+        if (event.target.closest?.('input, select, textarea, button, a[href], [role="button"], [contenteditable="true"]')) return;
 
         const active = dialog.querySelector('[data-score-team].is-active') ?? dialog.querySelector('[data-score-team="1"]');
 

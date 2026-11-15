@@ -374,7 +374,13 @@
                 data-testid="my-player-dialog"
                 aria-labelledby="myPlayerDialogTitle">
                 <form wire:submit="savePlayer" novalidate wire:loading.attr="aria-busy">
-                    <x-form-errors />
+                    <x-form-errors :targets="[
+                        'playerName' => 'myPlayerName',
+                        'playerNumber' => 'myPlayerNumber',
+                        'playerPosition' => 'myPlayerPosition',
+                        'playerBirthdate' => 'myPlayerBirthdate',
+                    ]" />
+                    <x-required-note class="hf-mb-2" />
                     <div class="hf-dialog__head">
                         <h2 class="hf-dialog__title" id="myPlayerDialogTitle">{{ $editingPlayerId !== null ? 'Edit '.$playerName : 'Add player' }}</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePlayerDialog" aria-label="Close dialog" data-testid="dialog-close">
@@ -391,6 +397,7 @@
                                     type="text"
                                     wire:model="playerName"
                                     autocomplete="off"
+                                    required
                                     @error('playerName') aria-invalid="true" aria-describedby="playerName-error" @enderror
                                     data-testid="my-player-name"
                                 >
@@ -405,6 +412,7 @@
                                     min="1"
                                     max="99"
                                     wire:model="playerNumber"
+                                    required
                                     @error('playerNumber') aria-invalid="true" aria-describedby="playerNumber-error" @enderror
                                     data-testid="my-player-number"
                                 >
@@ -412,7 +420,7 @@
                             </div>
                             <div class="hf-field">
                                 <label class="hf-label" for="myPlayerPosition">Position</label>
-                                <select class="hf-select" id="myPlayerPosition" wire:model="playerPosition" data-testid="my-player-position">
+                                <select class="hf-select" id="myPlayerPosition" wire:model="playerPosition" required data-testid="my-player-position">
                                     @foreach (\App\Livewire\Coach\MyTeam::POSITIONS as $position)
                                         <option value="{{ $position }}">{{ $position }}</option>
                                     @endforeach
@@ -427,6 +435,7 @@
                                     type="date"
                                     max="{{ now()->format('Y-m-d') }}"
                                     wire:model="playerBirthdate"
+                                    required
                                     @error('playerBirthdate') aria-invalid="true" aria-describedby="playerBirthdate-error" @enderror
                                     data-testid="my-player-birthdate"
                                 >
@@ -492,7 +501,11 @@
                 data-testid="my-payment-dialog"
                 aria-labelledby="myPaymentDialogTitle">
                 <form wire:submit="savePayment" novalidate wire:loading.attr="aria-busy">
-                    <x-form-errors />
+                    <x-form-errors :targets="[
+                        'paymentMethod' => 'myPaymentMethod',
+                        'paymentReference' => 'myPaymentRef',
+                    ]" />
+                    <x-required-note class="hf-mb-2" />
                     <div class="hf-dialog__head">
                         <h2 class="hf-dialog__title" id="myPaymentDialogTitle">Update payment reference</h2>
                         <button type="button" class="hf-icon-btn" wire:click="closePaymentDialog" aria-label="Close dialog" data-testid="dialog-close">
@@ -504,7 +517,7 @@
                         <div class="hf-form-grid">
                             <div class="hf-field">
                                 <label class="hf-label" for="myPaymentMethod">Method</label>
-                                <select class="hf-select" id="myPaymentMethod" wire:model="paymentMethod" data-testid="my-payment-method">
+                                <select class="hf-select" id="myPaymentMethod" wire:model="paymentMethod" required data-testid="my-payment-method">
                                     @foreach (\App\Livewire\Coach\MyTeam::PAYMENT_METHODS as $method)
                                         <option value="{{ $method }}">{{ $method }}</option>
                                     @endforeach
@@ -520,6 +533,7 @@
                                     wire:model="paymentReference"
                                     placeholder="GCASH-9283746"
                                     autocomplete="off"
+                                    required
                                     @error('paymentReference') aria-invalid="true" aria-describedby="paymentReference-error" @enderror
                                     data-testid="my-payment-ref"
                                 >

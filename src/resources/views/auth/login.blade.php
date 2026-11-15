@@ -35,6 +35,7 @@
                 @csrf
 
                 <x-form-errors :targets="['email' => 'loginEmail', 'password' => 'loginPassword']" />
+                <x-required-note class="hf-mb-2" />
 
                 <div class="hf-field">
                     <label class="hf-label" for="loginEmail">Email</label>
@@ -47,6 +48,7 @@
                         x-model="email"
                         value="{{ old('email') }}"
                         data-testid="login-email"
+                        required
                         @error('email') aria-invalid="true" aria-describedby="loginEmail-error" @enderror
                     >
                     @error('email')
@@ -66,6 +68,7 @@
                             autocomplete="current-password"
                             x-model="password"
                             data-testid="login-password"
+                            required
                             @error('password') aria-invalid="true" aria-describedby="loginPassword-error" @enderror
                         >
                         <button

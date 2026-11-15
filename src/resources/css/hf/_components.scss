@@ -352,6 +352,17 @@
   text-transform: uppercase;
 }
 
+.hf-field:has([required]) > .hf-label::after {
+  content: ' *';
+  color: var(--hf-danger-ink);
+  font-weight: 700;
+}
+
+.hf-required-mark {
+  color: var(--hf-danger-ink);
+  font-weight: 800;
+}
+
 .hf-help {
   color: var(--hf-muted);
   font-size: 12px;
@@ -468,19 +479,19 @@
 .hf-status-select__trigger--success {
   border-color: color-mix(in srgb, var(--hf-success) 32%, transparent);
   background: color-mix(in srgb, var(--hf-success) 11%, var(--hf-surface-2));
-  color: var(--hf-success);
+  color: var(--hf-success-ink);
 }
 
 .hf-status-select__trigger--warning {
   border-color: color-mix(in srgb, var(--hf-warning) 34%, transparent);
   background: color-mix(in srgb, var(--hf-warning) 11%, var(--hf-surface-2));
-  color: var(--hf-warning);
+  color: var(--hf-warning-ink);
 }
 
 .hf-status-select__trigger--danger {
   border-color: color-mix(in srgb, var(--hf-alert) 32%, transparent);
   background: color-mix(in srgb, var(--hf-alert) 10%, var(--hf-surface-2));
-  color: var(--hf-alert);
+  color: var(--hf-danger-ink);
 }
 
 .hf-status-select__trigger--slate {
@@ -516,10 +527,14 @@
   text-align: left;
 }
 
-.hf-status-select__option:hover,
+.hf-status-select__option:hover {
+  background: color-mix(in srgb, var(--hf-primary) 9%, transparent);
+}
+
 .hf-status-select__option:focus-visible {
   background: color-mix(in srgb, var(--hf-primary) 9%, transparent);
-  outline: none;
+  outline: 2px solid var(--hf-action);
+  outline-offset: -2px;
 }
 
 .hf-status-select__option.is-selected {
