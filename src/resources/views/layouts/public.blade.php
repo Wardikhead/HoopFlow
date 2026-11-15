@@ -267,7 +267,7 @@
                 </div>
             </dialog>
 
-            <main id="main" class="hf-main">
+            <main id="main" class="hf-main" tabindex="-1">
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>

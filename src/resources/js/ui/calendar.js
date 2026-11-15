@@ -15,6 +15,9 @@ export function initCalendar() {
         const index = cells.indexOf(cell);
         if (index === -1) return;
 
+        // Enter and Space must reach the button so a day can be selected.
+        if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
+
         const columns = 7;
         let next = index;
         if (event.key === 'ArrowRight') next = index + 1;

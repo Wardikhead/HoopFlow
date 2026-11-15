@@ -95,6 +95,65 @@ it('gives the team unavailable page a single level-one heading', function () {
     structureExpectSingleH1($response->getContent(), 'team unavailable');
 });
 
+it('keeps heading order valid on the main workspace pages', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+
+    foreach ([
+        '/dashboard', '/tournaments', '/tournaments/create', '/teams',
+        '/submissions', '/payments', '/announcements', '/announcements/create',
+        '/bracket', '/schedule', '/standings', '/audit',
+        '/submissions?q=zzzzzz', '/payments?q=zzzzzz', '/announcements?q=zzzzzz',
+        '/audit?q=zzzzzz', '/matches?q=zzzzzz', '/tournaments?q=zzzzzz',
+        '/teams?q=zzzzzz', '/standings?q=zzzzzz',
+    ] as $url) {
+        $response = $this->actingAs($organizer)->get($url);
+        $response->assertStatus(200);
+        structureExpectSingleH1($response->getContent(), $url);
+    }
+
+    foreach (['/my-team', '/team-register'] as $url) {
+        $response = $this->actingAs($coach)->get($url);
+        $response->assertStatus(200);
+        structureExpectSingleH1($response->getContent(), $url);
+    }
+});
+
+it('lets the skip link move focus into the workspace main', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $html = $this->actingAs($organizer)->get('/dashboard')->getContent();
+
+    $main = structureXPath($html)->query('//main[@id="main"]')->item(0);
+
+    expect($main)->not->toBeNull('The workspace has no main landmark');
+    expect($main->getAttribute('tabindex'))->toBe('-1', 'The workspace main must accept programmatic focus for the skip link');
+});
+
+it('announces the selected schedule day to assistive technology', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $html = $this->actingAs($organizer)->get('/schedule')->getContent();
+    $xpath = structureXPath($html);
+
+    $days = $xpath->query('//button[@data-calendar-day]');
+    expect($days->length)->toBeGreaterThan(0, 'The schedule rendered no calendar days');
+
+    $selected = [];
+    foreach ($days as $day) {
+        $pressed = $day->getAttribute('aria-pressed');
+        expect(in_array($pressed, ['true', 'false'], true))
+            ->toBeTrue('Every calendar day must expose its selected state');
+
+        $visible = str_contains($day->getAttribute('class'), 'is-selected');
+        expect($pressed === 'true')->toBe($visible, 'aria-pressed must match the visible selection');
+
+        if ($pressed === 'true') {
+            $selected[] = $day->getAttribute('data-testid');
+        }
+    }
+
+    expect($selected)->toHaveCount(1);
+});
+
 it('gives every rendered table a caption', function () {
     $tournaments = ['landing' => '/', 'standings' => '/standings'];
 

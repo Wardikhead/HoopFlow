@@ -45,7 +45,7 @@
   border-color: var(--hf-danger-ink);
   background: var(--hf-danger-ink);
   box-shadow: 0 2px 0 color-mix(in srgb, var(--hf-danger-ink) 70%, #000);
-  color: #fff;
+  color: var(--hf-on-danger);
 }
 
 .hf-btn.is-loading {
@@ -940,7 +940,7 @@
   font-size: 34px;
 }
 
-.hf-empty :is(h1, h3) {
+.hf-empty :is(h1, h2, h3) {
   margin: 0;
   font-family: var(--hf-font-display);
   font-size: 24px;

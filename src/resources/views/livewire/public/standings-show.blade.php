@@ -113,13 +113,13 @@
             @if ($allRows->isEmpty())
                 <div class="hf-empty" data-testid="standings-empty">
                     <i class="bi bi-bar-chart" aria-hidden="true"></i>
-                    <h3>No standings yet</h3>
+                    <h2>No standings yet</h2>
                     <p>Standings appear as soon as approved teams have recorded results.</p>
                 </div>
             @elseif ($rows->isEmpty())
                 <div class="hf-empty" data-testid="standings-no-match">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <h3>No teams match</h3>
+                    <h2>No teams match</h2>
                     <p>Clear the search or choose another standings filter.</p>
                 </div>
             @else

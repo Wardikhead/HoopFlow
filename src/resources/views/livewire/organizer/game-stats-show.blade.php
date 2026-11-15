@@ -24,6 +24,8 @@
             <a class="hf-btn hf-btn--primary" href="{{ route('matches') }}">Browse matchups</a>
         </div>
     @else
+        @section('meta-description', 'Game box score - quarter-by-quarter scoring, player stats, and the final result in one HoopFlow view.')
+
         @section('breadcrumbs')
             <x-breadcrumbs :items="[
                 ['label' => 'Home', 'href' => route('dashboard')],

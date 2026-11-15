@@ -1,5 +1,6 @@
 <div>
     @section('title', 'Payments')
+    @section('meta-description', 'Track registration payments, verify receipts, and mark balances settled across your HoopFlow tournament.')
 
     @section('breadcrumbs')
         <x-breadcrumbs :items="[
@@ -84,7 +85,7 @@
         @if ($this->payments->isEmpty())
             <div class="hf-empty" data-testid="payment-empty">
                 <i class="bi bi-cash-stack" aria-hidden="true"></i>
-                <h3>No payments match</h3>
+                <h2>No payments match</h2>
                 <p>Try another status, tournament, or search term.</p>
                 <div class="hf-btn-row hf-mt-2">
                     <button type="button" class="hf-btn" wire:click="clearFilters" data-testid="payment-clear-filters">Clear filters</button>

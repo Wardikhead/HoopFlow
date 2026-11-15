@@ -105,6 +105,7 @@ function a11yRule(string $scss, string $selector): string
 beforeEach(function () {
     $this->tokens = file_get_contents(base_path('resources/css/hf/_tokens.scss'));
     $this->components = file_get_contents(base_path('resources/css/hf/_components.scss'));
+    $this->data = file_get_contents(base_path('resources/css/hf/_data.scss'));
     $this->surfaces = file_get_contents(base_path('resources/css/hf/_surfaces.scss'));
 
     $this->light = a11yBlock($this->tokens, ':root');
@@ -164,6 +165,63 @@ it('keeps status select warning and danger text at AA on their tinted background
             expect(a11yContrast($text, $background))
                 ->toBeGreaterThanOrEqual(4.5, "{$tone} status text ({$textMatches[1]}) fails on the {$theme} theme");
         }
+    }
+});
+
+it('keeps the landing primary button readable in both themes', function () {
+    $base = file_get_contents(base_path('resources/css/landing/_base.scss'));
+    $rule = a11yRule($base, '.hf-lp .hf-btn--primary');
+
+    expect(preg_match('/(?<![-\w])color:\s*(#[0-9a-fA-F]{6})/', $rule, $textMatch))
+        ->toBe(1, 'Landing primary button must set an explicit text colour, not inherit --hf-on-action');
+    expect(preg_match('/(?<![-\w])background:\s*(#[0-9a-fA-F]{6})/', $rule, $backgroundMatch))
+        ->toBe(1);
+
+    $hover = a11yRule($base, '.hf-lp .hf-btn--primary:hover');
+    expect(preg_match('/(?<![-\w])background:\s*(#[0-9a-fA-F]{6})/', $hover, $hoverMatch))->toBe(1);
+
+    foreach ([$backgroundMatch[1], $hoverMatch[1]] as $background) {
+        expect(a11yContrast(a11yRgb($textMatch[1]), a11yRgb($background)))
+            ->toBeGreaterThanOrEqual(4.5, "Landing primary button text {$textMatch[1]} fails on {$background}");
+    }
+});
+
+it('keeps pressed filter and period controls readable', function () {
+    foreach ([
+        'filter' => [$this->data, '.hf-filter.is-active'],
+        'period nav' => [$this->data, '.hf-period-nav__btn.is-active'],
+    ] as $name => [$scss, $selector]) {
+        $rule = a11yRule($scss, $selector);
+
+        expect(preg_match('/(?<![-\w])color:\s*var\(--(hf-[a-z-]+)\)/', $rule, $textMatch))
+            ->toBe(1, "{$name} must use an on-colour token instead of a hardcoded white");
+        expect(preg_match('/(?<![-\w])background:\s*var\(--(hf-[a-z-]+)\)/', $rule, $backgroundMatch))
+            ->toBe(1, "{$name} must use the action token as its background");
+
+        foreach (['light' => $this->light, 'dark' => $this->dark] as $theme => $block) {
+            $text = a11yRgb(a11yToken($block, $textMatch[1]));
+            $background = a11yRgb(a11yToken($block, $backgroundMatch[1]));
+
+            expect(a11yContrast($text, $background))
+                ->toBeGreaterThanOrEqual(4.5, "{$name} text ({$textMatch[1]}) fails on the {$theme} theme");
+        }
+    }
+});
+
+it('keeps the danger button readable in both themes', function () {
+    $rule = a11yRule($this->components, '.hf-btn--danger');
+
+    expect(preg_match('/(?<![-\w])color:\s*var\(--(hf-[a-z-]+)\)/', $rule, $textMatch))
+        ->toBe(1, 'Danger button must use an on-danger token instead of a hardcoded white');
+    expect(preg_match('/(?<![-\w])background:\s*var\(--(hf-[a-z-]+)\)/', $rule, $backgroundMatch))
+        ->toBe(1);
+
+    foreach (['light' => $this->light, 'dark' => $this->dark] as $theme => $block) {
+        $text = a11yRgb(a11yToken($block, $textMatch[1]));
+        $background = a11yRgb(a11yToken($block, $backgroundMatch[1]));
+
+        expect(a11yContrast($text, $background))
+            ->toBeGreaterThanOrEqual(4.5, "Danger button text ({$textMatch[1]}) fails on the {$theme} theme");
     }
 });
 

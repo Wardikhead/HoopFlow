@@ -159,7 +159,7 @@
                             <span class="hf-chip hf-chip--gold"><i class="bi bi-pin-angle-fill" aria-hidden="true"></i>Pinned</span>
                         @endif
                     </div>
-                    <h3 class="hf-section-title hf-mt-1">{{ trim($title) !== '' ? $title : 'Your headline' }}</h3>
+                    <h2 class="hf-section-title hf-mt-1">{{ trim($title) !== '' ? $title : 'Your headline' }}</h2>
                     <p class="hf-muted hf-small hf-mb-0">{{ trim($body) !== '' ? $body : 'The message coaches and fans will see.' }}</p>
                     <div class="hf-match-head hf-mt-2">
                         <span>{{ $author }}</span>

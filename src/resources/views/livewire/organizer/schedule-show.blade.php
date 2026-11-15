@@ -76,14 +76,14 @@
                         @endforeach
                         @foreach ($this->monthCells as $cell)
                             <button type="button"
-                                    class="hf-calendar-cell{{ $cell['count'] ? ' has-events' : '' }}{{ $cell['reserved'] ? ' is-reserved' : '' }}{{ $cell['key'] === $this->selectedDay ? ' is-selected' : '' }}{{ $cell['key'] === now()->toDateString() ? ' is-today' : '' }}"
+                                    class="hf-calendar-cell{{ $cell['count'] ? ' has-events' : '' }}{{ $cell['reserved'] ? ' is-reserved' : '' }}{{ $cell['key'] === $this->selectedDay ? ' is-selected' : '' }}{{ $cell['key'] === now()->toDateString() ? ' is-today' : '' }}{{ $cell['outside'] ? ' is-outside' : '' }}"
                                     wire:click="selectDay('{{ $cell['key'] }}')"
                                     data-testid="schedule-day-{{ $cell['key'] }}"
                                     data-calendar-day
                                     tabindex="0"
+                                    aria-pressed="{{ $cell['key'] === $this->selectedDay ? 'true' : 'false' }}"
                                     data-reserved="{{ $cell['reserved'] ? 'true' : 'false' }}"
-                                    title="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j') }}{{ $cell['count'] ? ' · '.$cell['count'].' games' : ' · no games' }}{{ $cell['reserved'] ? ' · reserved for playoffs' : '' }}"
-                                    style="{{ $cell['outside'] ? 'opacity: .45' : '' }}">
+                                    title="{{ \Carbon\Carbon::parse($cell['key'])->format('l, F j') }}{{ $cell['count'] ? ' · '.$cell['count'].' games' : ' · no games' }}{{ $cell['reserved'] ? ' · reserved for playoffs' : '' }}">
                                 <span>{{ $cell['day'] }}</span>
                                 @if ($cell['count'])
                                     <span class="hf-calendar-count">{{ $cell['count'] }} games</span>
