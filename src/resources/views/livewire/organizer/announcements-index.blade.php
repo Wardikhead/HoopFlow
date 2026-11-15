@@ -30,7 +30,7 @@
         @if (auth()->user()?->hasRole('organizer'))
             <div class="hf-page-actions">
                 <a class="hf-btn hf-btn--primary" href="{{ $createUrl }}" data-testid="announcement-new">
-                    <i class="bi bi-megaphone"></i> New announcement
+                    <i class="bi bi-megaphone" aria-hidden="true"></i> New announcement
                 </a>
             </div>
         @endif

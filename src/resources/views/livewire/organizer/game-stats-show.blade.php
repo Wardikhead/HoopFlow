@@ -105,7 +105,7 @@
         @if ($this->scoreMismatch !== [])
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-score-mismatch">
                 <div class="hf-between hf-wrap">
-                    <span class="hf-chip hf-chip--gold"><i class="bi bi-exclamation-triangle"></i> Box score mismatch</span>
+                    <span class="hf-chip hf-chip--gold"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Box score mismatch</span>
                 </div>
                 @foreach ($this->scoreMismatch as $mismatch)
                     <p class="hf-small hf-mt-1 hf-mb-0">
@@ -121,7 +121,7 @@
         @if ($correction)
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="stats-correction">
                 <div class="hf-between hf-wrap">
-                    <span class="hf-chip hf-chip--gold"><i class="bi bi-arrow-repeat"></i> Corrected score</span>
+                    <span class="hf-chip hf-chip--gold"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Corrected score</span>
                     <span class="hf-small hf-muted">{{ $correction['corrected_at']?->format('M j, Y') }} · {{ $correction['corrected_at']?->format('g:i A') }}</span>
                 </div>
                 <p class="hf-small hf-mt-1 hf-mb-0">

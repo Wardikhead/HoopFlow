@@ -6,6 +6,7 @@
 
     <div class="hf-lp-table-wrap">
         <table class="hf-lp-standings__table">
+            <caption class="hf-sr-only">Regular season standings</caption>
             <thead>
                 <tr>
                     <th scope="col">#</th>

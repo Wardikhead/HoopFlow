@@ -28,9 +28,9 @@
             <p class="hf-page-desc">{{ $team->coachUser?->name ?? $team->coach_name ?? 'Coach' }} · {{ $team->city }}</p>
         </div>
         <div class="hf-page-actions">
-            <a class="hf-btn" href="{{ route('teams', $tournament ? ['tournament' => $tournament->id] : []) }}" data-testid="team-back"><i class="bi bi-arrow-left"></i> Teams</a>
+            <a class="hf-btn" href="{{ route('teams', $tournament ? ['tournament' => $tournament->id] : []) }}" data-testid="team-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Teams</a>
             @if ($isOwner)
-                <a class="hf-btn hf-btn--primary" href="{{ route('myTeam', array_filter(['team' => $team->id, 'tournament' => $tournament?->id])) }}" data-testid="team-manage-roster"><i class="bi bi-person-lines-fill"></i> Manage roster</a>
+                <a class="hf-btn hf-btn--primary" href="{{ route('myTeam', array_filter(['team' => $team->id, 'tournament' => $tournament?->id])) }}" data-testid="team-manage-roster"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Manage roster</a>
             @endif
         </div>
     </header>

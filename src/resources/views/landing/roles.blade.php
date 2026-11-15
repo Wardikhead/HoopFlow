@@ -21,7 +21,7 @@
                                     <div class="hf-lp-role__row"><span>Vipers</span><span class="hf-lp-role__state is-ok">Roster verified</span></div>
                                     <div class="hf-lp-role__row"><span>Saints</span><span class="hf-lp-role__state is-warn">Consent pending</span></div>
                                     <div class="hf-lp-role__row"><span>Bolts</span><span class="hf-lp-role__state is-ok">Payment received</span></div>
-                                    <span class="hf-lp-role__link">Open review <i class="bi bi-arrow-up-right"></i></span>
+                                    <span class="hf-lp-role__link">Open review <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
                                 </div>
                                 @break
 

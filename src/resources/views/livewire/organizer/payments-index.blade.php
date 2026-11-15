@@ -15,7 +15,7 @@
             <p class="hf-page-desc">Verify entry fees, track the collection rate, and keep every reference in the audit trail.</p>
         </div>
         <div class="hf-page-actions">
-            <a class="hf-btn" href="{{ route('submissions') }}" data-testid="payments-open-submissions"><i class="bi bi-clipboard-check"></i> Submissions</a>
+            <a class="hf-btn" href="{{ route('submissions') }}" data-testid="payments-open-submissions"><i class="bi bi-clipboard-check" aria-hidden="true"></i> Submissions</a>
         </div>
     </header>
 

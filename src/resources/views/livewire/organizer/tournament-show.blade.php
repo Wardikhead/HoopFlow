@@ -13,7 +13,7 @@
 
         <div class="hf-empty" data-testid="tournament-not-found">
             <i class="bi bi-trophy" aria-hidden="true"></i>
-            <h3>Tournament not found</h3>
+            <h1>Tournament not found</h1>
             <p>The tournament link is invalid or the demo has been reset.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
@@ -132,7 +132,7 @@
                                             <x-status-chip :status="$paymentLabel($payment)" />
                                         @endif
                                     </span>
-                                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+                                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                                 </span>
                             </div>
                             @if ($role === 'organizer' && $isPending)

@@ -3,7 +3,7 @@
         @if ($requestedMatchMissing)
             <div class="hf-empty" data-testid="ingame-missing-match">
                 <i class="bi bi-search" aria-hidden="true"></i>
-                <h3>Match not found</h3>
+                <h1>Match not found</h1>
                 <p>That game is not in this organization, or the link is out of date.</p>
                 <a class="hf-btn hf-btn--primary" href="{{ route('gameManage') }}" data-testid="manage-select-match">Browse matchups</a>
             </div>
@@ -101,7 +101,7 @@
                     <div>
                         <span class="hf-eyebrow">Best of {{ $this->seriesAnchor->best_of }} · {{ $this->seriesGameLabel }}</span>
                         <h2 class="hf-section-title hf-mb-0">{{ $this->seriesSummary }}</h2>
-                        <p class="hf-small hf-muted hf-mb-0"><i class="bi bi-calendar-event"></i> {{ $this->seriesScheduleLabel }}</p>
+                        <p class="hf-small hf-muted hf-mb-0"><i class="bi bi-calendar-event" aria-hidden="true"></i> {{ $this->seriesScheduleLabel }}</p>
                     </div>
                     <span class="hf-chip hf-chip--{{ $match->status === 'forfeit' ? 'danger' : ($match->status === 'in_progress' ? 'gold' : ($match->status === 'final' ? 'success' : 'primary')) }}">{{ $match->statusLabel() }}</span>
                 </div>
@@ -153,7 +153,7 @@
                     @endforeach
                 </div>
                 @if ($this->nextSeriesSummary !== '')
-                    <p class="hf-small hf-mt-2 hf-mb-0" data-testid="ingame-series-next"><i class="bi bi-arrow-right-circle"></i> {{ $this->nextSeriesSummary }}</p>
+                    <p class="hf-small hf-mt-2 hf-mb-0" data-testid="ingame-series-next"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i> {{ $this->nextSeriesSummary }}</p>
                 @endif
             </section>
         @endif
@@ -161,7 +161,7 @@
         @if ($correctionMode)
             <div class="hf-card hf-card--flat hf-mb-3" data-testid="ingame-correction-banner">
                 <div class="hf-between hf-wrap">
-                    <span class="hf-chip hf-chip--gold"><i class="bi bi-arrow-repeat"></i> Correction mode</span>
+                    <span class="hf-chip hf-chip--gold"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Correction mode</span>
                 </div>
                 <p class="hf-small hf-mt-1 hf-mb-0">You are editing a recorded result. A reason is required, and changes are written to the audit trail.</p>
             </div>
@@ -206,7 +206,7 @@
                                 <p class="hf-small hf-muted hf-mb-0">{{ $this->nextSeriesSummary }}</p>
                             </div>
                             <a class="hf-btn hf-btn--primary" href="{{ route('gameManage', ['match' => $this->nextSeriesGame->id]) }}" data-testid="ingame-next-game-link">
-                                <i class="bi bi-arrow-right-circle"></i> Go to Game {{ $this->nextSeriesGame->game_number }}
+                                <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Go to Game {{ $this->nextSeriesGame->game_number }}
                             </a>
                         </div>
                     </div>
@@ -259,8 +259,8 @@
                     </div>
                 </div>
                 <div class="hf-btn-row">
-                    <button type="button" class="hf-btn" wire:click="addOvertime" data-testid="ingame-add-overtime"><i class="bi bi-plus-lg"></i> Add overtime</button>
-                    <button type="button" class="hf-btn" wire:click="removeOvertime" data-testid="ingame-remove-overtime"><i class="bi bi-dash-lg"></i> Remove last OT</button>
+                    <button type="button" class="hf-btn" wire:click="addOvertime" data-testid="ingame-add-overtime"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add overtime</button>
+                    <button type="button" class="hf-btn" wire:click="removeOvertime" data-testid="ingame-remove-overtime"><i class="bi bi-dash-lg" aria-hidden="true"></i> Remove last OT</button>
                 </div>
             </section>
 
@@ -414,7 +414,7 @@
                 @endif
                 @if (! $correctionMode && $this->seriesAnchor)
                     <p class="hf-small hf-muted hf-mt-0 hf-mb-2" data-testid="ingame-series-hint">
-                        <i class="bi bi-info-circle"></i>
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
                         Publishing {{ $match->seriesGameLabel() }} locks it and updates the series. The next game opens when you are ready.
                     </p>
                 @endif
