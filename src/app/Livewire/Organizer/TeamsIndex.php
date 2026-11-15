@@ -108,6 +108,7 @@ class TeamsIndex extends Component
     public function tournaments(): Collection
     {
         return Tournament::query()
+            ->whereNull('archived_at')
             ->with('divisions')
             ->orderBy('start_date')
             ->orderBy('name')

@@ -34,6 +34,67 @@ class TournamentLifecycleService
         return true;
     }
 
+    public function archive(Tournament $tournament): bool
+    {
+        $tournament->refresh();
+
+        if ($tournament->isArchived()) {
+            return false;
+        }
+
+        $tournament->update(['archived_at' => now()]);
+
+        $this->auditLogger->log(
+            'tournament.archive',
+            'tournament',
+            $tournament->id,
+            ['archived_at' => null],
+            ['archived_at' => $tournament->archived_at?->toIso8601String()],
+            $tournament->organization_id,
+        );
+
+        return true;
+    }
+
+    public function restore(Tournament $tournament): bool
+    {
+        $tournament->refresh();
+
+        if (! $tournament->isArchived()) {
+            return false;
+        }
+
+        $archivedAt = $tournament->archived_at?->toIso8601String();
+        $tournament->update(['archived_at' => null]);
+
+        $this->auditLogger->log(
+            'tournament.restore',
+            'tournament',
+            $tournament->id,
+            ['archived_at' => $archivedAt],
+            ['archived_at' => null],
+            $tournament->organization_id,
+        );
+
+        return true;
+    }
+
+    public function delete(Tournament $tournament): bool
+    {
+        $tournament->refresh();
+
+        $this->auditLogger->log(
+            'tournament.delete',
+            'tournament',
+            $tournament->id,
+            ['name' => $tournament->name, 'status' => $tournament->status],
+            null,
+            $tournament->organization_id,
+        );
+
+        return (bool) $tournament->delete();
+    }
+
     public function syncCompletion(Tournament $tournament, ?Team $champion = null): bool
     {
         $tournament->refresh();

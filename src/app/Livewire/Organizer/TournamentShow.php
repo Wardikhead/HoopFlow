@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\BracketService;
 use App\Services\SchedulingService;
+use App\Services\TournamentLifecycleService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -352,6 +353,75 @@ class TournamentShow extends Component
         );
     }
 
+    public function requestArchiveTournament(): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('archive', $tournament);
+
+        if ($tournament->isArchived()) {
+            $this->toast('This tournament is already archived.', 'Nothing to archive', 'warning');
+
+            return;
+        }
+
+        $this->openConfirm(
+            'Archive '.$tournament->name.'?',
+            'The tournament leaves the default list. Registrations, brackets, and results are kept, and you can restore it later.',
+            'Archive tournament',
+            'primary',
+            'archive-tournament',
+        );
+    }
+
+    public function requestRestoreTournament(): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('unarchive', $tournament);
+
+        if (! $tournament->isArchived()) {
+            $this->toast('This tournament is not archived.', 'Nothing to restore', 'warning');
+
+            return;
+        }
+
+        $this->openConfirm(
+            'Restore '.$tournament->name.'?',
+            'The tournament returns to the default list with its original status and schedule intact.',
+            'Restore tournament',
+            'primary',
+            'restore-tournament',
+        );
+    }
+
+    public function requestDeleteTournament(): void
+    {
+        $tournament = $this->tournament;
+
+        if (! $tournament instanceof Tournament) {
+            return;
+        }
+
+        Gate::authorize('delete', $tournament);
+
+        $this->openConfirm(
+            'Delete '.$tournament->name.'?',
+            'This takes the tournament off every list and desk. The record is retained behind the scenes for recovery, but it cannot be opened again from the app.',
+            'Delete tournament',
+            'danger',
+            'delete-tournament',
+        );
+    }
+
     public function requestGenerateSchedule(): void
     {
         $tournament = $this->tournament;
@@ -416,11 +486,18 @@ class TournamentShow extends Component
         $action = $this->confirmAction;
         $this->resetConfirm();
 
-        if ($action !== 'generate-bracket') {
+        $tournament = $this->tournament;
+
+        if ($tournament instanceof Tournament
+            && in_array($action, ['archive-tournament', 'restore-tournament', 'delete-tournament'], true)) {
+            $this->confirmLifecycleAction($action, $tournament);
+
             return;
         }
 
-        $tournament = $this->tournament;
+        if ($action !== 'generate-bracket') {
+            return;
+        }
 
         if (! $tournament instanceof Tournament) {
             return;
@@ -438,6 +515,43 @@ class TournamentShow extends Component
         } catch (InvalidArgumentException $exception) {
             $this->toast($exception->getMessage(), 'Could not generate bracket', 'danger');
         }
+    }
+
+    protected function confirmLifecycleAction(string $action, Tournament $tournament): void
+    {
+        $lifecycle = app(TournamentLifecycleService::class);
+
+        $handled = match ($action) {
+            'archive-tournament' => Gate::allows('archive', $tournament) && $lifecycle->archive($tournament),
+            'restore-tournament' => Gate::allows('unarchive', $tournament) && $lifecycle->restore($tournament),
+            'delete-tournament' => Gate::allows('delete', $tournament) && $lifecycle->delete($tournament),
+            default => false,
+        };
+
+        if (! $handled) {
+            $this->toast('That action is not available for this tournament.', 'Nothing changed', 'warning');
+
+            return;
+        }
+
+        if ($action === 'delete-tournament') {
+            $this->redirectRoute('tournaments', navigate: true);
+
+            return;
+        }
+
+        unset($this->tournament);
+
+        match ($action) {
+            'archive-tournament' => $this->toast(
+                $tournament->name.' is out of the default list. Restore it from the Archived filter.',
+                'Tournament archived',
+            ),
+            default => $this->toast(
+                $tournament->name.' is back in the default list.',
+                'Tournament restored',
+            ),
+        };
     }
 
     public function cancelConfirm(): void

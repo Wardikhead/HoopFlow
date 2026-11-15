@@ -9,15 +9,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property array<string, mixed>|null $rules_json
+ * @property Carbon|null $archived_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'description', 'start_date', 'end_date', 'status', 'payment_method', 'payment_account', 'rules_json', 'created_by'])]
+#[Fillable(['organization_id', 'name', 'slug', 'description', 'start_date', 'end_date', 'status', 'payment_method', 'payment_account', 'rules_json', 'created_by', 'archived_at'])]
 class Tournament extends Model
 {
     /** @use HasFactory<Factory> */
-    use BelongsToOrganization, HasFactory;
+    use BelongsToOrganization, HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
@@ -25,7 +28,13 @@ class Tournament extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'rules_json' => 'array',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
     }
 
     /**

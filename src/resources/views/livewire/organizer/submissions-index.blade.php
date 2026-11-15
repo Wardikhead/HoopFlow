@@ -186,7 +186,7 @@
                                             $document = $player->eligibilityDocuments
                                                 ->firstWhere('type', \App\Services\EligibilityService::DOCUMENT_TYPE);
                                             $documentStatus = $document?->status ?? 'pending';
-                                            $editable = in_array($review->status, ['submitted', 'approved'], true);
+                                            $editable = in_array($review->status, ['submitted', 'pending', 'approved'], true);
                                             $ageAtStart = $reviewEligibilityService->ageAtTournamentStart($player->birthdate, $review->tournament);
                                             $ageIssue = $reviewEligibilityService->ageIssue($player->birthdate, $review->division, $review->tournament);
                                         @endphp
@@ -272,7 +272,7 @@
                 </div>
                 <div class="hf-dialog__foot hf-dialog__foot--sticky">
                     <button type="button" class="hf-btn" wire:click="closeReview()" data-testid="submission-detail-close">Close</button>
-                    @if ($review->status === 'submitted')
+                    @if (in_array($review->status, ['submitted', 'pending'], true))
                         <button type="button" class="hf-btn hf-btn--danger" wire:click="reject({{ $review->id }})" data-testid="submission-detail-reject">Reject</button>
                         @if ($review->tournament?->seedsLocked())
                             <span class="hf-chip hf-chip--gold" data-testid="submission-detail-seeds-locked"><i class="bi bi-lock-fill" aria-hidden="true"></i>Seeds locked</span>
@@ -319,7 +319,7 @@
                                 @endforeach
                             </ul>
                             <label class="hf-check">
-                                <input type="checkbox" wire:model="approveAnyway" data-testid="submission-approve-anyway" @error('approveAnyway') aria-invalid="true" aria-describedby="approveAnyway-error" @enderror>
+                                <input type="checkbox" wire:model.live="approveAnyway" data-testid="submission-approve-anyway" @error('approveAnyway') aria-invalid="true" aria-describedby="approveAnyway-error" @enderror>
                                 Approve anyway
                             </label>
                         </div>
@@ -328,7 +328,7 @@
                 </div>
                 <div class="hf-dialog__foot hf-dialog__foot--sticky">
                     <button type="button" class="hf-btn" wire:click="cancelApprove()" data-testid="submission-approve-cancel">Cancel</button>
-                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" wire:loading.class="is-loading" wire:loading.attr="disabled" data-testid="submission-approve-confirm" @disabled($ageBlockers->isNotEmpty() || ($overrideIssues->isNotEmpty() && ! $approveAnyway))>Approve team</button>
+                    <button type="button" class="hf-btn hf-btn--primary" wire:click="confirmApprove" wire:loading.class="is-loading" wire:loading.attr="disabled" data-testid="submission-approve-confirm" @disabled($ageBlockers->isNotEmpty())>Approve team</button>
                 </div>
             </dialog>
         @endif

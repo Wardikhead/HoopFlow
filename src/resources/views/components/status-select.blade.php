@@ -27,16 +27,62 @@
             this.open = true;
             this.$nextTick(() => this.place());
         },
+        containingBlock(element) {
+            let node = element?.parentElement;
+
+            while (node && node !== document.documentElement && node !== document.body) {
+                const style = getComputedStyle(node);
+                const contained = (style.contain || '').split(' ').some((value) => ['paint', 'layout', 'strict', 'content'].includes(value));
+                const willChange = (style.willChange || '').split(',').map((value) => value.trim()).some((value) => ['transform', 'perspective', 'filter'].includes(value));
+                const backdrop = typeof style.backdropFilter === 'string' && style.backdropFilter !== 'none';
+                const container = typeof style.containerType === 'string' && style.containerType !== 'normal';
+
+                if (style.transform !== 'none'
+                    || style.perspective !== 'none'
+                    || style.filter !== 'none'
+                    || backdrop
+                    || container
+                    || contained
+                    || willChange) {
+                    return { element: node, rect: node.getBoundingClientRect() };
+                }
+
+                node = node.parentElement;
+            }
+
+            return null;
+        },
         place() {
-            const rect = this.$refs.trigger.getBoundingClientRect();
-            const width = Math.max(rect.width, 252);
-            const menuHeight = this.$refs.menu ? this.$refs.menu.offsetHeight : 190;
-            this.position.width = width;
-            this.position.left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+            const trigger = this.$refs.trigger;
+            const menu = this.$refs.menu;
+
+            if (! trigger) {
+                return;
+            }
+
+            const rect = trigger.getBoundingClientRect();
+            const available = Math.max(200, window.innerWidth - 16);
+            const width = Math.min(320, Math.max(rect.width, 252), available);
+            const menuHeight = menu ? (menu.offsetHeight || 190) : 190;
+            const block = this.containingBlock(menu);
+            const origin = block
+                ? {
+                    left: block.rect.left + block.element.clientLeft,
+                    top: block.rect.top + block.element.clientTop,
+                    right: block.rect.left + block.element.clientLeft + block.element.clientWidth,
+                    bottom: block.rect.top + block.element.clientTop + block.element.clientHeight,
+                }
+                : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+
+            const left = Math.max(origin.left + 8, Math.min(rect.left, origin.right - width - 8));
             const below = rect.bottom + 6;
-            this.position.top = below + menuHeight > window.innerHeight - 8
-                ? Math.max(8, rect.top - menuHeight - 6)
+            const top = below + menuHeight > origin.bottom - 8
+                ? Math.max(origin.top + 8, rect.top - menuHeight - 6)
                 : below;
+
+            this.position.width = width;
+            this.position.left = left - origin.left;
+            this.position.top = top - origin.top;
         },
         close(focus) {
             this.open = false;
@@ -69,6 +115,7 @@
     x-on:click.outside="open = false"
     x-on:scroll.document.capture="open = false"
     x-on:resize.window="open = false"
+    x-on:animationend.window="if (open) place()"
 >
     <button
         type="button"
