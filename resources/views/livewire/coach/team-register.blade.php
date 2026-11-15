@@ -28,21 +28,21 @@
     @if (! $tournament)
         <div class="hf-empty" data-testid="register-not-found">
             <i class="bi bi-trophy" aria-hidden="true"></i>
-            <h3>Tournament not found</h3>
+            <h1>Tournament not found</h1>
             <p>Choose an open tournament from the directory.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Browse tournaments</a>
         </div>
     @elseif ($tournament->status !== 'registration-open')
         <div class="hf-empty" data-testid="register-closed">
             <i class="bi bi-lock" aria-hidden="true"></i>
-            <h3>Registration is closed</h3>
+            <h1>Registration is closed</h1>
             <p>{{ $tournament->name }} is not accepting new teams.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Find an open tournament</a>
         </div>
     @elseif ($existingTeam)
         <div class="hf-empty" data-testid="register-existing">
             <i class="bi bi-check2-circle" aria-hidden="true"></i>
-            <h3>Team already registered</h3>
+            <h1>Team already registered</h1>
             <p>{{ $existingTeam->name }} is already in {{ $tournament->name }} with status “{{ $existingRegistration?->status === 'submitted' ? 'pending' : ($existingRegistration?->status ?? 'pending') }}”.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('myTeam', array_filter(['team' => $existingTeam->id, 'tournament' => $tournament->id])) }}">Open my team</a>
         </div>
@@ -56,7 +56,7 @@
                 </p>
             </div>
             <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="register-cancel"><i class="bi bi-arrow-left"></i> Tournament</a>
+                <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="register-cancel"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tournament</a>
             </div>
         </header>
 
@@ -81,7 +81,7 @@
                 <div class="hf-between hf-mb-2">
                     <p class="hf-small hf-muted hf-mb-0">Coach account: {{ auth()->user()?->name }}</p>
                     <button type="button" class="hf-btn hf-btn--sm" wire:click="fillDemo" data-testid="register-fill-demo">
-                        <i class="bi bi-magic"></i> Fill sample data
+                        <i class="bi bi-magic" aria-hidden="true"></i> Fill sample data
                     </button>
                 </div>
                 <div class="hf-form-grid">
@@ -132,7 +132,7 @@
                         <p class="hf-small hf-muted hf-mb-0">Guardian consent and documents are reviewed by the organizer after submission.</p>
                     </div>
                     <button type="button" class="hf-btn hf-btn--sm" wire:click="addPlayer" data-testid="register-add-player">
-                        <i class="bi bi-plus-lg"></i> Add player
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add player
                     </button>
                 </div>
                 @error('players') <p class="hf-field-error" id="players-error">{{ $message }}</p> @enderror

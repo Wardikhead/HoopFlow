@@ -6,7 +6,7 @@
     @if (! $tournament)
         <div class="hf-empty" data-testid="schedule-empty">
             <i class="bi bi-calendar3" aria-hidden="true"></i>
-            <h3>Tournament not found</h3>
+            <h1>Tournament not found</h1>
             <p>The schedule link is invalid or the demo has been reset.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>
@@ -62,11 +62,11 @@
                 <div class="hf-card hf-mb-3">
                     <div class="hf-between hf-mb-2">
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(-1)" data-testid="schedule-month-prev">
-                            <i class="bi bi-chevron-left"></i> Prev
+                            <i class="bi bi-chevron-left" aria-hidden="true"></i> Prev
                         </button>
                         <strong class="hf-section-title hf-mb-0" data-testid="schedule-month-label">{{ $this->monthLabel }}</strong>
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="navigateMonth(1)" data-testid="schedule-month-next">
-                            Next <i class="bi bi-chevron-right"></i>
+                            Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
                         </button>
                     </div>
 
@@ -127,11 +127,11 @@
 
                     <div class="hf-between hf-mt-2">
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="shiftWeek(-1)" data-testid="schedule-week-prev">
-                            <i class="bi bi-arrow-left"></i> Week
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Week
                         </button>
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="firstMatchday" data-testid="schedule-first-day">First matchday</button>
                         <button type="button" class="hf-btn hf-btn--sm" wire:click="shiftWeek(1)" data-testid="schedule-week-next">
-                            Week <i class="bi bi-arrow-right"></i>
+                            Week <i class="bi bi-arrow-right" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -151,7 +151,7 @@
                                     wire:click="toggleCourt({{ $court->id }})"
                                     aria-pressed="{{ $active ? 'true' : 'false' }}"
                                     data-testid="schedule-court-{{ $court->id }}">
-                                <i class="bi bi-geo-alt"></i> {{ $court->name }}
+                                <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $court->name }}
                             </button>
                         @endforeach
                     </div>

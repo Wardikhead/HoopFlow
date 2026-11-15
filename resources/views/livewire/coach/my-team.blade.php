@@ -79,21 +79,21 @@
                     {{ implode(' · ', array_filter([$this->coachName(), $team->city, $this->venueName])) }}
                 </p>
                 <div class="hf-page-meta">
-                    <span><i class="bi bi-shield-check"></i><x-status-chip :status="$status" /></span>
+                    <span><i class="bi bi-shield-check" aria-hidden="true"></i><x-status-chip :status="$status" /></span>
                     <span>
-                        <i class="bi bi-cash-coin"></i>
+                        <i class="bi bi-cash-coin" aria-hidden="true"></i>
                         @if ($payment)
                             <x-status-chip :status="$this->paymentChipStatus()" />
                         @else
                             <span class="hf-chip hf-chip--slate">No payment</span>
                         @endif
                     </span>
-                    <span><i class="bi bi-people"></i>{{ $playerCount }} players</span>
+                    <span><i class="bi bi-people" aria-hidden="true"></i>{{ $playerCount }} players</span>
                 </div>
             </div>
             <div class="hf-page-actions">
                 <a class="hf-btn" href="{{ route('teamShow', array_filter(['team' => $team->id, 'tournament' => $tournament?->id])) }}" data-testid="my-team-public">Public profile</a>
-                <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="my-team-register-another"><i class="bi bi-plus-lg"></i> Register another team</a>
+                <a class="hf-btn" href="{{ route('tournaments') }}" data-testid="my-team-register-another"><i class="bi bi-plus-lg" aria-hidden="true"></i> Register another team</a>
             </div>
         </header>
 
@@ -187,7 +187,7 @@
                 <div class="hf-section-head">
                     <h2 class="hf-section-title">Roster ({{ $playerCount }})</h2>
                     @if ($locked)
-                        <span class="hf-chip hf-chip--slate"><i class="bi bi-lock"></i> Locked after verification</span>
+                        <span class="hf-chip hf-chip--slate"><i class="bi bi-lock" aria-hidden="true"></i> Locked after verification</span>
                     @else
                         <button
                             type="button"
@@ -197,7 +197,7 @@
                             wire:loading.class="is-loading"
                             @disabled($playerCount >= 12)
                         >
-                            <i class="bi bi-plus-lg"></i> Add player
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add player
                         </button>
                     @endif
                 </div>
@@ -246,7 +246,7 @@
                                                             aria-label="Edit {{ $playerName }}"
                                                             data-testid="my-team-edit-{{ $player->id }}"
                                                         >
-                                                            <i class="bi bi-pencil-square"></i>
+                                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                         </button>
                                                         <button
                                                             type="button"
@@ -255,7 +255,7 @@
                                                             aria-label="Remove {{ $playerName }}"
                                                             data-testid="my-team-remove-{{ $player->id }}"
                                                         >
-                                                            <i class="bi bi-trash3"></i>
+                                                            <i class="bi bi-trash3" aria-hidden="true"></i>
                                                         </button>
                                                     </div>
                                                 </td>

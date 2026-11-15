@@ -15,7 +15,7 @@
             <p class="hf-page-desc">Review rosters, consent, documents, and payment references before a team enters the bracket.</p>
         </div>
         <div class="hf-page-actions">
-            <a class="hf-btn" href="{{ route('payments') }}" data-testid="submissions-open-payments"><i class="bi bi-credit-card"></i> Payments</a>
+            <a class="hf-btn" href="{{ route('payments') }}" data-testid="submissions-open-payments"><i class="bi bi-credit-card" aria-hidden="true"></i> Payments</a>
         </div>
     </header>
 
@@ -168,9 +168,9 @@
                         <div class="hf-between">
                             <h3 class="hf-section-title hf-mb-0">Roster ({{ $reviewPlayers->count() }})</h3>
                             <div class="hf-status-legend" aria-hidden="true">
-                                <span class="hf-status-legend__item hf-status-legend__item--success"><i class="bi bi-check-circle-fill"></i>Verified</span>
-                                <span class="hf-status-legend__item hf-status-legend__item--warning"><i class="bi bi-hourglass-split"></i>Pending</span>
-                                <span class="hf-status-legend__item hf-status-legend__item--danger"><i class="bi bi-x-circle-fill"></i>Missing</span>
+                                <span class="hf-status-legend__item hf-status-legend__item--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Verified</span>
+                                <span class="hf-status-legend__item hf-status-legend__item--warning"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Pending</span>
+                                <span class="hf-status-legend__item hf-status-legend__item--danger"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>Missing</span>
                             </div>
                         </div>
                         <div class="hf-table-wrap hf-mt-1">

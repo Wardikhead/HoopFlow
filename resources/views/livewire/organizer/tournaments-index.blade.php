@@ -116,10 +116,10 @@
                 </div>
             </div>
             <div class="hf-flex hf-wrap hf-gap-3 hf-mt-2 hf-small hf-muted">
-                <span><i class="bi bi-geo-alt"></i> {{ $courts }} courts</span>
-                <span><i class="bi bi-cash"></i> {{ $money($tournament->entryFee()) }} entry</span>
-                <span><i class="bi bi-diagram-3"></i> {{ $matchesPlayed }} played</span>
-                <span><i class="bi bi-hourglass-split"></i> {{ $pending }} pending</span>
+                <span><i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $courts }} courts</span>
+                <span><i class="bi bi-cash" aria-hidden="true"></i> {{ $money($tournament->entryFee()) }} entry</span>
+                <span><i class="bi bi-diagram-3" aria-hidden="true"></i> {{ $matchesPlayed }} played</span>
+                <span><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ $pending }} pending</span>
             </div>
             <div class="hf-btn-row hf-mt-2">
                 @if ($role === 'coach' && $tournament->status === 'registration-open' && ! $coachTeam)

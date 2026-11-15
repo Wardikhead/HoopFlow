@@ -260,7 +260,7 @@
                         @endforeach
                     </div>
                     <button type="button" class="hf-btn hf-btn--sm hf-mt-2" wire:click="addCourt" data-testid="create-add-court">
-                        <i class="bi bi-plus-lg"></i> Add court
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add court
                     </button>
                     @error('courts') <p class="hf-field-error" id="courts-error">{{ $message }}</p> @enderror
                 </div>
@@ -324,9 +324,9 @@
                     <span class="hf-chip hf-chip--gold">{{ $filledCourts->count() }} courts</span>
                 </div>
                 <div class="hf-flex hf-wrap hf-gap-2 hf-mt-2 hf-small hf-muted">
-                    <span><i class="bi bi-clock"></i> {{ $slotMinutes }}-minute slots</span>
-                    <span><i class="bi bi-hourglass-split"></i> {{ $restMinutes }}-minute rest</span>
-                    <span><i class="bi bi-geo-alt"></i> {{ $filledCourts->isNotEmpty() ? $filledCourts->implode(' · ') : 'No courts yet' }}</span>
+                    <span><i class="bi bi-clock" aria-hidden="true"></i> {{ $slotMinutes }}-minute slots</span>
+                    <span><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ $restMinutes }}-minute rest</span>
+                    <span><i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $filledCourts->isNotEmpty() ? $filledCourts->implode(' · ') : 'No courts yet' }}</span>
                 </div>
             </div>
 

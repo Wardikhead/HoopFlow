@@ -12,7 +12,7 @@
     @if ($this->tournaments->isEmpty())
         <div class="hf-empty" data-testid="announcement-no-tournaments">
             <i class="bi bi-megaphone" aria-hidden="true"></i>
-            <h3>No tournaments yet</h3>
+            <h1>No tournaments yet</h1>
             <p>Create a tournament before publishing a bulletin.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournamentCreate') }}">Create tournament</a>
         </div>
@@ -29,7 +29,7 @@
                 <p class="hf-page-desc">Publish a venue, schedule, or eligibility notice to the right audience.</p>
             </div>
             <div class="hf-page-actions">
-                <a class="hf-btn" href="{{ route('announcements') }}" data-testid="announcement-composer-back"><i class="bi bi-arrow-left"></i> Announcements</a>
+                <a class="hf-btn" href="{{ route('announcements') }}" data-testid="announcement-composer-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Announcements</a>
             </div>
         </header>
 

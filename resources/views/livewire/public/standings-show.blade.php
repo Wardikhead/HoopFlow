@@ -6,7 +6,7 @@
     @if (! $tournament)
         <div class="hf-empty" data-testid="standings-not-found">
             <i class="bi bi-bar-chart" aria-hidden="true"></i>
-            <h3>Tournament not found</h3>
+            <h1>Tournament not found</h1>
             <p>The standings link is invalid or the demo has been reset.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}">Back to tournaments</a>
         </div>

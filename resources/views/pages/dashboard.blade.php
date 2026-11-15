@@ -1,4 +1,4 @@
-﻿@extends('layouts.public')
+@extends('layouts.public')
 
 @section('title', 'Dashboard')
 
@@ -98,19 +98,19 @@
                     <span class="hf-chip hf-chip--warning">Review</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $pending }} pending teams</h3>
                     <p class="hf-muted hf-small hf-mb-0">Roster, consent, and documents are waiting for an organizer decision.</p>
-                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                 </a>
                 <a class="hf-card hf-card--flat hf-card--link" href="{{ route('payments', ['status' => 'pending']) }}" data-testid="dashboard-action-payments">
                     <span class="hf-chip hf-chip--danger">Verify</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $unpaidCount }} payments</h3>
                     <p class="hf-muted hf-small hf-mb-0">Collected {{ $money($collected) }} of {{ $money($expected) }}.</p>
-                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                 </a>
                 <a class="hf-card hf-card--flat hf-card--link" href="{{ $scoreHref }}" data-testid="dashboard-action-score">
                     <span class="hf-chip hf-chip--primary">Score</span>
                     <h3 class="hf-section-title hf-mt-2">{{ $matchesScheduled }} games left</h3>
                     <p class="hf-muted hf-small hf-mb-0">Open the quarterfinal console and advance the winner.</p>
-                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                 </a>
             </div>
 
@@ -183,7 +183,7 @@
 
             <div class="hf-section-head">
                 <h2 class="hf-section-title">Announcements</h2>
-                <a class="hf-section-link" href="{{ route('announcements', $tournament ? ['id' => $tournament->id] : []) }}">All</a>
+                <a class="hf-section-link" href="{{ route('announcements', $tournament ? ['id' => $tournament->id] : []) }}">All announcements</a>
             </div>
             <div class="hf-grid">
                 @forelse ($announcements as $announcement)

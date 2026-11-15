@@ -125,9 +125,9 @@
             </div>
 
             <div class="hf-flex hf-wrap hf-gap-2 hf-mb-2 hf-small hf-muted">
-                <span class="hf-chip hf-chip--slate"><i class="bi bi-clock"></i> Scheduled</span>
-                <span class="hf-chip hf-chip--success"><i class="bi bi-flag-fill"></i> Final</span>
-                <span class="hf-chip hf-chip--danger"><i class="bi bi-shield-x"></i> Forfeit</span>
+                <span class="hf-chip hf-chip--slate"><i class="bi bi-clock" aria-hidden="true"></i> Scheduled</span>
+                <span class="hf-chip hf-chip--success"><i class="bi bi-flag-fill" aria-hidden="true"></i> Final</span>
+                <span class="hf-chip hf-chip--danger"><i class="bi bi-shield-x" aria-hidden="true"></i> Forfeit</span>
                 <span>{{ $isOrganizer ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
             </div>
 
@@ -186,11 +186,11 @@
                 @endforeach
                 <div class="hf-between hf-mt-2">
                     <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.max(0, mobileRound - 1)" x-bind:disabled="mobileRound === 0" data-testid="bracket-prev-round">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
                     </button>
                     <span class="hf-small hf-muted" x-text="(mobileRound + 1) + ' of {{ $roundCount }}'"></span>
                     <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.min({{ $roundCount - 1 }}, mobileRound + 1)" x-bind:disabled="mobileRound === {{ $roundCount - 1 }}" data-testid="bracket-next-round">
-                        Next <i class="bi bi-arrow-right"></i>
+                        Next <i class="bi bi-arrow-right" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -319,7 +319,7 @@
                                 <strong>{{ $this->selectedSeriesSummary }}</strong>
                                 @if ($detailActiveGame && (int) $detailActiveGame->id !== (int) $detailMatch->id)
                                     <a class="hf-btn hf-btn--sm hf-btn--primary" href="{{ route('gameManage', ['match' => $detailActiveGame->id]) }}" data-testid="bracket-active-game">
-                                        <i class="bi bi-arrow-right-circle"></i> Game {{ $detailActiveGame->game_number }} is next
+                                        <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Game {{ $detailActiveGame->game_number }} is next
                                     </a>
                                 @endif
                             </div>
@@ -435,11 +435,11 @@
                     @if ($isOrganizer)
                         @if ($this->selectedSeriesGames->isNotEmpty())
                             <button type="button" class="hf-btn" wire:click="openGameChooser({{ $detailMatch->id }})" data-testid="bracket-in-game">
-                                <i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats
+                                <i class="bi bi-clipboard-pulse" aria-hidden="true"></i> In-game score &amp; player stats
                             </button>
                         @else
                             <a class="hf-btn" href="{{ route('gameManage', ['match' => $detailMatch->id]) }}" data-testid="bracket-in-game">
-                                <i class="bi bi-clipboard-pulse"></i> In-game score &amp; player stats
+                                <i class="bi bi-clipboard-pulse" aria-hidden="true"></i> In-game score &amp; player stats
                             </a>
                         @endif
                     @endif

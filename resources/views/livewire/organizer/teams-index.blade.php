@@ -56,12 +56,12 @@
             </div>
             <div class="hf-page-actions">
                 @if ($role === 'organizer')
-                    <a class="hf-btn" href="{{ route('teams') }}" data-testid="teams-change-tournament"><i class="bi bi-arrow-left"></i> Change tournament</a>
-                    <a class="hf-btn hf-btn--primary" href="{{ route('submissions') }}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check"></i> Review queue</a>
+                    <a class="hf-btn" href="{{ route('teams') }}" data-testid="teams-change-tournament"><i class="bi bi-arrow-left" aria-hidden="true"></i> Change tournament</a>
+                    <a class="hf-btn hf-btn--primary" href="{{ route('submissions') }}" data-testid="teams-review-queue"><i class="bi bi-clipboard-check" aria-hidden="true"></i> Review queue</a>
                 @elseif ($role === 'coach')
                     @php $openTournament = $this->openTournamentForCoach; @endphp
                     @if ($openTournament)
-                        <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $openTournament->id]) }}" data-testid="teams-register"><i class="bi bi-plus-lg"></i> Register team</a>
+                        <a class="hf-btn hf-btn--primary" href="{{ route('teamRegister', ['tournament' => $openTournament->id]) }}" data-testid="teams-register"><i class="bi bi-plus-lg" aria-hidden="true"></i> Register team</a>
                     @endif
                 @else
                     <a class="hf-btn" href="{{ route('dashboard') }}">Back to dashboard</a>
@@ -164,7 +164,7 @@
                                             <x-payment-chip :payment="$registration->payment" />
                                         @endif
                                     </span>
-                                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+                                    <span class="hf-card__arrow" aria-hidden="true"><i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                                 </span>
                             </div>
                             <dl class="hf-team-card__meta">
