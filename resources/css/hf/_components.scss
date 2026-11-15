@@ -1363,22 +1363,36 @@ a.hf-card:hover .hf-card__arrow,
 }
 
 .hf-password-bar {
+  position: relative;
   height: 5px;
+  overflow: hidden;
   border-radius: 999px;
   background: var(--hf-border);
-  transition: background-color 120ms ease;
 }
 
-.hf-password-bar.is-filled {
+.hf-password-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background: var(--hf-danger-ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition:
+    transform var(--hf-dur-standard) var(--hf-ease-out),
+    background-color var(--hf-dur-standard) linear;
 }
 
-.hf-score-2 .hf-password-bar.is-filled {
+.hf-password-bar.is-filled::before {
+  transform: scaleX(1);
+}
+
+.hf-score-2 .hf-password-bar.is-filled::before {
   background: var(--hf-warning-ink);
 }
 
-.hf-score-3 .hf-password-bar.is-filled,
-.hf-score-4 .hf-password-bar.is-filled {
+.hf-score-3 .hf-password-bar.is-filled::before,
+.hf-score-4 .hf-password-bar.is-filled::before {
   background: var(--hf-success-ink);
 }
 
@@ -1386,6 +1400,11 @@ a.hf-card:hover .hf-card__arrow,
   margin: 0;
   color: var(--hf-muted);
   font-size: 12px;
+  transition: color var(--hf-dur-standard) linear;
+}
+
+.hf-score-4 .hf-password-hint {
+  color: var(--hf-success-ink);
 }
 
 .hf-password-checks {
@@ -1403,10 +1422,92 @@ a.hf-card:hover .hf-card__arrow,
   align-items: center;
   color: var(--hf-muted);
   font-size: 12px;
+  transition: color var(--hf-dur-standard) linear;
+}
+
+.hf-password-check .bi {
+  transform-origin: center;
 }
 
 .hf-password-check.is-met {
   color: var(--hf-success-ink);
+}
+
+.hf-password-check.is-met .bi {
+  animation: hf-password-check-pop var(--hf-dur-expressive) var(--hf-ease-out);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hf-password-meter {
+    animation: hf-password-meter-in var(--hf-dur-expressive) var(--hf-ease-out) both;
+  }
+
+  .hf-score-4 .hf-password-bars {
+    animation: hf-password-meter-complete 520ms var(--hf-ease-out);
+  }
+
+  .hf-score-4 .hf-password-bar.is-filled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      color-mix(in srgb, #fff 65%, transparent) 50%,
+      transparent 80%
+    );
+    transform: translateX(-120%);
+    animation: hf-password-shine 560ms var(--hf-ease-out) 120ms both;
+    pointer-events: none;
+  }
+}
+
+@keyframes hf-password-meter-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hf-password-meter-complete {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  40% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes hf-password-shine {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes hf-password-check-pop {
+  0% {
+    transform: scale(0.6);
+  }
+
+  60% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @media (max-width: 520px) {
