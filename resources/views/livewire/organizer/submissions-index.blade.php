@@ -343,11 +343,12 @@
                 </div>
                 <div class="hf-dialog__body hf-dialog__body--split">
                     <div class="hf-min-w-0">
-                        <x-form-errors />
+                        <x-form-errors :targets="['rejectReason' => 'submissionRejectReason']" />
+                        <x-required-note class="hf-mb-2" />
                         <p class="hf-small hf-muted">Tell the coach what needs to change. The reason is shown on the coach's status page and written to the audit log.</p>
                         <div class="hf-field hf-field--full">
                             <label class="hf-label" for="submissionRejectReason">Reason</label>
-                            <textarea id="submissionRejectReason" class="hf-textarea" rows="4" wire:model="rejectReason" placeholder="Missing PSA birth certificate for two players." data-testid="submission-reject-reason"></textarea>
+                            <textarea id="submissionRejectReason" class="hf-textarea" rows="4" wire:model="rejectReason" placeholder="Missing PSA birth certificate for two players." required data-testid="submission-reject-reason"></textarea>
                         </div>
                     </div>
                     <aside class="hf-min-w-0">

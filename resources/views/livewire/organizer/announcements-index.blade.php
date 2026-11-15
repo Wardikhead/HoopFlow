@@ -127,6 +127,7 @@
                                  wire:key="announcement-pinned-{{ $announcement->id }}"
                                  wire:click="openAnnouncement({{ $announcement->id }})"
                                  wire:keydown.enter="openAnnouncement({{ $announcement->id }})"
+                                 x-on:keydown.space.prevent="$wire.openAnnouncement({{ $announcement->id }})"
                                  aria-haspopup="dialog"
                                  data-testid="announcement-{{ $announcement->id }}">
                             <div class="hf-between">
@@ -160,6 +161,7 @@
                                  wire:key="announcement-{{ $announcement->id }}"
                                  wire:click="openAnnouncement({{ $announcement->id }})"
                                  wire:keydown.enter="openAnnouncement({{ $announcement->id }})"
+                                 x-on:keydown.space.prevent="$wire.openAnnouncement({{ $announcement->id }})"
                                  aria-haspopup="dialog"
                                  data-testid="announcement-{{ $announcement->id }}">
                             <div class="hf-between">

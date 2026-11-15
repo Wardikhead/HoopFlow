@@ -7,6 +7,22 @@
         $existingRegistration = $existingTeam?->registrations->firstWhere('tournament_id', $tournament?->id);
         $division = $tournament?->divisions->first();
         $money = fn ($value) => '₱' . number_format((int) ($value ?? 0));
+        $errorTargets = [
+            'name' => 'registerTeamName',
+            'shortName' => 'registerShortName',
+            'city' => 'registerCity',
+            'coach' => 'registerCoach',
+            'avatarColor' => 'registerColor0',
+            'players' => 'register-roster',
+            'paymentMethod' => 'registerMethod',
+            'paymentRef' => 'registerRef',
+        ];
+        foreach ($players as $index => $player) {
+            $errorTargets["players.$index.name"] = "playerName$index";
+            $errorTargets["players.$index.number"] = "playerNumber$index";
+            $errorTargets["players.$index.position"] = "playerPosition$index";
+            $errorTargets["players.$index.birthdate"] = "playerBirthdate$index";
+        }
     @endphp
 
     @if (! $tournament)
@@ -59,7 +75,8 @@
 
         <div class="hf-wizard">
             <form wire:submit="save" class="hf-card hf-wizard__form" novalidate data-testid="register-form">
-                <x-form-errors />
+                <x-form-errors :targets="$errorTargets" />
+                <x-required-note class="hf-mb-2" />
             <section data-step-panel="0" @if ($step !== 0) hidden @endif>
                 <div class="hf-between hf-mb-2">
                     <p class="hf-small hf-muted hf-mb-0">Coach account: {{ auth()->user()?->name }}</p>
@@ -70,25 +87,25 @@
                 <div class="hf-form-grid">
                     <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerTeamName">Team name</label>
-                        <input class="hf-input" id="registerTeamName" type="text" wire:model="name" placeholder="San Antonio Vipers U17"
+                        <input class="hf-input" id="registerTeamName" type="text" wire:model="name" placeholder="San Antonio Vipers U17" required
                                @error('name') aria-invalid="true" aria-describedby="name-error" @enderror data-testid="register-team-name">
                         @error('name') <p class="hf-field-error" id="name-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerShortName">Short name (2–3 letters)</label>
-                        <input class="hf-input" id="registerShortName" type="text" wire:model="shortName" maxlength="3" placeholder="VPR"
+                        <input class="hf-input" id="registerShortName" type="text" wire:model="shortName" maxlength="3" placeholder="VPR" required
                                @error('shortName') aria-invalid="true" aria-describedby="shortName-error" @enderror data-testid="register-short-name">
                         @error('shortName') <p class="hf-field-error" id="shortName-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerCity">City</label>
-                        <input class="hf-input" id="registerCity" type="text" wire:model="city" placeholder="Pasig City"
+                        <input class="hf-input" id="registerCity" type="text" wire:model="city" placeholder="Pasig City" required
                                @error('city') aria-invalid="true" aria-describedby="city-error" @enderror data-testid="register-city">
                         @error('city') <p class="hf-field-error" id="city-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="hf-field hf-field--full">
                         <label class="hf-label" for="registerCoach">Coach</label>
-                        <input class="hf-input" id="registerCoach" type="text" wire:model="coach"
+                        <input class="hf-input" id="registerCoach" type="text" wire:model="coach" required
                                @error('coach') aria-invalid="true" aria-describedby="coach-error" @enderror data-testid="register-coach">
                         @error('coach') <p class="hf-field-error" id="coach-error">{{ $message }}</p> @enderror
                     </div>
@@ -97,7 +114,7 @@
                         <div class="hf-flex hf-wrap hf-gap-2">
                             @foreach (\App\Livewire\Coach\TeamRegister::COLORS as $index => $color)
                                 <label class="hf-check">
-                                    <input type="radio" wire:model="avatarColor" value="{{ $color['value'] }}" data-testid="register-color-{{ $index }}">
+                                    <input type="radio" id="registerColor{{ $index }}" wire:model="avatarColor" value="{{ $color['value'] }}" @if ($index === 0) required @endif data-testid="register-color-{{ $index }}">
                                     <span class="hf-shield" style="--team-color: {{ $color['value'] }}" aria-hidden="true"></span>
                                     {{ $color['label'] }}
                                 </label>
@@ -119,7 +136,7 @@
                     </button>
                 </div>
                 @error('players') <p class="hf-field-error" id="players-error">{{ $message }}</p> @enderror
-                <div data-testid="register-roster">
+                <div id="register-roster" data-testid="register-roster">
                     @foreach ($players as $index => $player)
                         <div class="hf-card hf-card--flat hf-mb-2" wire:key="player-row-{{ $index }}" data-player-row="{{ $index }}" data-testid="register-player-{{ $index }}">
                             <div class="hf-between hf-mb-1">
@@ -132,19 +149,19 @@
                             <div class="hf-form-grid">
                                 <div class="hf-field hf-field--full">
                                     <label class="hf-label" for="playerName{{ $index }}">Player name</label>
-                                    <input class="hf-input" id="playerName{{ $index }}" type="text" wire:model="players.{{ $index }}.name" placeholder="Full name"
+                                    <input class="hf-input" id="playerName{{ $index }}" type="text" wire:model="players.{{ $index }}.name" placeholder="Full name" required
                                            @error('players.'.$index.'.name') aria-invalid="true" aria-describedby="players-{{$index}}-name-error" @enderror data-testid="register-player-name-{{ $index }}">
                                     @error('players.'.$index.'.name') <p class="hf-field-error" id="players-{{$index}}-name-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerNumber{{ $index }}">Jersey number</label>
-                                    <input class="hf-input" id="playerNumber{{ $index }}" type="number" min="1" max="99" wire:model="players.{{ $index }}.number"
+                                    <input class="hf-input" id="playerNumber{{ $index }}" type="number" min="1" max="99" wire:model="players.{{ $index }}.number" required
                                            @error('players.'.$index.'.number') aria-invalid="true" aria-describedby="players-{{$index}}-number-error" @enderror data-testid="register-player-number-{{ $index }}">
                                     @error('players.'.$index.'.number') <p class="hf-field-error" id="players-{{$index}}-number-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerPosition{{ $index }}">Position</label>
-                                    <select class="hf-select" id="playerPosition{{ $index }}" wire:model="players.{{ $index }}.position" data-testid="register-player-position-{{ $index }}">
+                                    <select class="hf-select" id="playerPosition{{ $index }}" wire:model="players.{{ $index }}.position" required data-testid="register-player-position-{{ $index }}">
                                         @foreach (\App\Livewire\Coach\TeamRegister::POSITIONS as $position)
                                             <option value="{{ $position }}">{{ $position }}</option>
                                         @endforeach
@@ -153,7 +170,7 @@
                                 </div>
                                 <div class="hf-field">
                                     <label class="hf-label" for="playerBirthdate{{ $index }}">Birthdate</label>
-                                    <input class="hf-input" id="playerBirthdate{{ $index }}" type="date" max="{{ now()->format('Y-m-d') }}" wire:model="players.{{ $index }}.birthdate"
+                                    <input class="hf-input" id="playerBirthdate{{ $index }}" type="date" max="{{ now()->format('Y-m-d') }}" wire:model="players.{{ $index }}.birthdate" required
                                            @error('players.'.$index.'.birthdate') aria-invalid="true" aria-describedby="players-{{$index}}-birthdate-error" @enderror data-testid="register-player-birthdate-{{ $index }}">
                                     @error('players.'.$index.'.birthdate') <p class="hf-field-error" id="players-{{$index}}-birthdate-error">{{ $message }}</p> @enderror
                                 </div>
@@ -187,7 +204,7 @@
                 <div class="hf-form-grid hf-mt-3">
                     <div class="hf-field">
                         <label class="hf-label" for="registerMethod">Payment method</label>
-                        <select class="hf-select" id="registerMethod" wire:model="paymentMethod"
+                        <select class="hf-select" id="registerMethod" wire:model="paymentMethod" required
                                 @error('paymentMethod') aria-invalid="true" aria-describedby="paymentMethod-error" @enderror data-testid="register-payment-method">
                             <option value="GCash">GCash</option>
                             <option value="Maya">Maya</option>
@@ -198,7 +215,7 @@
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="registerRef">Reference</label>
-                        <input class="hf-input" id="registerRef" type="text" wire:model="paymentRef" placeholder="GCASH-9283746"
+                        <input class="hf-input" id="registerRef" type="text" wire:model="paymentRef" placeholder="GCASH-9283746" required
                                @error('paymentRef') aria-invalid="true" aria-describedby="paymentRef-error" @enderror data-testid="register-payment-ref">
                         @error('paymentRef') <p class="hf-field-error" id="paymentRef-error">{{ $message }}</p> @enderror
                     </div>

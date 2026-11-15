@@ -345,7 +345,8 @@
 }
 
 .hf-matchday__body { position: relative; z-index: 1; min-width: 0; }
-.hf-eyebrow--on-dark { color: var(--hf-gold-ink); }
+.hf-eyebrow--on-dark { color: var(--hf-gold); }
+.hf-matchday .hf-chip--primary { color: var(--hf-primary-on-dark); }
 .hf-matchday__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .hf-matchday__title {
   margin: 4px 0 0;
@@ -619,7 +620,7 @@
 
 .hf-auth-points .bi {
   margin-top: 2px;
-  color: var(--hf-gold-ink);
+  color: var(--hf-gold);
 }
 
 .hf-auth-shell .hf-auth-card {

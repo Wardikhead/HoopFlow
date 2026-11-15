@@ -33,6 +33,7 @@
                     'role' => 'registerRole',
                     'organization' => 'registerOrganization',
                 ]" />
+                <x-required-note class="hf-mb-2" />
 
                 <div class="hf-form-grid">
                     <div class="hf-field hf-field--full">
@@ -45,6 +46,7 @@
                             placeholder="Juan Dela Cruz"
                             value="{{ old('name') }}"
                             data-testid="register-name"
+                            required
                             @error('name') aria-invalid="true" aria-describedby="registerName-error" @enderror
                         >
                         @error('name')
@@ -63,6 +65,7 @@
                             placeholder="you@club.ph"
                             value="{{ old('email') }}"
                             data-testid="register-email"
+                            required
                             @error('email') aria-invalid="true" aria-describedby="registerEmail-error" @enderror
                         >
                         @error('email')
@@ -79,6 +82,7 @@
                             type="password"
                             autocomplete="new-password"
                             data-testid="register-password"
+                            required
                             @error('password') aria-invalid="true" aria-describedby="registerPassword-error" @enderror
                         >
                         @error('password')
@@ -93,6 +97,7 @@
                             id="registerRole"
                             name="role"
                             data-testid="register-role"
+                            required
                             @error('role') aria-invalid="true" aria-describedby="registerRole-error" @enderror
                         >
                             <option value="coach" @selected(old('role', 'coach') === 'coach')>Coach</option>
