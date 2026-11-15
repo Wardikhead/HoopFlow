@@ -12,6 +12,7 @@
 @endphp
 
 @section('title', 'Tournaments')
+@section('meta-description', 'Manage tournaments - divisions, brackets, schedules, and live status across your HoopFlow league.')
 
 @section('breadcrumbs')
     <x-breadcrumbs :items="[

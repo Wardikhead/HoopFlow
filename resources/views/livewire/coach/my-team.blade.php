@@ -1,5 +1,6 @@
 <div>
     @section('title', 'My team')
+    @section('meta-description', 'Coach workspace - roster, eligibility documents, and registration status for your HoopFlow team.')
 
     @php
         $team = $this->team;
@@ -65,7 +66,7 @@
         </header>
         <div class="hf-empty" data-testid="my-team-empty">
             <i class="bi bi-person-plus" aria-hidden="true"></i>
-            <h3>No team attached</h3>
+            <h2>No team attached</h2>
             <p>Register a team for an open tournament to start the coach journey.</p>
             <a class="hf-btn hf-btn--primary" href="{{ route('tournaments') }}" data-testid="my-team-browse">Browse tournaments</a>
         </div>
