@@ -8,6 +8,7 @@ import { initCalendar } from './ui/calendar';
 import { initCountUp } from './ui/countup';
 import { initFeedback } from './ui/feedback';
 import { initMotion } from './ui/motion';
+import { registerPasswordMeter } from './ui/password-strength';
 import { initPreferences, syncPreferenceButtons } from './ui/preferences';
 import { initScoreConsole } from './ui/score-console';
 import { initScorekeeper } from './ui/scorekeeper';
@@ -28,6 +29,7 @@ initNavRail();
 initShell();
 initMoreSheet();
 initValidation();
+registerPasswordMeter();
 registerToasts();
 
 // Native <dialog> elements keep their open state outside the DOM attributes that
