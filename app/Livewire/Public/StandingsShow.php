@@ -67,8 +67,8 @@ class StandingsShow extends Component
         if (is_numeric($requested) && (int) $requested > 0) {
             $this->tournamentId = (int) $requested;
         } else {
-            $first = Tournament::query()->where('status', 'active')->orderBy('id')->first()
-                ?? Tournament::query()->orderBy('id')->first();
+            $first = Tournament::query()->whereNull('archived_at')->where('status', 'active')->orderBy('id')->first()
+                ?? Tournament::query()->whereNull('archived_at')->orderBy('id')->first();
 
             $this->tournamentId = $first instanceof Tournament ? (int) $first->id : 0;
         }
@@ -104,7 +104,7 @@ class StandingsShow extends Component
     #[Computed]
     public function tournaments(): Collection
     {
-        return Tournament::query()->orderBy('name')->get();
+        return Tournament::query()->whereNull('archived_at')->orderBy('name')->get();
     }
 
     /**

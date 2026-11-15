@@ -96,6 +96,7 @@ class TeamRegister extends Component
 
         if ($this->tournament_id === null) {
             $openId = Tournament::query()
+                ->whereNull('archived_at')
                 ->where('status', 'registration-open')
                 ->orderBy('id')
                 ->value('id');
@@ -130,7 +131,9 @@ class TeamRegister extends Component
     #[Computed]
     public function tournament(): ?Tournament
     {
-        return $this->tournament_id !== null ? Tournament::find($this->tournament_id) : null;
+        return $this->tournament_id !== null
+            ? Tournament::query()->whereNull('archived_at')->find($this->tournament_id)
+            : null;
     }
 
     #[Computed]

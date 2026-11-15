@@ -103,7 +103,8 @@
         @php
             $authUser = auth()->user();
             $role = $authUser->hasRole('organizer') ? 'organizer' : ($authUser->hasRole('coach') ? 'coach' : 'fan');
-            $activeTournament = \App\Models\Tournament::where('status', 'active')->first() ?? \App\Models\Tournament::first();
+            $activeTournament = \App\Models\Tournament::whereNull('archived_at')->where('status', 'active')->first()
+                ?? \App\Models\Tournament::whereNull('archived_at')->first();
 
             $navItems = [
                 'dashboard' => ['label' => 'Dashboard', 'icon' => 'speedometer2', 'route' => 'dashboard'],

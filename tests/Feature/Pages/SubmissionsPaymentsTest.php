@@ -3,6 +3,7 @@
 use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\Payment;
+use App\Models\Player;
 use App\Models\Registration;
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
@@ -350,4 +351,78 @@ it('approves incomplete eligibility after the override and locks the roster', fu
 
     expect($registration->fresh()->status)->toBe('approved')
         ->and($registration->fresh()->roster_locked_at)->not->toBeNull();
+});
+
+it('keeps the submission roster in jersey order as statuses change', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $players = $registration->team->players()->orderBy('id')->take(3)->get();
+
+    $players[0]->update(['jersey_number' => 99]);
+    $players[1]->update(['jersey_number' => 5]);
+    $players[2]->update(['jersey_number' => 42]);
+
+    $expected = Player::query()
+        ->where('team_id', $registration->team_id)
+        ->orderBy('jersey_number')
+        ->orderBy('id')
+        ->pluck('id')
+        ->all();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('openReview', $registration->id);
+
+    expect($component->instance()->findRegistration($registration->id)->team->players->pluck('id')->all())
+        ->toBe($expected);
+
+    $component->call('updateConsent', $expected[1], 'missing');
+
+    expect($component->instance()->findRegistration($registration->id)->team->players->pluck('id')->all())
+        ->toBe($expected);
+});
+
+it('includes pending registrations in the pending submission queue and kpi', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $registration->update(['status' => 'pending']);
+
+    $component = Livewire::actingAs($organizer)->test(SubmissionsIndex::class);
+
+    expect($component->instance()->registrations->pluck('id')->all())->toContain($registration->id)
+        ->and($component->instance()->kpis['pending'])->toBe(
+            Registration::query()->whereIn('status', ['submitted', 'pending'])->count(),
+        );
+});
+
+it('approves a registration that is marked pending', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $registration->update(['status' => 'pending']);
+
+    Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->set('approveAnyway', true)
+        ->call('confirmApprove')
+        ->assertHasNoErrors();
+
+    expect($registration->fresh()->status)->toBe('approved');
+});
+
+it('renders a live approve-anyway checkbox without disabling the confirm button', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $registration = Registration::where('status', 'submitted')->firstOrFail();
+    $registration->team->players()->update([
+        'consent_status' => 'pending',
+        'consent_at' => null,
+    ]);
+
+    $html = Livewire::actingAs($organizer)
+        ->test(SubmissionsIndex::class)
+        ->call('approve', $registration->id)
+        ->html();
+
+    expect($html)->toContain('wire:model.live="approveAnyway"')
+        ->and($html)->not->toMatch('/data-testid="submission-approve-confirm"[^>]*\bdisabled\b/');
 });

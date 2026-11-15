@@ -30,10 +30,11 @@ class DashboardController extends Controller
         }
 
         $tournament = Tournament::query()
+            ->whereNull('archived_at')
             ->where('status', 'active')
             ->orderBy('start_date')
             ->first()
-            ?? Tournament::query()->orderBy('start_date')->first();
+            ?? Tournament::query()->whereNull('archived_at')->orderBy('start_date')->first();
 
         $data = [
             'tournament' => $tournament,
@@ -98,6 +99,7 @@ class DashboardController extends Controller
                 ? $coachTeam->players->filter(fn ($player): bool => $player->consent_at !== null)->count()
                 : 0;
             $data['openTournaments'] = Tournament::query()
+                ->whereNull('archived_at')
                 ->where('status', 'registration-open')
                 ->with([
                     'divisions',

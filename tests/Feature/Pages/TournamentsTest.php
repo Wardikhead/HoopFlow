@@ -2,11 +2,13 @@
 
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentShow;
+use App\Livewire\Organizer\TournamentsIndex;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\BracketService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -279,4 +281,127 @@ it('rejects even best-of lengths and out-of-range legs', function () {
         ->set('roundRobinLegs', 11)
         ->call('nextStep')
         ->assertHasErrors(['bestOfFinal', 'roundRobinLegs']);
+});
+
+it('archives a tournament from the index and lists it only in the archived filter', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(TournamentsIndex::class)
+        ->call('requestArchive', $tournament->id)
+        ->assertSet('showConfirm', true)
+        ->assertSet('confirmAction', 'archive-tournament')
+        ->call('confirm')
+        ->assertSet('showConfirm', false);
+
+    expect($tournament->fresh()->archived_at)->not->toBeNull()
+        ->and($component->instance()->tournaments->pluck('id')->all())->not->toContain($tournament->id);
+
+    $component->set('status', 'archived');
+
+    expect($component->instance()->tournaments->pluck('id')->all())->toContain($tournament->id);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'action' => 'tournament.archive',
+        'entity_type' => 'tournament',
+        'entity_id' => $tournament->id,
+    ]);
+});
+
+it('restores an archived tournament from the index', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+    $tournament->update(['archived_at' => now()]);
+
+    $component = Livewire::actingAs($organizer)
+        ->test(TournamentsIndex::class)
+        ->call('requestRestore', $tournament->id)
+        ->assertSet('confirmAction', 'restore-tournament')
+        ->call('confirm');
+
+    expect($tournament->fresh()->archived_at)->toBeNull()
+        ->and($component->instance()->tournaments->pluck('id')->all())->toContain($tournament->id);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'action' => 'tournament.restore',
+        'entity_type' => 'tournament',
+        'entity_id' => $tournament->id,
+    ]);
+});
+
+it('soft deletes a tournament from the index', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(TournamentsIndex::class)
+        ->call('requestDelete', $tournament->id)
+        ->assertSet('confirmAction', 'delete-tournament')
+        ->call('confirm');
+
+    $this->assertSoftDeleted('tournaments', ['id' => $tournament->id]);
+
+    expect($component->instance()->tournaments->pluck('id')->all())->not->toContain($tournament->id);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'action' => 'tournament.delete',
+        'entity_type' => 'tournament',
+        'entity_id' => $tournament->id,
+    ]);
+});
+
+it('forbids non-organizers from archiving or deleting tournaments', function () {
+    $coach = User::where('email', 'coach.marcus@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    expect(Gate::forUser($coach)->allows('archive', $tournament))->toBeFalse()
+        ->and(Gate::forUser($coach)->allows('unarchive', $tournament))->toBeFalse()
+        ->and(Gate::forUser($coach)->allows('delete', $tournament))->toBeFalse();
+
+    Livewire::actingAs($coach)
+        ->test(TournamentsIndex::class)
+        ->call('requestArchive', $tournament->id)
+        ->assertForbidden();
+
+    Livewire::actingAs($coach)
+        ->test(TournamentsIndex::class)
+        ->call('requestDelete', $tournament->id)
+        ->assertForbidden();
+
+    expect($tournament->fresh()->archived_at)->toBeNull()
+        ->and($tournament->fresh()->deleted_at)->toBeNull();
+});
+
+it('archives and restores a tournament from the tournament desk', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    $component = Livewire::actingAs($organizer)
+        ->test(TournamentShow::class, ['tournament' => $tournament->id])
+        ->call('requestArchiveTournament')
+        ->assertSet('confirmAction', 'archive-tournament')
+        ->call('confirm');
+
+    expect($tournament->fresh()->archived_at)->not->toBeNull();
+
+    $component->call('requestRestoreTournament')
+        ->assertSet('confirmAction', 'restore-tournament')
+        ->call('confirm');
+
+    expect($tournament->fresh()->archived_at)->toBeNull();
+});
+
+it('deletes a tournament from the tournament desk and returns to the index', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(TournamentShow::class, ['tournament' => $tournament->id])
+        ->call('requestDeleteTournament')
+        ->assertSet('confirmAction', 'delete-tournament')
+        ->call('confirm')
+        ->assertRedirect(route('tournaments'));
+
+    $this->assertSoftDeleted('tournaments', ['id' => $tournament->id]);
 });

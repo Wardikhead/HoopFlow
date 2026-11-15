@@ -73,6 +73,9 @@
             class="hf-mb-3"
             data-testid="tournament-hero-{{ $tournament->id }}"
         >
+            @if ($tournament->isArchived())
+                <span class="hf-chip hf-chip--gold" data-testid="show-archived"><i class="bi bi-archive-fill" aria-hidden="true"></i>Archived</span>
+            @endif
             <a class="hf-btn hf-btn--primary" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="show-bracket">Bracket</a>
             <a class="hf-btn" href="{{ route('schedule', ['id' => $tournament->id]) }}" data-testid="show-schedule">Schedule</a>
             <a class="hf-btn" href="{{ route('standings', ['id' => $tournament->id]) }}" data-testid="show-standings">Standings</a>
@@ -85,6 +88,12 @@
             @endif
             @if ($role === 'organizer')
                 <a class="hf-btn" href="{{ route('announcementCreate', ['tournament' => $tournament->id]) }}" data-testid="show-create-announcement">Announce</a>
+                @if ($tournament->isArchived())
+                    <button type="button" class="hf-btn" wire:click="requestRestoreTournament" data-testid="show-restore">Restore</button>
+                @else
+                    <button type="button" class="hf-btn" wire:click="requestArchiveTournament" data-testid="show-archive">Archive</button>
+                @endif
+                <button type="button" class="hf-btn hf-btn--danger" wire:click="requestDeleteTournament" data-testid="show-delete">Delete</button>
             @endif
         </x-matchday-strip>
 

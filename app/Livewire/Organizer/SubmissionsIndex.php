@@ -176,7 +176,7 @@ class SubmissionsIndex extends Component
         $registration = $this->reviewingRegistration();
 
         if (! $registration instanceof Registration
-            || ! in_array($registration->status, ['submitted', 'approved'], true)) {
+            || ! in_array($registration->status, ['submitted', 'pending', 'approved'], true)) {
             return;
         }
 
@@ -214,7 +214,7 @@ class SubmissionsIndex extends Component
         $registration = $this->reviewingRegistration();
 
         if (! $registration instanceof Registration
-            || ! in_array($registration->status, ['submitted', 'approved'], true)) {
+            || ! in_array($registration->status, ['submitted', 'pending', 'approved'], true)) {
             return;
         }
 
@@ -251,7 +251,12 @@ class SubmissionsIndex extends Component
     public function approvalIssues(int $registrationId): array
     {
         $registration = Registration::query()
-            ->with(['team.players.eligibilityDocuments', 'division', 'tournament'])
+            ->with([
+                'team.players' => fn ($query) => $query->orderBy('jersey_number')->orderBy('id'),
+                'team.players.eligibilityDocuments',
+                'division',
+                'tournament',
+            ])
             ->find($registrationId);
 
         $team = $registration?->team;
@@ -306,7 +311,10 @@ class SubmissionsIndex extends Component
         }
 
         return Registration::query()
-            ->with(['team.players.eligibilityDocuments'])
+            ->with([
+                'team.players' => fn ($query) => $query->orderBy('jersey_number')->orderBy('id'),
+                'team.players.eligibilityDocuments',
+            ])
             ->find($this->reviewingId);
     }
 
@@ -322,7 +330,7 @@ class SubmissionsIndex extends Component
 
         $registration = Registration::query()->find($registrationId);
 
-        if ($registration === null || $registration->status !== 'submitted') {
+        if ($registration === null || ! in_array($registration->status, ['submitted', 'pending'], true)) {
             return;
         }
 
@@ -350,7 +358,7 @@ class SubmissionsIndex extends Component
     {
         $registration = Registration::query()->find($registrationId);
 
-        if ($registration === null || $registration->status !== 'submitted') {
+        if ($registration === null || ! in_array($registration->status, ['submitted', 'pending'], true)) {
             return;
         }
 
@@ -381,9 +389,12 @@ class SubmissionsIndex extends Component
     public function registrations(): Collection
     {
         $query = Registration::query()
+            ->whereHas('tournament')
             ->with(['team', 'tournament', 'division', 'payment', 'team.players.eligibilityDocuments']);
 
-        if ($this->status !== '' && $this->status !== 'all') {
+        if ($this->status === 'submitted') {
+            $query->whereIn('status', ['submitted', 'pending']);
+        } elseif ($this->status !== '' && $this->status !== 'all') {
             $query->where('status', $this->status);
         }
 
@@ -413,7 +424,10 @@ class SubmissionsIndex extends Component
     #[Computed]
     public function tournaments(): Collection
     {
-        return Tournament::query()->orderBy('name')->get();
+        return Tournament::query()
+            ->whereNull('archived_at')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -422,11 +436,14 @@ class SubmissionsIndex extends Component
     #[Computed]
     public function kpis(): array
     {
+        $active = fn () => Registration::query()
+            ->whereHas('tournament', fn ($query) => $query->whereNull('archived_at'));
+
         return [
-            'pending' => Registration::query()->where('status', 'submitted')->count(),
-            'approved' => Registration::query()->where('status', 'approved')->count(),
-            'rejected' => Registration::query()->where('status', 'rejected')->count(),
-            'open' => Tournament::query()->where('status', 'registration-open')->count(),
+            'pending' => $active()->whereIn('status', ['submitted', 'pending'])->count(),
+            'approved' => $active()->where('status', 'approved')->count(),
+            'rejected' => $active()->where('status', 'rejected')->count(),
+            'open' => Tournament::query()->whereNull('archived_at')->where('status', 'registration-open')->count(),
         ];
     }
 
@@ -437,7 +454,13 @@ class SubmissionsIndex extends Component
         }
 
         return Registration::query()
-            ->with(['team.players.eligibilityDocuments', 'tournament', 'division', 'payment'])
+            ->with([
+                'team.players' => fn ($query) => $query->orderBy('jersey_number')->orderBy('id'),
+                'team.players.eligibilityDocuments',
+                'tournament',
+                'division',
+                'payment',
+            ])
             ->find((int) $id);
     }
 

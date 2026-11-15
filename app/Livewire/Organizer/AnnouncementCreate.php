@@ -42,7 +42,7 @@ class AnnouncementCreate extends Component
         $requested = request()->query('id') ?? request()->query('tournament');
 
         if (is_numeric($requested)) {
-            $tournament = Tournament::query()->find((int) $requested);
+            $tournament = Tournament::query()->whereNull('archived_at')->find((int) $requested);
 
             if ($tournament instanceof Tournament) {
                 $this->tournament_id = (int) $tournament->id;
@@ -50,8 +50,8 @@ class AnnouncementCreate extends Component
         }
 
         if ($this->tournament_id === null) {
-            $default = Tournament::query()->where('status', 'active')->orderBy('id')->first()
-                ?? Tournament::query()->orderBy('id')->first();
+            $default = Tournament::query()->whereNull('archived_at')->where('status', 'active')->orderBy('id')->first()
+                ?? Tournament::query()->whereNull('archived_at')->orderBy('id')->first();
 
             $this->tournament_id = $default instanceof Tournament ? (int) $default->id : null;
         }
@@ -132,6 +132,7 @@ class AnnouncementCreate extends Component
     public function tournaments(): Collection
     {
         return Tournament::query()
+            ->whereNull('archived_at')
             ->with('divisions')
             ->orderBy('name')
             ->get();

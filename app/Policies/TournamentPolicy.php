@@ -14,6 +14,16 @@ class TournamentPolicy extends BasePolicy
             || ($model instanceof Tournament && $model->created_by === $user->id);
     }
 
+    public function archive(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
+    public function unarchive(User $user, ?Model $model = null): bool
+    {
+        return $user->hasRole('organizer');
+    }
+
     public function generateBracket(User $user, ?Model $model = null): bool
     {
         return $user->hasRole('organizer');
