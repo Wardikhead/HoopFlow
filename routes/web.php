@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TeamController;
 use App\Livewire\Coach\MyTeam;
 use App\Livewire\Coach\TeamRegister;
@@ -53,7 +54,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/announcements', AnnouncementsIndex::class)->name('announcements');
     Route::get('/announcements/create', AnnouncementCreate::class)->name('announcementCreate')->middleware('role:organizer');
 
-    Route::view('/profile', 'pages.profile')->name('profile');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::delete('/profile/sessions', [ProfileController::class, 'destroyOtherSessions'])->name('profile.sessions.destroyOthers');
 
     Route::get('/audit', AuditLogIndex::class)->name('audit')->middleware('role:organizer');
 

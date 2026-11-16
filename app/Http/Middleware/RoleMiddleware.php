@@ -12,14 +12,12 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (! $user) {
+        if (! $user || ! $user->isActive()) {
             abort(403);
         }
 
-        foreach ($roles as $role) {
-            if ($user->hasRole($role)) {
-                return $next($request);
-            }
+        if ($user->hasAnyRole(...$roles)) {
+            return $next($request);
         }
 
         abort(403);

@@ -42,4 +42,14 @@ class User extends Authenticatable
     {
         return $this->roles()->where('key', $key)->exists();
     }
+
+    public function hasAnyRole(string ...$keys): bool
+    {
+        return $this->roles()->whereIn('key', $keys)->exists();
+    }
+
+    public function isActive(): bool
+    {
+        return strtolower(trim((string) $this->status)) === 'active';
+    }
 }

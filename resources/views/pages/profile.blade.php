@@ -40,6 +40,9 @@
         ->map(fn ($part) => mb_substr($part, 0, 1))
         ->slice(0, 2)
         ->implode('');
+
+    $activeSessions = $activeSessions ?? collect();
+    $otherSessions = $activeSessions->where('current', false);
 @endphp
 
 <header class="hf-page-head hf-mb-3">
@@ -83,6 +86,40 @@
                 <button type="button" class="hf-segmented__item" data-hf-pref="motion" data-hf-value="{{ $value }}" aria-pressed="false">{{ $label }}</button>
             @endforeach
         </div>
+    </section>
+
+    <section id="sessions" class="hf-card" data-testid="profile-sessions">
+        <span class="hf-kpi-label">Security</span>
+        <h2 class="hf-section-title hf-mt-1">Active sessions</h2>
+        <p class="hf-small hf-muted">Devices currently signed in to your account. Sign out anything you do not recognize.</p>
+
+        @if ($activeSessions->isEmpty())
+            <p class="hf-small hf-muted hf-mb-0">No active session records yet.</p>
+        @else
+            <ul class="hf-session-list">
+                @foreach ($activeSessions as $session)
+                    <li>
+                        <div>
+                            <strong>{{ $session['device'] }}</strong>
+                            <span class="hf-small hf-muted">{{ $session['ip'] }} · {{ $session['last_active'] }}</span>
+                        </div>
+                        @if ($session['current'])
+                            <span class="hf-chip hf-chip--primary">This device</span>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+
+            @if ($otherSessions->isNotEmpty())
+                <form method="POST" action="{{ route('profile.sessions.destroyOthers') }}" class="hf-mt-3">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="hf-btn hf-btn--sm" data-testid="profile-revoke-sessions">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out other sessions
+                    </button>
+                </form>
+            @endif
+        @endif
     </section>
 
     <section class="hf-card" data-testid="profile-role-card">

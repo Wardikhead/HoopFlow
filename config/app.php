@@ -30,6 +30,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo Accounts
+    |--------------------------------------------------------------------------
+    |
+    | The sign-in screen can show buttons that fill in the seeded prototype
+    | credentials. This is convenient locally but must never expose working
+    | accounts in production.
+    |
+    */
+
+    'demo_accounts' => (bool) env('DEMO_ACCOUNTS', env('APP_ENV', 'production') !== 'production'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |
