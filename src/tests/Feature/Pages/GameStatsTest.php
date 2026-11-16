@@ -141,7 +141,7 @@ it('renders the prototype game stats header, scoreboard, correction banner, and 
         ->assertSeeHtml('data-testid="stats-bracket"')
         ->assertSeeHtml('data-testid="stats-schedule"')
         ->assertSeeHtml('data-testid="stats-matches"')
-        ->assertSee(route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]), false)
+        ->assertSee(e(route('bracket', ['id' => $match->tournament_id, 'match' => $match->id])), false)
         ->assertSee(route('schedule', ['id' => $match->tournament_id]), false)
         ->assertSee(route('matches', ['id' => $match->tournament_id]), false);
 });

@@ -14,7 +14,7 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 it('updates player fields without touching consent or document status', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     $division = Division::factory()->create([
         'tournament_id' => $tournament->id,
@@ -57,7 +57,7 @@ it('updates player fields without touching consent or document status', function
 });
 
 it('resets document review when the coach changes the birthdate', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     $division = Division::factory()->create([
         'tournament_id' => $tournament->id,
@@ -101,7 +101,7 @@ it('resets document review when the coach changes the birthdate', function () {
 });
 
 it('rejects a birthdate outside the allowed range', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $team = Team::factory()->create(['coach_user_id' => $coach->id]);
     $player = Player::factory()->create([
         'team_id' => $team->id,
@@ -117,7 +117,7 @@ it('rejects a birthdate outside the allowed range', function () {
 });
 
 it('rejects an over-age birthdate when the roster has no registration loaded', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     Division::factory()->create([
         'tournament_id' => $tournament->id,
@@ -142,7 +142,7 @@ it('rejects an over-age birthdate when the roster has no registration loaded', f
 });
 
 it('rejects an over-age birthdate against the registered division', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     $division = Division::factory()->create([
         'tournament_id' => $tournament->id,
@@ -172,7 +172,7 @@ it('rejects an over-age birthdate against the registered division', function () 
 });
 
 it('does not expose consent or document editing in the player dialog', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $team = Team::factory()->create(['coach_user_id' => $coach->id]);
     $player = Player::factory()->create([
         'team_id' => $team->id,

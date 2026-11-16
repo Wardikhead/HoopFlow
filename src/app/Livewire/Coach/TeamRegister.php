@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Coach;
 
+use App\Livewire\SecureComponent;
 use App\Models\Division;
 use App\Models\Organization;
 use App\Models\Payment;
@@ -20,7 +21,6 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Tournament|null $tournament
@@ -32,8 +32,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('Register team')]
-class TeamRegister extends Component
+class TeamRegister extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['coach'];
+    }
+
     /** @var array<int, array{value: string, label: string}> */
     public const COLORS = [
         ['value' => '#ea580c', 'label' => 'Orange'],

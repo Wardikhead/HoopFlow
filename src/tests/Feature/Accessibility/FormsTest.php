@@ -140,7 +140,7 @@ it('marks every required control on the announcement composer', function () {
 });
 
 it('marks every required control in the my-team dialogs', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     $division = Division::factory()->create([
         'tournament_id' => $tournament->id,
@@ -242,7 +242,7 @@ it('resolves every error summary link on the announcement composer', function ()
 });
 
 it('resolves every error summary link in the my-team dialogs', function () {
-    $coach = User::factory()->create();
+    $coach = User::factory()->coach()->create();
     $tournament = Tournament::factory()->create(['start_date' => '2026-06-01']);
     $division = Division::factory()->create([
         'tournament_id' => $tournament->id,

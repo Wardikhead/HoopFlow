@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -43,5 +44,29 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * Give the created user the coach role.
+     */
+    public function coach(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::firstOrCreate(['key' => 'coach'], ['name' => 'Coach']);
+
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
+    }
+
+    /**
+     * Give the created user the organizer role.
+     */
+    public function organizer(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::firstOrCreate(['key' => 'organizer'], ['name' => 'Organizer']);
+
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
     }
 }

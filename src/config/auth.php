@@ -114,4 +114,35 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login Throttling
+    |--------------------------------------------------------------------------
+    |
+    | Failed sign-in attempts are counted per normalized email address and
+    | client IP. Once the limit is reached the client must wait for the
+    | decay window before another attempt is accepted.
+    |
+    */
+
+    'login' => [
+        'max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+        'decay_seconds' => (int) env('AUTH_LOGIN_DECAY_SECONDS', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Security
+    |--------------------------------------------------------------------------
+    |
+    | Authenticated sessions are bound to a hash of the browser user agent
+    | and expire after a period of inactivity, independently of the
+    | framework's absolute session lifetime.
+    |
+    */
+
+    'session' => [
+        'idle_timeout' => (int) env('AUTH_SESSION_IDLE_TIMEOUT', 60),
+    ],
+
 ];

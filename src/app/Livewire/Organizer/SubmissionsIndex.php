@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Player;
 use App\Models\Registration;
 use App\Models\Team;
@@ -14,7 +15,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Collection<int, Registration> $registrations
@@ -23,8 +23,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('Submissions')]
-class SubmissionsIndex extends Component
+class SubmissionsIndex extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
+
     public string $status = 'submitted';
 
     public string $search = '';

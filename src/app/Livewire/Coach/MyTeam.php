@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Coach;
 
+use App\Livewire\SecureComponent;
 use App\Models\AuditLog;
 use App\Models\Division;
 use App\Models\MatchModel;
@@ -20,7 +21,6 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Collection<int, Team> $teams
@@ -37,8 +37,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('My team')]
-class MyTeam extends Component
+class MyTeam extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['coach'];
+    }
+
     /** @var array<int, string> */
     public const POSITIONS = TeamRegister::POSITIONS;
 

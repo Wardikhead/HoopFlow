@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Announcement;
 use App\Models\Tournament;
 use App\Models\User;
@@ -12,7 +13,6 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Collection<int, Tournament> $tournaments
@@ -20,8 +20,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('New announcement')]
-class AnnouncementCreate extends Component
+class AnnouncementCreate extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
+
     public ?int $tournament_id = null;
 
     public string $title = '';

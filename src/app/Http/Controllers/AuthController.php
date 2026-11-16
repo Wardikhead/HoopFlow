@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -40,11 +41,27 @@ class AuthController extends Controller
             'password.required' => 'Enter your password.',
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $throttleKey = $this->throttleKey($request);
+        $maxAttempts = max(1, (int) config('auth.login.max_attempts', 5));
+        $decaySeconds = max(1, (int) config('auth.login.decay_seconds', 60));
+
+        if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()
+                ->withErrors(['email' => "Too many login attempts. Try again in {$seconds} seconds."])
+                ->onlyInput('email');
+        }
+
+        if (Auth::attempt([...$credentials, 'status' => 'active'], $request->boolean('remember'))) {
+            RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
+            $this->recordSessionSecurity($request);
 
             return redirect()->intended(route('dashboard'));
         }
+
+        RateLimiter::hit($throttleKey, $decaySeconds);
 
         return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
     }
@@ -105,6 +122,7 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $this->recordSessionSecurity($request);
 
         return redirect()->route('dashboard');
     }
@@ -117,6 +135,21 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function throttleKey(Request $request): string
+    {
+        return Str::transliterate(
+            Str::lower((string) $request->input('email')).'|'.$request->ip()
+        );
+    }
+
+    private function recordSessionSecurity(Request $request): void
+    {
+        $request->session()->put([
+            'auth.fingerprint' => hash('sha256', (string) $request->userAgent()),
+            'auth.last_activity' => time(),
+        ]);
     }
 
     /**

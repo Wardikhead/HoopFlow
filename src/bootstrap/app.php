@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnforceSessionTimeout;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\VerifySessionFingerprint;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +19,21 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => RoleMiddleware::class,
+            'active' => EnsureUserIsActive::class,
+            'session.fingerprint' => VerifySessionFingerprint::class,
+            'session.timeout' => EnforceSessionTimeout::class,
         ]);
+
+        $middleware->web(
+            append: [
+                EnsureUserIsActive::class,
+                VerifySessionFingerprint::class,
+                EnforceSessionTimeout::class,
+            ],
+            prepend: [
+                SecurityHeaders::class,
+            ],
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

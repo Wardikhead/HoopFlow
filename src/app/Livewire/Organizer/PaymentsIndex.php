@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Payment;
 use App\Models\Registration;
 use App\Models\Tournament;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Collection<int, Payment> $payments
@@ -21,9 +21,17 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('Payments')]
-class PaymentsIndex extends Component
+class PaymentsIndex extends SecureComponent
 {
     public const METHODS = ['GCash', 'Maya', 'Bank transfer', 'Cash'];
+
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
 
     public string $status = 'pending';
 

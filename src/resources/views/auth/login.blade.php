@@ -90,33 +90,35 @@
                 </button>
             </form>
 
-            <p class="hf-demo-title hf-mt-3">Quick-fill accounts</p>
-            <div class="hf-quick-accounts">
-                <button
-                    type="button"
-                    x-on:click="email = 'organizer@hoopflow.ph'; password = 'password'"
-                    data-testid="quick-login-organizer"
-                >
-                    <strong>Organizer</strong>
-                    <span>Tournament operations</span>
-                </button>
-                <button
-                    type="button"
-                    x-on:click="email = 'coach.marcus@hoopflow.ph'; password = 'password'"
-                    data-testid="quick-login-coach"
-                >
-                    <strong>Coach</strong>
-                    <span>San Antonio Vipers</span>
-                </button>
-                <button
-                    type="button"
-                    x-on:click="email = 'fan.juan@hoopflow.ph'; password = 'password'"
-                    data-testid="quick-login-fan"
-                >
-                    <strong>Fan</strong>
-                    <span>Public view</span>
-                </button>
-            </div>
+            @if (config('app.demo_accounts'))
+                <p class="hf-demo-title hf-mt-3">Quick-fill accounts</p>
+                <div class="hf-quick-accounts">
+                    <button
+                        type="button"
+                        x-on:click="email = 'organizer@hoopflow.ph'; password = 'password'"
+                        data-testid="quick-login-organizer"
+                    >
+                        <strong>Organizer</strong>
+                        <span>Tournament operations</span>
+                    </button>
+                    <button
+                        type="button"
+                        x-on:click="email = 'coach.marcus@hoopflow.ph'; password = 'password'"
+                        data-testid="quick-login-coach"
+                    >
+                        <strong>Coach</strong>
+                        <span>San Antonio Vipers</span>
+                    </button>
+                    <button
+                        type="button"
+                        x-on:click="email = 'fan.juan@hoopflow.ph'; password = 'password'"
+                        data-testid="quick-login-fan"
+                    >
+                        <strong>Fan</strong>
+                        <span>Public view</span>
+                    </button>
+                </div>
+            @endif
 
             <p class="hf-small hf-muted hf-mt-3 hf-mb-0">
                 No account? <a href="{{ route('register') }}">Create one</a>.

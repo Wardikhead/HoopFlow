@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Court;
 use App\Models\Division;
 use App\Models\GameRule;
@@ -15,12 +16,19 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 #[Layout('layouts.public')]
 #[Title('Create tournament')]
-class TournamentCreate extends Component
+class TournamentCreate extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
+
     public int $step = 0;
 
     public string $name = 'HoopFlow Metro Invitational';

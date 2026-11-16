@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\Player;
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read MatchModel|null $match
@@ -36,8 +36,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('In-game score & player stats')]
-class GameManage extends Component
+class GameManage extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
+
     public ?int $matchId = null;
 
     public bool $requestedMatchMissing = false;

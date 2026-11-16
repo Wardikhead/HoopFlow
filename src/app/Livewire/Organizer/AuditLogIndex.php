@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Livewire\SecureComponent;
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\MatchModel;
@@ -14,7 +15,6 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Component;
 
 /**
  * @property-read Collection<int, AuditLog> $allEntries
@@ -26,8 +26,16 @@ use Livewire\Component;
  */
 #[Layout('layouts.public')]
 #[Title('Audit log')]
-class AuditLogIndex extends Component
+class AuditLogIndex extends SecureComponent
 {
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedRoles(): array
+    {
+        return ['organizer'];
+    }
+
     /** @var array<string, string> */
     public const ACTION_LABELS = [
         'tournament.create' => 'Tournament created',

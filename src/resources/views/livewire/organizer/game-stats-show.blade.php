@@ -47,7 +47,7 @@
             ]"
             class="hf-mb-3"
         >
-            <a class="hf-btn" href="{!! route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) !!}" data-testid="stats-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
+            <a class="hf-btn" href="{{ route('bracket', ['id' => $match->tournament_id, 'match' => $match->id]) }}" data-testid="stats-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
             <a class="hf-btn" href="{{ route('schedule', ['id' => $match->tournament_id]) }}" data-testid="stats-schedule"><i class="bi bi-calendar3" aria-hidden="true"></i> Schedule</a>
             <a class="hf-btn" href="{{ route('matches', ['id' => $match->tournament_id]) }}" data-testid="stats-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
             @if ($canScore)
