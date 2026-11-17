@@ -538,6 +538,14 @@
     width: 52px;
     padding: 4px;
   }
+
+  [data-nav='collapsed'] .hf-rail-footer .hf-user-menu__panel {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: var(--hf-menu-bottom, 74px);
+    left: var(--hf-menu-left, 84px);
+  }
 }
 
 @media (max-width: 767.98px) {
