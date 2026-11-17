@@ -272,7 +272,7 @@
                 </div>
             </dialog>
 
-            <main id="main" class="hf-main" tabindex="-1">
+            <main id="main" class="hf-main" tabindex="-1" wire:transition.navigate="hf-page">
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>
