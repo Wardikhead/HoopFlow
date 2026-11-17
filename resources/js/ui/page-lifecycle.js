@@ -12,6 +12,7 @@ import { registerPasswordMeter } from './password-strength';
 import { applyPreferences, initPreferences, syncPreferenceButtons } from './preferences';
 import { initScoreConsole } from './score-console';
 import { bindScorekeeperPage, initScorekeeper } from './scorekeeper';
+import { initRichSelects } from './select.js';
 import { initSpaNavigation } from './spa-nav';
 import { initMoreSheet, initNavRail, initShell, syncNavRail } from './shell';
 import { registerToasts } from './toasts';
@@ -76,6 +77,7 @@ function initPage({ focus = true, animate = true } = {}) {
     syncDocumentState();
     syncPreferenceButtons();
     refreshValidation();
+    initRichSelects();
 
     if (focus) {
         focusMain();

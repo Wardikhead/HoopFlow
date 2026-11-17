@@ -44,7 +44,7 @@
             class="hf-mb-3"
         >
             <label class="hf-sr-only" for="standingsTournament">Tournament</label>
-            <select class="hf-select" id="standingsTournament" wire:change="changeTournament($event.target.value)" data-testid="standings-tournament">
+            <select class="hf-select" data-hf-select id="standingsTournament" wire:change="changeTournament($event.target.value)" data-testid="standings-tournament">
                 @foreach ($this->tournaments as $tournamentOption)
                     <option value="{{ $tournamentOption->id }}" @selected($tournamentOption->id === $tournament->id)>{{ $tournamentOption->name }}</option>
                 @endforeach

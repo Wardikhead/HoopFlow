@@ -263,7 +263,7 @@
 
             <div class="hf-field hf-mb-2">
                 <label class="hf-label" for="statsTeamFilter">Team filter</label>
-                <select id="statsTeamFilter" class="hf-select" wire:model.live="side" data-testid="stats-team-filter">
+                <select id="statsTeamFilter" class="hf-select" data-hf-select wire:model.live="side" data-testid="stats-team-filter">
                     <option value="all">All</option>
                     <option value="team1">Team 1</option>
                     <option value="team2">Team 2</option>

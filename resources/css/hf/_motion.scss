@@ -26,8 +26,17 @@
   .hf-input,
   .hf-select,
   .hf-textarea,
+  .hf-combo__trigger,
+  .hf-combo__menu,
   .hf-dialog {
     border: 1px solid CanvasText;
+  }
+
+  /* High contrast drops background images, so hand the arrow back to the OS. */
+  .hf-select {
+    padding-right: 12px;
+    background-image: none;
+    appearance: auto;
   }
 
   .hf-rail-link.is-active {
@@ -80,6 +89,15 @@
 
   .hf-toast {
     animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-combo__menu.is-open {
+    animation: hf-combo-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-combo__menu.is-closing {
+    animation: hf-combo-out var(--hf-dur-micro) ease-in both;
+    pointer-events: none;
   }
 
   .hf-user-menu[open] .hf-user-menu__panel {
@@ -161,6 +179,16 @@
   to { opacity: 1; transform: none; }
 }
 
+@keyframes hf-combo-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.995); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-combo-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-3px); }
+}
+
 @keyframes hf-sheet-in {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: none; }
@@ -195,6 +223,7 @@
   .hf-user-menu[open] .hf-user-menu__panel,
   .hf-user-menu.is-closing .hf-user-menu__panel,
   .hf-user-menu__body > *,
+  .hf-combo__menu,
   .hf-toast {
     animation: none !important;
   }
@@ -214,6 +243,7 @@
 [data-motion='reduced'] .hf-user-menu[open] .hf-user-menu__panel,
 [data-motion='reduced'] .hf-user-menu.is-closing .hf-user-menu__panel,
 [data-motion='reduced'] .hf-user-menu__body > *,
+[data-motion='reduced'] .hf-combo__menu,
 [data-motion='reduced'] .hf-toast {
   animation: none !important;
 }
