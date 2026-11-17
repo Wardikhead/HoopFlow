@@ -1,5 +1,6 @@
 import { initBracketZoom } from './bracket';
 import { initCalendar } from './calendar';
+import { initCardMenus } from './card-menu';
 import { initCountUp } from './countup';
 import { initFeedback } from './feedback';
 import { initDialogMotion } from './dialog-motion.js';
@@ -33,6 +34,7 @@ function initGlobals() {
 
     initBracketZoom();
     initCalendar();
+    initCardMenus();
     initFeedback();
     initLivewireBridge();
     initDialogMotion();
