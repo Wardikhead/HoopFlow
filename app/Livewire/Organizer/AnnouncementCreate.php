@@ -130,7 +130,7 @@ class AnnouncementCreate extends SecureComponent
             'tone' => 'success',
         ]);
 
-        $this->redirect(route('announcements', ['id' => $announcement->tournament_id]));
+        $this->redirect(route('announcements', ['id' => $announcement->tournament_id]), navigate: true);
     }
 
     /**

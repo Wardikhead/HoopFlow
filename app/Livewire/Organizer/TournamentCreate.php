@@ -339,7 +339,7 @@ class TournamentCreate extends SecureComponent
             tone: 'success',
         );
 
-        $this->redirectRoute('tournamentShow', ['tournament' => $tournament->id]);
+        $this->redirectRoute('tournamentShow', ['tournament' => $tournament->id], navigate: true);
     }
 
     protected function validateFormatStep(): void

@@ -444,7 +444,7 @@ class TeamRegister extends SecureComponent
         $this->redirectRoute('myTeam', array_filter([
             'team' => $createdTeam?->id,
             'tournament' => $tournament->id,
-        ]));
+        ]), navigate: true);
     }
 
     /**

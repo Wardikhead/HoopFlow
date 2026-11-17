@@ -824,7 +824,7 @@ class BracketShow extends Component
         Gate::authorize('enterStats', $match);
 
         if ($match->best_of <= 1) {
-            $this->redirect(route('gameManage', ['match' => $match->id]));
+            $this->redirect(route('gameManage', ['match' => $match->id]), navigate: true);
 
             return;
         }
