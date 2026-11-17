@@ -51,6 +51,23 @@ it('leaves guest pages as normal browser navigation', function () {
     expect(substr_count((string) $response->getContent(), 'wire:navigate'))->toBe(0);
 });
 
+it('names the authenticated main element for view transitions', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    $response = $this->actingAs($organizer)->get(route('dashboard'))->assertOk();
+    $xpath = spaXPath((string) $response->getContent());
+    $main = $xpath->query("//main[@id='main']")->item(0);
+
+    expect($main)->not->toBeNull();
+    expect($main->getAttribute('wire:transition.navigate'))->toBe('hf-page');
+});
+
+it('keeps guest pages free of navigation transition hooks', function () {
+    $response = $this->get(route('login'))->assertOk();
+
+    expect(substr_count((string) $response->getContent(), 'wire:transition.navigate'))->toBe(0);
+});
+
 it('navigates after switching the standings tournament', function () {
     $tournament = Tournament::query()->firstOrFail();
 
