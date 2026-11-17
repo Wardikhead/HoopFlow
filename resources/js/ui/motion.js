@@ -1,11 +1,19 @@
-export function initMotion() {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+let bound = false;
+
+export function applyReveal() {
     if (reduce.matches) return;
 
     document.querySelectorAll('[data-reveal]').forEach((element, index) => {
         element.classList.add('hf-reveal');
         element.style.setProperty('--hf-reveal-delay', `${Math.min(index * 40, 200)}ms`);
     });
+}
+
+export function initMotion() {
+    if (bound) return;
+    bound = true;
 
     document.addEventListener('hf:theme-changed', () => {
         document.documentElement.classList.add('hf-theme-transition');

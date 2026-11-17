@@ -56,24 +56,31 @@ function focusFirstInvalid() {
     }
 }
 
-function sync() {
+let bound = false;
+
+export function refreshValidation() {
     ensureErrorIds();
     buildSummary();
 }
 
 export function initValidation() {
-    sync();
+    refreshValidation();
+
     if (document.querySelector('[data-hf-error-summary]')) {
         window.requestAnimationFrame(focusFirstInvalid);
     }
+
+    if (bound) return;
+    bound = true;
+
     document.addEventListener('livewire:init', () => {
         window.Livewire.hook('morphed', () => {
-            sync();
+            refreshValidation();
             focusFirstInvalid();
         });
     });
 
     document.addEventListener('submit', () => {
-        window.setTimeout(sync, 0);
+        window.setTimeout(refreshValidation, 0);
     });
 }
