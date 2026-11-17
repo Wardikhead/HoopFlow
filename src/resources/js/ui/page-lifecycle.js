@@ -8,7 +8,7 @@ import { initPageLoader } from './loading';
 import { initLogoutDialog } from './logout';
 import { applyReveal, initMotion } from './motion';
 import { registerPasswordMeter } from './password-strength';
-import { initPreferences, syncPreferenceButtons } from './preferences';
+import { applyPreferences, initPreferences, syncPreferenceButtons } from './preferences';
 import { initScoreConsole } from './score-console';
 import { bindScorekeeperPage, initScorekeeper } from './scorekeeper';
 import { initSpaNavigation } from './spa-nav';
@@ -51,6 +51,7 @@ function initPage({ focus = true } = {}) {
     liveScores = initLiveScores();
 
     bindScorekeeperPage();
+    applyPreferences();
     syncNavRail();
     syncPreferenceButtons();
     refreshValidation();

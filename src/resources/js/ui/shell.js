@@ -137,8 +137,19 @@ function renderNav(state) {
     hideTooltip();
 }
 
+export function resolveNavState({ stored = null, current = null, mediaMatches = false } = {}) {
+    if (stored === 'expanded' || stored === 'collapsed') return stored;
+    if (current === 'expanded' || current === 'collapsed') return current;
+
+    return mediaMatches ? 'expanded' : 'collapsed';
+}
+
 export function syncNavRail() {
-    renderNav(document.documentElement.dataset.nav === 'expanded' ? 'expanded' : 'collapsed');
+    renderNav(resolveNavState({
+        stored: storedNav(),
+        current: document.documentElement.dataset.nav ?? null,
+        mediaMatches: window.matchMedia('(min-width: 1200px)').matches,
+    }));
 }
 
 export function initNavRail() {
