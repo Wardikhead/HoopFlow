@@ -15,109 +15,146 @@ export function initShell() {
     });
 }
 
+let moreSheetBound = false;
+let sheetTrigger = null;
+
 export function initMoreSheet() {
-    const sheet = document.querySelector('[data-more-sheet]');
-    if (!sheet) return;
+    if (moreSheetBound) return;
+    moreSheetBound = true;
 
-    let trigger = null;
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
 
-    document.querySelectorAll('[data-more-sheet-open]').forEach((button) => {
-        button.addEventListener('click', () => {
-            trigger = button;
+        const opener = target.closest('[data-more-sheet-open]');
+        if (opener) {
+            const sheet = document.querySelector('[data-more-sheet]');
+            if (!(sheet instanceof HTMLDialogElement)) return;
+
+            sheetTrigger = opener;
             sheet.showModal();
-        });
+
+            return;
+        }
+
+        if (target.closest('[data-more-sheet-close]')) {
+            document.querySelector('dialog[data-more-sheet][open]')?.close();
+
+            return;
+        }
+
+        if (target.closest('dialog[data-more-sheet] a')) {
+            document.querySelector('dialog[data-more-sheet][open]')?.close();
+
+            return;
+        }
+
+        const sheet = target.closest('dialog[data-more-sheet]');
+        if (sheet && event.target === sheet) sheet.close();
     });
 
-    document.querySelectorAll('[data-more-sheet-close]').forEach((button) => {
-        button.addEventListener('click', () => sheet.close());
-    });
+    document.addEventListener('close', (event) => {
+        if (!(event.target instanceof HTMLDialogElement)) return;
+        if (!event.target.matches('dialog[data-more-sheet]')) return;
 
-    sheet.addEventListener('click', (event) => {
-        if (event.target === sheet) sheet.close();
-    });
-
-    sheet.addEventListener('close', () => {
-        trigger?.focus({ preventScroll: true });
-    });
-
-    sheet.querySelectorAll('a').forEach((link) => {
-        link.addEventListener('click', () => sheet.close());
-    });
+        sheetTrigger?.focus({ preventScroll: true });
+        sheetTrigger = null;
+    }, true);
 }
 
 const NAV_KEY = 'hf-nav';
 const TOOLTIP_GAP = 10;
 const VIEWPORT_GAP = 8;
 
-export function initNavRail() {
-    const root = document.documentElement;
-    const toggle = document.querySelector('[data-nav-toggle]');
-    const rail = document.getElementById('hf-rail');
+let navBound = false;
+let tooltip = null;
+let tooltipTarget = null;
 
-    if (!toggle || !rail) return;
+function ensureTooltip() {
+    if (tooltip?.isConnected) return tooltip;
 
-    const desktop = window.matchMedia('(min-width: 1200px)');
-    const tooltip = document.createElement('div');
+    tooltip = document.createElement('div');
     tooltip.className = 'hf-rail-tooltip';
     tooltip.setAttribute('aria-hidden', 'true');
     document.body.appendChild(tooltip);
 
-    let tooltipTarget = null;
+    return tooltip;
+}
 
-    const hideTooltip = () => {
-        tooltipTarget = null;
-        tooltip.classList.remove('is-visible');
-    };
+function hideTooltip() {
+    tooltipTarget = null;
+    tooltip?.classList.remove('is-visible');
+}
 
-    const positionTooltip = (link) => {
-        const linkRect = link.getBoundingClientRect();
-        const tooltipRect = tooltip.getBoundingClientRect();
-        const left = Math.min(
-            linkRect.right + TOOLTIP_GAP,
-            window.innerWidth - tooltipRect.width - VIEWPORT_GAP,
-        );
-        const top = Math.min(
-            window.innerHeight - tooltipRect.height - VIEWPORT_GAP,
-            Math.max(VIEWPORT_GAP, linkRect.top + linkRect.height / 2 - tooltipRect.height / 2),
-        );
+function positionTooltip(link) {
+    const node = ensureTooltip();
+    const linkRect = link.getBoundingClientRect();
+    const tooltipRect = node.getBoundingClientRect();
+    const left = Math.min(
+        linkRect.right + TOOLTIP_GAP,
+        window.innerWidth - tooltipRect.width - VIEWPORT_GAP,
+    );
+    const top = Math.min(
+        window.innerHeight - tooltipRect.height - VIEWPORT_GAP,
+        Math.max(VIEWPORT_GAP, linkRect.top + linkRect.height / 2 - tooltipRect.height / 2),
+    );
 
-        tooltip.style.left = `${Math.max(VIEWPORT_GAP, left)}px`;
-        tooltip.style.top = `${top}px`;
-    };
+    node.style.left = `${Math.max(VIEWPORT_GAP, left)}px`;
+    node.style.top = `${top}px`;
+}
 
-    const showTooltip = (link) => {
-        if (root.dataset.nav !== 'collapsed' || window.innerWidth < 768) return;
+function showTooltip(link) {
+    if (document.documentElement.dataset.nav !== 'collapsed' || window.innerWidth < 768) return;
 
-        const label = link.dataset.label;
-        if (!label) return;
+    const label = link.dataset.label;
+    if (!label) return;
 
-        tooltipTarget = link;
-        tooltip.textContent = label;
-        tooltip.classList.add('is-visible');
-        positionTooltip(link);
-    };
+    tooltipTarget = link;
+    ensureTooltip().textContent = label;
+    tooltip.classList.add('is-visible');
+    positionTooltip(link);
+}
 
-    const stored = () => {
-        try {
-            const value = localStorage.getItem(NAV_KEY);
-            return value === 'expanded' || value === 'collapsed' ? value : null;
-        } catch {
-            return null;
-        }
-    };
+function storedNav() {
+    try {
+        const value = localStorage.getItem(NAV_KEY);
 
-    const render = (state) => {
-        root.dataset.nav = state;
+        return value === 'expanded' || value === 'collapsed' ? value : null;
+    } catch {
+        return null;
+    }
+}
+
+function renderNav(state) {
+    document.documentElement.dataset.nav = state;
+
+    const toggle = document.querySelector('[data-nav-toggle]');
+    if (toggle) {
         toggle.setAttribute('aria-expanded', state === 'expanded' ? 'true' : 'false');
         toggle.setAttribute('aria-label', state === 'expanded' ? 'Collapse navigation' : 'Expand navigation');
-        hideTooltip();
-    };
+    }
 
-    render(root.dataset.nav === 'expanded' ? 'expanded' : 'collapsed');
+    hideTooltip();
+}
 
-    toggle.addEventListener('click', () => {
-        const next = root.dataset.nav === 'expanded' ? 'collapsed' : 'expanded';
-        render(next);
+export function syncNavRail() {
+    renderNav(document.documentElement.dataset.nav === 'expanded' ? 'expanded' : 'collapsed');
+}
+
+export function initNavRail() {
+    if (navBound) return;
+    navBound = true;
+
+    const desktop = window.matchMedia('(min-width: 1200px)');
+
+    syncNavRail();
+
+    document.addEventListener('click', (event) => {
+        const toggle = event.target instanceof Element ? event.target.closest('[data-nav-toggle]') : null;
+        if (!toggle) return;
+
+        const next = document.documentElement.dataset.nav === 'expanded' ? 'collapsed' : 'expanded';
+        renderNav(next);
 
         try {
             localStorage.setItem(NAV_KEY, next);
@@ -127,27 +164,28 @@ export function initNavRail() {
     });
 
     desktop.addEventListener('change', (event) => {
-        if (stored()) return;
-        render(event.matches ? 'expanded' : 'collapsed');
+        if (storedNav()) return;
+
+        renderNav(event.matches ? 'expanded' : 'collapsed');
     });
 
-    rail.addEventListener('pointerover', (event) => {
+    document.addEventListener('pointerover', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
         if (link && link !== tooltipTarget) showTooltip(link);
     });
 
-    rail.addEventListener('pointerout', (event) => {
+    document.addEventListener('pointerout', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
         if (!link) return;
         if (!link.contains(event.relatedTarget)) hideTooltip();
     });
 
-    rail.addEventListener('focusin', (event) => {
+    document.addEventListener('focusin', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
         if (link) showTooltip(link);
     });
 
-    rail.addEventListener('focusout', (event) => {
+    document.addEventListener('focusout', (event) => {
         if (event.target instanceof Element && event.target.closest('.hf-rail-link')) hideTooltip();
     });
 
