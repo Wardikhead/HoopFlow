@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['bracket_id', 'tournament_id', 'stage', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'completed_at', 'forfeit_reason', 'quarters_json', 'series_id', 'game_number', 'best_of', 'series_home_wins', 'series_away_wins', 'series_winner_team_id', 'game_winner_team_id'])]
+#[Fillable(['bracket_id', 'tournament_id', 'stage', 'round_number', 'match_number', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'winner_team_id', 'status', 'version', 'score_updated_at', 'completed_at', 'forfeit_reason', 'quarters_json', 'series_id', 'game_number', 'best_of', 'series_home_wins', 'series_away_wins', 'series_winner_team_id', 'game_winner_team_id'])]
 class MatchModel extends Model
 {
     public $incrementing = false;
@@ -36,6 +36,8 @@ class MatchModel extends Model
     {
         return [
             'completed_at' => 'datetime',
+            'score_updated_at' => 'datetime',
+            'version' => 'integer',
             'quarters_json' => 'array',
             'series_id' => 'integer',
             'game_number' => 'integer',
