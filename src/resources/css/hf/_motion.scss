@@ -54,6 +54,30 @@
     animation: hf-backdrop-in var(--hf-dur-standard) linear both;
   }
 
+  .hf-sheet[open] {
+    animation: hf-sheet-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-sheet[open]::backdrop {
+    animation: hf-backdrop-in var(--hf-dur-standard) linear both;
+  }
+
+  .hf-dialog.is-closing {
+    animation: hf-dialog-out 160ms ease-in both;
+  }
+
+  .hf-dialog.is-closing::backdrop {
+    animation: hf-backdrop-out 160ms linear both;
+  }
+
+  .hf-sheet.is-closing {
+    animation: hf-sheet-out 160ms ease-in both;
+  }
+
+  .hf-sheet.is-closing::backdrop {
+    animation: hf-backdrop-out 160ms linear both;
+  }
+
   .hf-toast {
     animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out) both;
   }
@@ -100,6 +124,21 @@
   to { opacity: 1; transform: none; }
 }
 
+@keyframes hf-sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-sheet-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(24px); }
+}
+
+@keyframes hf-dialog-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+
 .hf-theme-transition,
 .hf-theme-transition *,
 .hf-theme-transition *::before,
@@ -114,6 +153,8 @@
   .hf-reveal,
   .hf-dialog[open],
   .hf-dialog[open]::backdrop,
+  .hf-sheet[open],
+  .hf-sheet[open]::backdrop,
   .hf-toast {
     animation: none !important;
   }
@@ -128,6 +169,8 @@
 [data-motion='reduced'] .hf-reveal,
 [data-motion='reduced'] .hf-dialog[open],
 [data-motion='reduced'] .hf-dialog[open]::backdrop,
+[data-motion='reduced'] .hf-sheet[open],
+[data-motion='reduced'] .hf-sheet[open]::backdrop,
 [data-motion='reduced'] .hf-toast {
   animation: none !important;
 }
