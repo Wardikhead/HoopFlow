@@ -140,16 +140,7 @@
                     <details
                         class="hf-card-menu"
                         data-testid="tournament-manage-{{ $tournament->id }}"
-                        x-data="{
-                            up: false,
-                            place() {
-                                const panel = this.$el.querySelector('.hf-card-menu__panel');
-                                const nav = document.querySelector('.hf-bottom-nav');
-                                const reserve = nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0;
-                                const bottom = this.$el.getBoundingClientRect().bottom + (panel?.offsetHeight ?? 96) + 12;
-                                this.up = this.$el.open && bottom > window.innerHeight - reserve;
-                            },
-                        }"
+                        x-data="hfCardMenu"
                         x-on:toggle="place()"
                         x-bind:class="{ 'is-up': up }">
                         <summary class="hf-btn hf-btn--sm">

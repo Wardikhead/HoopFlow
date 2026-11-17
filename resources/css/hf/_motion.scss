@@ -278,6 +278,36 @@
   animation: hf-page-vt-in var(--hf-dur-page) var(--hf-ease-out) both;
 }
 
+/* Shell chrome is fixed/sticky, so the root snapshot misplaces it during the
+   page swap. Naming each piece keeps it out of that snapshot; hiding the old
+   image avoids a ghost when the topbar height differs between pages. */
+.hf-rail {
+  view-transition-name: hf-rail;
+}
+
+.hf-topbar {
+  view-transition-name: hf-topbar;
+}
+
+.hf-bottom-nav {
+  view-transition-name: hf-bottom-nav;
+}
+
+::view-transition-group(hf-rail),
+::view-transition-group(hf-topbar),
+::view-transition-group(hf-bottom-nav),
+::view-transition-new(hf-rail),
+::view-transition-new(hf-topbar),
+::view-transition-new(hf-bottom-nav) {
+  animation: none;
+}
+
+::view-transition-old(hf-rail),
+::view-transition-old(hf-topbar),
+::view-transition-old(hf-bottom-nav) {
+  display: none;
+}
+
 @keyframes hf-page-vt-out {
   from { opacity: 1; transform: none; }
   to { opacity: 0; transform: translateY(-4px); }
