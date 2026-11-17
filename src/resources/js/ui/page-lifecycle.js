@@ -20,6 +20,11 @@ let liveScores = null;
 let lastUrl = null;
 let globalsReady = false;
 
+function syncDocumentState() {
+    applyPreferences();
+    syncNavRail();
+}
+
 function initGlobals() {
     if (globalsReady) return;
     globalsReady = true;
@@ -41,18 +46,32 @@ function initGlobals() {
     initValidation();
     registerPasswordMeter();
     registerToasts();
+
+    // Livewire's SPA swap deletes <html> attributes that the server doesn't
+    // render. Restore them inside onSwap so the new page never paints with
+    // the wrong theme or an expanded rail.
+    document.addEventListener('livewire:navigating', (event) => {
+        if (typeof event.detail?.onSwap !== 'function') return;
+
+        event.detail.onSwap(() => {
+            document.documentElement.classList.add('hf-spa-nav');
+            syncDocumentState();
+            syncPreferenceButtons();
+        });
+    });
 }
 
-function initPage({ focus = true } = {}) {
-    applyReveal();
-    initCountUp();
+function initPage({ focus = true, animate = true } = {}) {
+    if (animate) {
+        applyReveal();
+        initCountUp();
+    }
 
     liveScores?.stop();
     liveScores = initLiveScores();
 
     bindScorekeeperPage();
-    applyPreferences();
-    syncNavRail();
+    syncDocumentState();
     syncPreferenceButtons();
     refreshValidation();
 
@@ -120,7 +139,7 @@ export function initPageLifecycle() {
         const initial = lastUrl === null;
 
         lastUrl = window.location.href;
-        initPage({ focus: !initial });
+        initPage({ focus: !initial, animate: initial });
     });
 
     if (document.readyState === 'loading') {
