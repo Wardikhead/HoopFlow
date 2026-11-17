@@ -18,12 +18,22 @@
         <i class="bi bi-chevron-down" aria-hidden="true"></i>
     </summary>
     <div class="hf-user-menu__panel">
-        <a href="{{ route('profile') }}" wire:navigate data-testid="topbar-profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
-        <a href="{{ route('profile') }}#appearance" wire:navigate><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
-        <a href="{{ route('profile') }}#shortcuts" wire:navigate><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
-        <form method="POST" action="{{ route('logout') }}" data-hf-logout-form>
-            @csrf
-            <button type="submit" data-testid="logout"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button>
-        </form>
+        <div class="hf-user-menu__head">
+            <span class="hf-avatar hf-avatar--lg">{{ $initials }}</span>
+            <span class="hf-user-menu__identity">
+                <span class="hf-user-menu__eyebrow">Signed in as</span>
+                <strong>{{ $user?->name }}</strong>
+                <span class="hf-user-menu__email">{{ $user?->email }}</span>
+            </span>
+        </div>
+        <div class="hf-user-menu__body">
+            <a href="{{ route('profile') }}" wire:navigate data-testid="topbar-profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+            <a href="{{ route('profile') }}#appearance" wire:navigate><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
+            <a href="{{ route('profile') }}#shortcuts" wire:navigate><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
+            <form method="POST" action="{{ route('logout') }}" data-hf-logout-form>
+                @csrf
+                <button type="submit" data-testid="logout"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button>
+            </form>
+        </div>
     </div>
 </details>

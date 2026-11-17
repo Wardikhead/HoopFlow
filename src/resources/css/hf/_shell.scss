@@ -374,6 +374,13 @@
   letter-spacing: 0.04em;
 }
 
+.hf-avatar--lg {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
 .hf-user-meta {
   display: none;
   line-height: 1.1;
@@ -661,6 +668,51 @@
 .hf-user-menu summary { cursor: pointer; list-style: none; }
 .hf-user-menu summary::-webkit-details-marker { display: none; }
 .hf-user-menu[open] summary { border-color: var(--hf-primary); }
+
+.hf-user-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--hf-border);
+}
+
+.hf-user-menu__identity {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.hf-user-menu__eyebrow {
+  color: var(--hf-muted);
+  font-family: var(--hf-font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hf-user-menu__identity strong,
+.hf-user-menu__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hf-user-menu__identity strong {
+  font-size: 12px;
+}
+
+.hf-user-menu__email {
+  color: var(--hf-muted);
+  font-size: 10px;
+}
+
+.hf-user-menu__body {
+  display: grid;
+}
+
 .hf-user-menu__panel {
   position: absolute;
   right: 0;
@@ -689,9 +741,52 @@
   cursor: pointer;
   font-size: 13px;
   text-align: left;
+  transition: background var(--hf-dur-micro) linear, color var(--hf-dur-micro) linear;
 }
 .hf-user-menu__panel a:hover,
 .hf-user-menu__panel button:hover { background: var(--hf-ground); text-decoration: none; }
+
+.hf-user-menu__panel .bi {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hf-muted) 10%, transparent);
+  color: var(--hf-muted);
+  font-size: 13px;
+  transition:
+    background var(--hf-dur-micro) linear,
+    color var(--hf-dur-micro) linear,
+    transform var(--hf-dur-micro) var(--hf-ease-out);
+}
+
+.hf-user-menu__panel a:hover .bi,
+.hf-user-menu__panel a:focus-visible .bi,
+.hf-user-menu__panel button:hover .bi,
+.hf-user-menu__panel button:focus-visible .bi {
+  background: color-mix(in srgb, var(--hf-primary) 16%, transparent);
+  color: var(--hf-primary-ink);
+  transform: translateX(1px);
+}
+
+.hf-user-menu__panel form {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--hf-border);
+}
+
+.hf-user-menu__panel form button:hover,
+.hf-user-menu__panel form button:focus-visible {
+  color: var(--hf-danger-ink);
+}
+
+.hf-user-menu__panel form button:hover .bi,
+.hf-user-menu__panel form button:focus-visible .bi {
+  background: color-mix(in srgb, var(--hf-danger-ink) 14%, transparent);
+  color: var(--hf-danger-ink);
+}
 
 /* Mobile More sheet */
 .hf-sheet {

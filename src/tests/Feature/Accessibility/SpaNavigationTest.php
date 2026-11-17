@@ -68,6 +68,19 @@ it('keeps guest pages free of navigation transition hooks', function () {
     expect(substr_count((string) $response->getContent(), 'wire:transition.navigate'))->toBe(0);
 });
 
+it('shows the signed-in account in the user menu header', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+
+    $response = $this->actingAs($organizer)->get(route('dashboard'))->assertOk();
+    $xpath = spaXPath((string) $response->getContent());
+    $head = $xpath->query("//div[contains(@class, 'hf-user-menu__head')]")->item(0);
+
+    expect($head)->not->toBeNull();
+    expect($head->textContent)->toContain('Signed in as');
+    expect($head->textContent)->toContain($organizer->name);
+    expect($head->textContent)->toContain($organizer->email);
+});
+
 it('navigates after switching the standings tournament', function () {
     $tournament = Tournament::query()->firstOrFail();
 
