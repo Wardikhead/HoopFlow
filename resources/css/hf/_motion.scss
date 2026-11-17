@@ -82,6 +82,28 @@
     animation: hf-toast-in var(--hf-dur-standard) var(--hf-ease-out) both;
   }
 
+  .hf-user-menu[open] .hf-user-menu__panel {
+    transform-origin: bottom right;
+    animation: hf-menu-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-user-menu.is-closing .hf-user-menu__panel {
+    animation: hf-menu-out var(--hf-dur-micro) ease-in both;
+    pointer-events: none;
+  }
+
+  .hf-user-menu__body > * {
+    animation: hf-menu-item-in var(--hf-dur-standard) var(--hf-ease-out) both;
+  }
+
+  .hf-user-menu__body > *:nth-child(2) { animation-delay: 24ms; }
+  .hf-user-menu__body > *:nth-child(3) { animation-delay: 48ms; }
+  .hf-user-menu__body > *:nth-child(4) { animation-delay: 72ms; }
+
+  .hf-sheet__account.hf-user-menu[open] .hf-user-menu__panel {
+    animation: none;
+  }
+
   .hf-btn:active {
     transform: translateY(0) scale(0.98);
   }
@@ -124,6 +146,21 @@
   to { opacity: 1; transform: none; }
 }
 
+@keyframes hf-menu-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-menu-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(4px) scale(0.99); }
+}
+
+@keyframes hf-menu-item-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
 @keyframes hf-sheet-in {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: none; }
@@ -155,6 +192,9 @@
   .hf-dialog[open]::backdrop,
   .hf-sheet[open],
   .hf-sheet[open]::backdrop,
+  .hf-user-menu[open] .hf-user-menu__panel,
+  .hf-user-menu.is-closing .hf-user-menu__panel,
+  .hf-user-menu__body > *,
   .hf-toast {
     animation: none !important;
   }
@@ -171,6 +211,9 @@
 [data-motion='reduced'] .hf-dialog[open]::backdrop,
 [data-motion='reduced'] .hf-sheet[open],
 [data-motion='reduced'] .hf-sheet[open]::backdrop,
+[data-motion='reduced'] .hf-user-menu[open] .hf-user-menu__panel,
+[data-motion='reduced'] .hf-user-menu.is-closing .hf-user-menu__panel,
+[data-motion='reduced'] .hf-user-menu__body > *,
 [data-motion='reduced'] .hf-toast {
   animation: none !important;
 }

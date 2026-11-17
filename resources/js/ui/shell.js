@@ -1,9 +1,12 @@
 import { closeDialogWithMotion } from './dialog-motion.js';
+import { closeUserMenu, initUserMenus } from './menus.js';
 
 export function initShell() {
+    initUserMenus();
+
     document.addEventListener('click', (event) => {
         document.querySelectorAll('details.hf-user-menu[open]').forEach((menu) => {
-            if (!menu.contains(event.target)) menu.removeAttribute('open');
+            if (!menu.contains(event.target)) closeUserMenu(menu);
         });
     });
 
@@ -11,7 +14,7 @@ export function initShell() {
         if (event.key !== 'Escape') return;
 
         document.querySelectorAll('details.hf-user-menu[open]').forEach((menu) => {
-            menu.removeAttribute('open');
+            closeUserMenu(menu);
             menu.querySelector('summary')?.focus();
         });
     });
