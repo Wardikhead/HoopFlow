@@ -2,6 +2,7 @@ import { initBracketZoom } from './bracket';
 import { initCalendar } from './calendar';
 import { initCountUp } from './countup';
 import { initFeedback } from './feedback';
+import { initDialogMotion } from './dialog-motion.js';
 import { initLiveScores } from './live-scores';
 import { initLivewireBridge } from './livewire-bridge';
 import { initPageLoader } from './loading';
@@ -33,6 +34,7 @@ function initGlobals() {
     initCalendar();
     initFeedback();
     initLivewireBridge();
+    initDialogMotion();
     initPageLoader();
     initLogoutDialog();
     initMotion();

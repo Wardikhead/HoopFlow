@@ -1,3 +1,5 @@
+import { closeDialogWithMotion } from './dialog-motion.js';
+
 export function initShell() {
     document.addEventListener('click', (event) => {
         document.querySelectorAll('details.hf-user-menu[open]').forEach((menu) => {
@@ -38,7 +40,8 @@ export function initMoreSheet() {
         }
 
         if (target.closest('[data-more-sheet-close]')) {
-            document.querySelector('dialog[data-more-sheet][open]')?.close();
+            const sheet = document.querySelector('dialog[data-more-sheet][open]');
+            if (sheet instanceof HTMLDialogElement) closeDialogWithMotion(sheet);
 
             return;
         }
@@ -50,8 +53,15 @@ export function initMoreSheet() {
         }
 
         const sheet = target.closest('dialog[data-more-sheet]');
-        if (sheet && event.target === sheet) sheet.close();
+        if (sheet && event.target === sheet) closeDialogWithMotion(sheet);
     });
+
+    document.addEventListener('cancel', (event) => {
+        if (!(event.target instanceof HTMLDialogElement) || !event.target.matches('dialog[data-more-sheet]')) return;
+
+        event.preventDefault();
+        closeDialogWithMotion(event.target);
+    }, true);
 
     document.addEventListener('close', (event) => {
         if (!(event.target instanceof HTMLDialogElement)) return;
