@@ -136,3 +136,15 @@
   opacity: 1;
   transform: none;
 }
+
+/* SPA visits keep the shell and page content static. Entry motion belongs to
+   full document loads, so navigating the app never replays it. */
+.hf-spa-nav .hf-main,
+.hf-spa-nav .hf-reveal,
+.hf-spa-nav .hf-page-enter {
+  animation: none !important;
+}
+
+.hf-spa-nav .hf-reveal {
+  transform: none !important;
+}
