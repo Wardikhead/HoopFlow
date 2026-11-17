@@ -20,7 +20,7 @@
                 <div class="hf-grid hf-grid--3">
                     <div class="hf-field">
                         <label class="hf-label" for="ingameTournamentFilter">Tournament</label>
-                        <select class="hf-select" id="ingameTournamentFilter" wire:model.live="tournamentFilter" data-testid="ingame-tournament-filter">
+                        <select class="hf-select" data-hf-select id="ingameTournamentFilter" wire:model.live="tournamentFilter" data-testid="ingame-tournament-filter">
                             <option value="all">All tournaments</option>
                             @foreach ($this->tournaments as $tournament)
                                 <option value="{{ $tournament->id }}">{{ $tournament->name }}</option>
@@ -29,7 +29,7 @@
                     </div>
                     <div class="hf-field">
                         <label class="hf-label" for="ingameStatusFilter">Status</label>
-                        <select class="hf-select" id="ingameStatusFilter" wire:model.live="statusFilter" data-testid="ingame-status-filter">
+                        <select class="hf-select" data-hf-select id="ingameStatusFilter" wire:model.live="statusFilter" data-testid="ingame-status-filter">
                             <option value="all">All statuses</option>
                             <option value="scheduled">Scheduled</option>
                             <option value="final">Final</option>
@@ -325,7 +325,7 @@
                             <button type="button" class="hf-chip hf-chip--{{ $side === $filter['key'] ? 'primary' : 'slate' }}" wire:click="setSide('{{ $filter['key'] }}')" aria-pressed="{{ $side === $filter['key'] ? 'true' : 'false' }}" data-testid="ingame-side-{{ $filter['key'] }}">{{ $filter['label'] }}</button>
                         @endforeach
                     </div>
-                    <select class="hf-select" wire:model.live="side" data-testid="ingame-team-filter" aria-label="Team filter">
+                    <select class="hf-select" data-hf-select wire:model.live="side" data-testid="ingame-team-filter" aria-label="Team filter">
                         <option value="all">Both teams</option>
                         <option value="team1">{{ $home?->name ?? 'Team 1' }}</option>
                         <option value="team2">{{ $away?->name ?? 'Team 2' }}</option>

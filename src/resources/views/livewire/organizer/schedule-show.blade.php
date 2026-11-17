@@ -442,6 +442,7 @@
                             <select
                                 id="rescheduleMatch"
                                 class="hf-select"
+                                data-hf-select
                                 wire:model="rescheduleMatchId"
                                 data-testid="reschedule-match"
                                 x-on:change="
@@ -468,7 +469,7 @@
                         </div>
                         <div class="hf-field">
                             <label class="hf-label" for="rescheduleCourt">Court</label>
-                            <select id="rescheduleCourt" class="hf-select" wire:model="rescheduleCourtId" x-ref="rescheduleCourt" data-testid="reschedule-court">
+                            <select id="rescheduleCourt" class="hf-select" data-hf-select wire:model="rescheduleCourtId" x-ref="rescheduleCourt" data-testid="reschedule-court">
                                 @foreach ($courts as $court)
                                     <option value="{{ $court->id }}">{{ $court->name }}</option>
                                 @endforeach

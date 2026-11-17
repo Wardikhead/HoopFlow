@@ -46,7 +46,7 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="matchCourt">Court</label>
-                    <select class="hf-select" id="matchCourt" wire:model.live="court" data-testid="match-court-filter">
+                    <select class="hf-select" data-hf-select id="matchCourt" wire:model.live="court" data-testid="match-court-filter">
                         <option value="all">All courts</option>
                         @foreach ($this->courts as $court)
                             <option value="{{ $court->id }}">{{ $court->name }}</option>
@@ -55,7 +55,7 @@
                 </div>
                 <div class="hf-field">
                     <label class="hf-label" for="matchStatus">Status</label>
-                    <select class="hf-select" id="matchStatus" wire:model.live="status" data-testid="match-status-filter">
+                    <select class="hf-select" data-hf-select id="matchStatus" wire:model.live="status" data-testid="match-status-filter">
                         <option value="all">All statuses</option>
                         <option value="scheduled">Scheduled</option>
                         <option value="final">Final</option>

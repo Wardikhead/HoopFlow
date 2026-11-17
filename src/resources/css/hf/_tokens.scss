@@ -15,6 +15,7 @@
   --hf-slate: #475569;
   --hf-border: color-mix(in srgb, var(--hf-ink) 12%, transparent);
   --hf-border-strong: color-mix(in srgb, var(--hf-ink) 50%, transparent);
+  --hf-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235b6472' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5l4 4 4-4'/%3E%3C/svg%3E");
   --hf-rail: #0b1220;
   --hf-rail-ink: #f3f5f9;
   --hf-rail-muted: #9aa6b8;
@@ -94,6 +95,7 @@
   --hf-slate: #94a3b8;
   --hf-border: rgba(243, 245, 249, 0.12);
   --hf-border-strong: color-mix(in srgb, var(--hf-ink) 40%, transparent);
+  --hf-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%239aa6b8' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5l4 4 4-4'/%3E%3C/svg%3E");
   --hf-rail: #060a12;
   --hf-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
   --hf-action: #fb7a1e;
