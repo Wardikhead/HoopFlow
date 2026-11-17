@@ -44,8 +44,9 @@
   role: string,            // '' when absent
   hasWireNavigate: boolean,
   hasClickHandler: boolean,
+  hasDynamicHref: boolean,
   isOptedOut: boolean,
-  shell: boolean,          // document has .hf-app
+  shell: boolean,          // this link is inside .hf-app
 }
 ```
 
@@ -67,6 +68,7 @@ const base = {
     role: '',
     hasWireNavigate: false,
     hasClickHandler: false,
+    hasDynamicHref: false,
     isOptedOut: false,
     shell: true,
 };
@@ -109,6 +111,10 @@ test('rejects links owned by a click handler', () => {
     assert.equal(shouldInterceptLink({ ...base, hasClickHandler: true }, current), false);
 });
 
+test('rejects links with a dynamically bound href', () => {
+    assert.equal(shouldInterceptLink({ ...base, hasDynamicHref: true }, current), false);
+});
+
 test('rejects opted-out links', () => {
     assert.equal(shouldInterceptLink({ ...base, isOptedOut: true }, current), false);
 });
@@ -148,16 +154,29 @@ function hasClickHandler(link) {
     });
 }
 
+function hasDynamicHref(link) {
+    return [...link.attributes].some((attribute) => {
+        const name = attribute.name;
+
+        return name === ':href' || name === 'x-bind:href';
+    });
+}
+
+function hasWireNavigate(link) {
+    return [...link.attributes].some((attribute) => attribute.name.startsWith('wire:navigate'));
+}
+
 function descriptorFor(link) {
     return {
         href: link.getAttribute('href') ?? '',
         target: link.getAttribute('target') ?? '',
         download: link.hasAttribute('download'),
         role: link.getAttribute('role') ?? '',
-        hasWireNavigate: link.hasAttribute('wire:navigate'),
+        hasWireNavigate: hasWireNavigate(link),
         hasClickHandler: hasClickHandler(link),
+        hasDynamicHref: hasDynamicHref(link),
         isOptedOut: link.closest('[data-no-navigate]') !== null,
-        shell: document.querySelector('.hf-app') !== null,
+        shell: link.closest('.hf-app') !== null,
     };
 }
 
@@ -165,6 +184,7 @@ export function shouldInterceptLink(link, currentUrl) {
     if (!link || !link.shell) return false;
     if (link.hasWireNavigate) return false;
     if (link.hasClickHandler) return false;
+    if (link.hasDynamicHref) return false;
     if (link.isOptedOut) return false;
     if (link.download) return false;
     if (link.role === 'button') return false;
@@ -214,7 +234,7 @@ export function initSpaNavigation() {
 
 Run: `node --test tests/js/spa-nav.test.js`
 
-Expected: 12 tests, 0 failures.
+Expected: 13 tests, 0 failures.
 
 - [ ] **Step 5: Commit**
 
@@ -445,13 +465,20 @@ export function bindScorekeeperPage() {
     if (!form) return;
 
     const markDirty = () => { dirty = true; };
+    const markClean = () => { dirty = false; };
 
     document.querySelectorAll('[data-testid^="ingame-q-"], [data-testid^="ingame-final-"], [data-testid^="ingame-stat-"]').forEach((input) => {
+        if (input.dataset.hfDirtyBound === '1') return;
+
+        input.dataset.hfDirtyBound = '1';
         input.addEventListener('input', markDirty);
     });
 
     document.querySelectorAll('[data-testid="ingame-save"], [data-testid="ingame-publish"], [data-testid="ingame-save-correction"]').forEach((button) => {
-        button.addEventListener('click', () => { dirty = false; });
+        if (button.dataset.hfDirtyBound === '1') return;
+
+        button.dataset.hfDirtyBound = '1';
+        button.addEventListener('click', markClean);
     });
 }
 ```
@@ -491,7 +518,7 @@ export function initValidation() {
 
 Delete the old `function sync()` definition at the bottom of the file.
 
-In `src/resources/js/ui/live-scores.js`, add a module-level active instance and stop it before starting a new one:
+In `src/resources/js/ui/live-scores.js`, add a module-level active instance and stop it before starting a new one. Move the `visibilitychange` handler into a named function so `stop()` can remove it:
 
 ```js
 let active = null;
@@ -505,11 +532,25 @@ export function initLiveScores() {
 
     // ... existing body unchanged ...
 
+    const onVisibilityChange = () => {
+        if (document.hidden) {
+            clearTimeout(timer);
+
+            return;
+        }
+
+        clearTimeout(timer);
+        poll();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const instance = {
         stop() {
             generation++;
             clearTimeout(timer);
             controller?.abort();
+            document.removeEventListener('visibilitychange', onVisibilityChange);
 
             if (active === instance) active = null;
         },
@@ -521,7 +562,7 @@ export function initLiveScores() {
 }
 ```
 
-Replace only the old final `return { stop() { ... } };` block with the `instance` construction shown above.
+Replace only the old final `return { stop() { ... } };` block with the `instance` construction shown above. The existing anonymous `document.addEventListener('visibilitychange', ...)` call must be replaced by the named handler.
 
 - [ ] **Step 3: Create the lifecycle orchestrator**
 
@@ -573,7 +614,7 @@ function initGlobals() {
     registerToasts();
 }
 
-function initPage() {
+function initPage({ focus = true } = {}) {
     applyReveal();
     initCountUp();
 
@@ -584,8 +625,12 @@ function initPage() {
     syncNavRail();
     syncPreferenceButtons();
     refreshValidation();
-    focusMain();
-    announcePage();
+
+    if (focus) {
+        focusMain();
+        announcePage();
+    }
+
     consumeFlashToast();
 }
 
@@ -609,20 +654,32 @@ function announcePage() {
 }
 
 function consumeFlashToast() {
-    window.setTimeout(() => {
-        const region = document.querySelector('[data-flash-toast]');
-        if (!region) return;
+    const dispatch = () => {
+        window.setTimeout(() => {
+            const region = document.querySelector('[data-flash-toast]');
+            if (!region) return;
 
-        const payload = region.getAttribute('data-flash-toast');
-        region.removeAttribute('data-flash-toast');
-        if (!payload) return;
+            const payload = region.getAttribute('data-flash-toast');
+            region.removeAttribute('data-flash-toast');
+            if (!payload) return;
 
-        try {
-            window.dispatchEvent(new CustomEvent('hf-toast', { detail: JSON.parse(payload) }));
-        } catch {
-            // Ignore malformed flash payloads.
-        }
-    }, 0);
+            try {
+                window.dispatchEvent(new CustomEvent('hf-toast', { detail: JSON.parse(payload) }));
+            } catch {
+                // Ignore malformed flash payloads.
+            }
+        }, 0);
+    };
+
+    // On the initial load the entry module can run before Livewire starts
+    // Alpine, so the toast region has no window listener yet.
+    if (document.readyState === 'complete') {
+        dispatch();
+
+        return;
+    }
+
+    document.addEventListener('DOMContentLoaded', dispatch, { once: true });
 }
 
 export function initPageLifecycle() {
@@ -632,8 +689,10 @@ export function initPageLifecycle() {
     document.addEventListener('livewire:navigated', () => {
         if (lastUrl === window.location.href) return;
 
+        const initial = lastUrl === null;
+
         lastUrl = window.location.href;
-        initPage();
+        initPage({ focus: !initial });
     });
 
     if (document.readyState === 'loading') {
@@ -641,11 +700,11 @@ export function initPageLifecycle() {
             if (lastUrl !== null) return;
 
             lastUrl = window.location.href;
-            initPage();
+            initPage({ focus: false });
         });
     } else if (lastUrl === null) {
         lastUrl = window.location.href;
-        initPage();
+        initPage({ focus: false });
     }
 }
 ```
@@ -667,7 +726,7 @@ initPageLifecycle();
 
 - [ ] **Step 5: Verify the existing JS tests and the bundle**
 
-Run: `node --test tests/js`
+Run: `node --test "tests/js/*.test.js"`
 
 Expected: all existing tests pass, including `live-scores.test.js`.
 
@@ -1031,7 +1090,7 @@ export function initLogoutDialog() {
 
 - [ ] **Step 3: Verify the bundle and tests**
 
-Run: `node --test tests/js`
+Run: `node --test "tests/js/*.test.js"`
 
 Expected: all tests pass.
 
@@ -1079,7 +1138,7 @@ beforeEach(function () {
 });
 
 it('renders the flash toast payload for the client to consume', function () {
-    $organizer = User::where('email', 'organizer@hoopflow.test')->firstOrFail();
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 
     $this->actingAs($organizer)
         ->withSession(['announcement_toast' => [
@@ -1094,7 +1153,7 @@ it('renders the flash toast payload for the client to consume', function () {
 });
 
 it('renders the page announcer region in the authenticated shell', function () {
-    $organizer = User::where('email', 'organizer@hoopflow.test')->firstOrFail();
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 
     $this->actingAs($organizer)
         ->get(route('dashboard'))
@@ -1118,7 +1177,7 @@ In `src/resources/views/layouts/public.blade.php`, immediately after the skip li
 <p class="hf-sr-only" role="status" aria-live="polite" aria-atomic="true" data-hf-page-announcer></p>
 ```
 
-Replace the toast region opening tag with the flash payload and a one-time remove:
+Replace the toast region opening tag with the flash payload. The existing `x-init` is removed so the lifecycle handler is the only consumer:
 
 ```blade
 <div class="hf-toast-region"
@@ -1128,13 +1187,12 @@ Replace the toast region opening tag with the flash payload and a one-time remov
      @hf-toast.window="push($event.detail)"
      @if ($flashToast)
          data-flash-toast="{{ json_encode($flashToast) }}"
-         x-init="push(@js($flashToast)); $el.removeAttribute('data-flash-toast')"
      @endif>
 ```
 
-The `x-init` removes the attribute when Alpine initializes the region. If the
-region is morphed in place and `x-init` does not re-run, the lifecycle handler
-reads the attribute and dispatches the toast exactly once.
+The lifecycle handler reads the attribute on the next task, removes it, and
+dispatches the toast exactly once. The attribute is re-rendered by the server on
+the next request, so no JavaScript path can show it twice.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1283,7 +1341,7 @@ function spaXPath(string $html): DOMXPath
 }
 
 it('marks rail and mobile navigation links for AJAX navigation', function () {
-    $organizer = User::where('email', 'organizer@hoopflow.test')->firstOrFail();
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 
     $response = $this->actingAs($organizer)->get(route('dashboard'))->assertOk();
     $xpath = spaXPath((string) $response->getContent());
@@ -1466,7 +1524,7 @@ Expected: `[OK] No errors`.
 
 - [ ] **Step 2: Run the JS tests and production build**
 
-Run: `node --test tests/js`
+Run: `node --test "tests/js/*.test.js"`
 
 Expected: all tests pass, including the 12 new `spa-nav` cases and the existing `live-scores` cases.
 
@@ -1488,7 +1546,7 @@ Start the dev server from `src/`:
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-If the local database is empty, run `php artisan migrate --seed` first and use the seeded organizer (`organizer@hoopflow.test` / `password`).
+If the local database is empty, run `php artisan migrate --seed` first and use the seeded organizer (`organizer@hoopflow.ph` / `password`).
 
 In the browser:
 
