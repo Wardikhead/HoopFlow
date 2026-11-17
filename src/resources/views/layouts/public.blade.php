@@ -46,6 +46,8 @@
 <body class="@yield('body-class')">
     <div class="hf-progress" data-hf-progress aria-hidden="true"><span></span></div>
 
+    <x-page-loader />
+
     <div class="hf-offline" data-hf-offline role="status" hidden>
         <i class="bi bi-wifi-off" aria-hidden="true"></i>
         You're offline. Changes won't save until you reconnect.
@@ -60,7 +62,7 @@
          aria-atomic="false"
          x-data="hfToasts"
          @hf-toast.window="push($event.detail)"
-         @if ($flashToast) x-init="push(@js($flashToast))" @endif>
+         @if ($flashToast) data-flash-toast="{{ json_encode($flashToast) }}" @endif>
         <template x-for="toast in toasts" :key="toast.id">
             <div class="hf-toast"
                  :class="`hf-toast--${toast.tone}${toast.paused ? ' is-paused' : ''}`"
@@ -84,6 +86,7 @@
     </div>
 
     <a class="visually-hidden-focusable" href="#main">Skip to content</a>
+    <p class="hf-sr-only" role="status" aria-live="polite" aria-atomic="true" data-hf-page-announcer></p>
 
     @guest
         <header class="hf-auth-topbar">
@@ -252,7 +255,7 @@
                             <a href="{{ route('profile') }}"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
                             <a href="{{ route('profile') }}#appearance"><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
                             <a href="{{ route('profile') }}#shortcuts"><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" data-hf-logout-form>
                                 @csrf
                                 <button type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button>
                             </form>
@@ -273,6 +276,8 @@
                 @yield('content')
             </main>
         </div>
+
+        <x-logout-dialog />
     @endauth
 
     @livewireScripts

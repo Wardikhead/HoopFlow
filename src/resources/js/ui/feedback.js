@@ -110,3 +110,11 @@ export function initFeedback() {
     initOffline();
     initRequests();
 }
+
+export function beginNavigation() {
+    startProgress();
+}
+
+export function finishNavigation() {
+    finishProgress();
+}
