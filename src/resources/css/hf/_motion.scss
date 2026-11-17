@@ -148,3 +148,26 @@
 .hf-spa-nav .hf-reveal {
   transform: none !important;
 }
+
+/* SPA page swap: only the named <main> participates. */
+::view-transition-group(hf-page) {
+  animation: none;
+}
+
+::view-transition-old(hf-page) {
+  animation: hf-page-vt-out var(--hf-dur-exit) ease-in both;
+}
+
+::view-transition-new(hf-page) {
+  animation: hf-page-vt-in var(--hf-dur-page) var(--hf-ease-out) both;
+}
+
+@keyframes hf-page-vt-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes hf-page-vt-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
