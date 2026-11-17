@@ -72,6 +72,8 @@
   --hf-dur-micro: 120ms;
   --hf-dur-standard: 180ms;
   --hf-dur-expressive: 280ms;
+  --hf-dur-exit: 140ms;
+  --hf-dur-page: 240ms;
   --hf-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -113,6 +115,11 @@
   --hf-card-pad: 14px;
   --hf-row-pad: 8px;
   --hf-section-gap: 12px;
+}
+
+[data-motion='reduced'] {
+  --hf-dur-exit: 0ms;
+  --hf-dur-page: 0ms;
 }
 
 [data-motion='reduced'] *,
