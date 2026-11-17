@@ -179,7 +179,7 @@
 
         <div class="hf-app">
             <aside class="hf-rail" id="hf-rail" aria-label="Primary navigation">
-                <a class="hf-rail-brand" href="{{ route('dashboard') }}" aria-label="HoopFlow dashboard">
+                <a class="hf-rail-brand" href="{{ route('dashboard') }}" wire:navigate aria-label="HoopFlow dashboard">
                     <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
 
@@ -211,7 +211,7 @@
                     <button type="button" class="hf-icon-btn" data-theme-toggle aria-label="Toggle color theme" data-testid="theme-toggle">
                         <i class="bi bi-moon-stars" aria-hidden="true"></i>
                     </button>
-                    <a class="hf-icon-btn" href="{{ route('announcements') }}" aria-label="Announcements" data-testid="topbar-announcements">
+                    <a class="hf-icon-btn" href="{{ route('announcements') }}" wire:navigate aria-label="Announcements" data-testid="topbar-announcements">
                         <i class="bi bi-bell" aria-hidden="true"></i>
                     </a>
                 </div>
@@ -221,6 +221,7 @@
                 @foreach ($roleTabs as $tab)
                     <a class="hf-nav-tab{{ $isActive($tab['key']) ? ' is-active' : '' }}"
                        href="{{ route($tab['route']) }}"
+                       wire:navigate
                        data-testid="mobile-nav-{{ $tab['key'] }}"
                        @if ($isActive($tab['key'])) aria-current="page" @endif>
                         <i class="bi bi-{{ $tab['icon'] }}" aria-hidden="true"></i>
@@ -252,9 +253,9 @@
                             </span>
                         </summary>
                         <div class="hf-user-menu__panel">
-                            <a href="{{ route('profile') }}"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
-                            <a href="{{ route('profile') }}#appearance"><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
-                            <a href="{{ route('profile') }}#shortcuts"><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
+                            <a href="{{ route('profile') }}" wire:navigate><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+                            <a href="{{ route('profile') }}#appearance" wire:navigate><i class="bi bi-palette" aria-hidden="true"></i> Appearance</a>
+                            <a href="{{ route('profile') }}#shortcuts" wire:navigate><i class="bi bi-keyboard" aria-hidden="true"></i> Keyboard shortcuts</a>
                             <form method="POST" action="{{ route('logout') }}" data-hf-logout-form>
                                 @csrf
                                 <button type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button>
@@ -266,7 +267,7 @@
 
                     <div class="hf-sheet__group">
                         <span class="hf-rail-label">Account</span>
-                        <a href="{{ route('profile') }}" data-more-link="profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+                        <a href="{{ route('profile') }}" wire:navigate data-more-link="profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
                     </div>
                 </div>
             </dialog>

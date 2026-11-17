@@ -30,6 +30,7 @@
 
             @if ($isSheet)
                 <a href="{{ route($item['route']) }}"
+                   wire:navigate
                    data-more-link="{{ $key }}"
                    @if ($active) aria-current="page" @endif>
                     <i class="bi bi-{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}
@@ -37,6 +38,7 @@
             @else
                 <a class="hf-rail-link{{ $active ? ' is-active' : '' }}"
                    href="{{ route($item['route']) }}"
+                   wire:navigate
                    data-testid="nav-{{ $key }}"
                    data-label="{{ $item['label'] }}"
                    data-nav-link

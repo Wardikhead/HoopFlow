@@ -87,7 +87,7 @@ class StandingsShow extends Component
             return;
         }
 
-        $this->redirect(route('standings', ['id' => (int) $tournamentId]));
+        $this->redirect(route('standings', ['id' => (int) $tournamentId]), navigate: true);
     }
 
     #[Computed]

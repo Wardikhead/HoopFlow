@@ -825,7 +825,7 @@ class GameManage extends SecureComponent
             return;
         }
 
-        $this->redirect(route('gameStats', ['match' => $match->id]));
+        $this->redirect(route('gameStats', ['match' => $match->id]), navigate: true);
     }
 
     public function cancelCorrection(): void
@@ -836,7 +836,7 @@ class GameManage extends SecureComponent
             return;
         }
 
-        $this->redirect(route('gameStats', ['match' => $match->id]));
+        $this->redirect(route('gameStats', ['match' => $match->id]), navigate: true);
     }
 
     public function closeConfirm(): void
@@ -916,7 +916,7 @@ class GameManage extends SecureComponent
         Gate::authorize('correctScore', $match);
 
         if (! $this->hasEditableBoxScore) {
-            $this->redirect(route('gameStats', ['match' => $match->id, 'correct' => 1]));
+            $this->redirect(route('gameStats', ['match' => $match->id, 'correct' => 1]), navigate: true);
 
             return;
         }

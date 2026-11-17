@@ -684,7 +684,7 @@ class GameStatsShow extends Component
         }
 
         if ($this->hasEditableBoxScore) {
-            $this->redirect(route('gameManage', ['match' => $match->id]));
+            $this->redirect(route('gameManage', ['match' => $match->id]), navigate: true);
 
             return;
         }
@@ -780,7 +780,7 @@ class GameStatsShow extends Component
         }
 
         if ($this->hasEditableBoxScore) {
-            $this->redirect(route('gameManage', ['match' => $match->id]));
+            $this->redirect(route('gameManage', ['match' => $match->id]), navigate: true);
 
             return;
         }
@@ -830,7 +830,7 @@ class GameStatsShow extends Component
         }
 
         if ($match->status === 'final' && $this->hasEditableBoxScore) {
-            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]), navigate: true);
 
             return;
         }
@@ -868,7 +868,7 @@ class GameStatsShow extends Component
         }
 
         if ($match->status === 'final' && $this->hasEditableBoxScore) {
-            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]), navigate: true);
 
             return;
         }
@@ -941,7 +941,7 @@ class GameStatsShow extends Component
         if ($match->status === 'scheduled' && $this->hasEditableBoxScore) {
             $this->showScoreConsole = false;
             $this->scoreHistory = [];
-            $this->redirect(route('gameManage', ['match' => $match->id]));
+            $this->redirect(route('gameManage', ['match' => $match->id]), navigate: true);
 
             return;
         }
@@ -996,7 +996,7 @@ class GameStatsShow extends Component
 
         if ($match->status === 'final' && $this->hasEditableBoxScore) {
             $this->showCorrection = false;
-            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]));
+            $this->redirect(route('gameManage', ['match' => $match->id, 'correct' => 1]), navigate: true);
 
             return;
         }
