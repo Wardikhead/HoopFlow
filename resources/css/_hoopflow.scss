@@ -1,10 +1,12 @@
 // Aggregates the HoopFlow design system. Order matters: tokens first, then
-// base, shell, components, data surfaces, page surfaces, motion, and print.
+// base, shell, components, data surfaces, page surfaces, overlays, motion, and
+// print.
 @use "hf/tokens";
 @use "hf/base";
 @use "hf/shell";
 @use "hf/components";
 @use "hf/data";
 @use "hf/surfaces";
+@use "hf/overlays";
 @use "hf/motion";
 @use "hf/print";
