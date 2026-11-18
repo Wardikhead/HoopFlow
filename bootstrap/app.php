@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             // API routes share the web session so the same Blade pages can call
             // them with fetch() and the CSRF meta tag. Public reads stay open.
-            Route::middleware(['web', 'throttle:60,1'])
+            Route::middleware(['web', 'throttle:api'])
                 ->prefix('api')
                 ->name('api.')
                 ->group(base_path('routes/api.php'));
@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(
             append: [
+                'throttle:web',
                 EnsureUserIsActive::class,
                 VerifySessionFingerprint::class,
                 EnforceSessionTimeout::class,
