@@ -280,3 +280,32 @@ it('revokes every session for a user', function () {
     $this->assertDatabaseMissing('sessions', ['user_id' => $user->id]);
     $this->assertDatabaseHas('sessions', ['user_id' => $other->id]);
 });
+
+it('shows the forgot password page', function () {
+    $this->get(route('password.request'))
+        ->assertOk()
+        ->assertSee('Forgot password')
+        ->assertSee('forgot-password-email', false)
+        ->assertSee(route('login'), false);
+});
+
+it('shows the reset password form with the token, email, and strength meter', function () {
+    $this->get(route('password.reset', ['token' => 'test-token', 'email' => 'reset@example.com']))
+        ->assertOk()
+        ->assertSee('test-token', false)
+        ->assertSee('reset-password-email', false)
+        ->assertSee('reset-password-password-toggle', false)
+        ->assertSee('Password requirements')
+        ->assertSee('aria-valuemax="4"', false);
+});
+
+it('shows the forgot password link and reset status on the login page', function () {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('login-forgot-password', false)
+        ->assertSee(route('password.request'), false);
+
+    $this->withSession(['status' => 'Your password has been reset. Sign in with your new password.'])
+        ->get(route('login'))
+        ->assertSee('Your password has been reset. Sign in with your new password.');
+});
