@@ -31,6 +31,10 @@
             <h1 class="hf-auth-title">Sign in</h1>
             <p class="hf-auth-sub">Sign in to manage your tournaments, teams, and matchday.</p>
 
+            @if (session('status'))
+                <x-callout tone="success" class="hf-mb-2">{{ session('status') }}</x-callout>
+            @endif
+
             <form method="POST" action="{{ route('login.store') }}" novalidate>
                 @csrf
 
@@ -57,7 +61,10 @@
                 </div>
 
                 <div class="hf-field hf-mt-2">
-                    <label class="hf-label" for="loginPassword">Password</label>
+                    <div class="hf-between">
+                        <label class="hf-label" for="loginPassword">Password</label>
+                        <a class="hf-small" href="{{ route('password.request') }}" data-testid="login-forgot-password">Forgot password?</a>
+                    </div>
                     <div class="hf-inline-form">
                         <input
                             class="hf-input"
