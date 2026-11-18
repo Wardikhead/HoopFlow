@@ -45,6 +45,13 @@ class SessionRegistry
             ->delete();
     }
 
+    public function revokeAll(User $user): int
+    {
+        return DB::table($this->table())
+            ->where('user_id', $user->id)
+            ->delete();
+    }
+
     private function table(): string
     {
         return (string) config('session.table', 'sessions');
