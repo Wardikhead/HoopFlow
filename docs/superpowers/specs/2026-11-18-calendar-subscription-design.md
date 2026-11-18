@@ -85,9 +85,10 @@ Route binding handles an unknown tournament with the framework 404. A team that 
 MatchSlot::query()
     ->where('tournament_id', $tournament->id)
     ->whereNotNull('published_at')
-    ->when($team !== null, fn ($query) => $query->whereHas('match', fn ($match) => $match
-        ->where('home_team_id', $team->id)
-        ->orWhere('away_team_id', $team->id)))
+    ->when($team !== null, fn ($query) => $query->whereHas('match', fn ($match) => $match->where(
+        fn ($matchQuery) => $matchQuery
+            ->where('home_team_id', $team->id)
+            ->orWhere('away_team_id', $team->id))))
     ->with(['match.bracket', 'match.homeTeam', 'match.awayTeam', 'court.venue'])
     ->orderBy('start_at')
     ->get();
@@ -193,9 +194,11 @@ public function tournamentCalendarUrl(): string;
 public function teamCalendarUrl(): ?string; // null until a team is chosen
 ```
 
-A third computed value, `subscribeTeams`, derives the team list from the already-loaded `scheduledSlots`, so opening the dialog adds no query. It returns a sorted list of `['id' => int, 'name' => string]` for every team that appears in a published slot.
+`publishedSlots` filters the already-loaded `scheduledSlots` to slots with `published_at` set, and `hasPublishedGames` reports whether that list is non-empty.
 
-The schedule page header action row gains a **Subscribe** button when `hasScheduledGames` is true:
+`subscribeTeams` derives the dialog's team list from `publishedSlots`, so opening the dialog adds no query. It returns a sorted list of `['id' => int, 'name' => string]` for every team that appears in a published slot.
+
+The schedule page header action row gains a **Subscribe** button when `hasPublishedGames` is true:
 
 ```
 Tournament · Bracket · Matchups · Subscribe
@@ -206,7 +209,7 @@ The dialog reuses the native `<dialog class="hf-dialog">` pattern already used b
 1. **All tournament games** — read-only URL field and a Copy button.
 2. **One team** — a labelled team `<select wire:model.live="subscribeTeamId">`, a read-only URL field that updates on selection, and a Copy button.
 
-Copy uses Alpine's `navigator.clipboard.writeText()` with a select-and-`document.execCommand('copy')` fallback for non-secure origins. The button text changes to **Copied** for about 1.5 seconds and the change is announced through `aria-live="polite"`. If no team is selected, the team URL field is disabled and shows a short prompt instead of a dead link.
+Copy uses Alpine's `navigator.clipboard.writeText()` with a select-and-`document.execCommand('copy')` fallback for non-secure origins. The button text changes to **Copied** for about 1.5 seconds and the change is announced through `aria-live="polite"`. If no team is selected, a short prompt replaces the team URL field, so there is no dead link.
 
 The dialog also states the one-step instruction: *Google Calendar → Other calendars → From URL → paste*. It notes that Apple Calendar and Outlook accept the same address.
 
@@ -267,7 +270,7 @@ public function write(
 | `src/app/Services/Calendar/IcsCalendarWriter.php` | New pure ICS renderer. |
 | `src/app/Providers/AppServiceProvider.php` | Bind the writer with the configured league timezone. |
 | `src/config/hoopflow.php` | New `timezone` value, default `Asia/Manila`. |
-| `src/app/Livewire/Organizer/ScheduleShow.php` | Add subscribe state, actions, URL and team computed values. |
+| `src/app/Livewire/Organizer/ScheduleShow.php` | Add subscribe state, actions, published-slot visibility, team list, and URL computed values. |
 | `src/resources/views/livewire/organizer/schedule-show.blade.php` | Add Subscribe button and dialog with copy controls. |
 | `src/tests/Unit/Services/Calendar/IcsCalendarWriterTest.php` | New writer tests. |
 | `src/tests/Feature/Calendar/ScheduleCalendarFeedTest.php` | New feed route and behaviour tests. |
@@ -287,14 +290,13 @@ public function write(
 ### Writer unit tests
 
 1. Envelope contains `VERSION:2.0`, the PRODID, `CALSCALE:GREGORIAN`, and the timezone block.
-2. A confirmed event contains the expected UID, `DTSTART;TZID=Asia/Manila`, `DTEND`, summary, and status.
+2. A confirmed event contains the expected UID, `DTSTART;TZID=Asia/Manila`, `DTEND`, summary, and status; a stored 9:00 AM time renders as `T090000` under `Asia/Manila`, not `010000Z` or `170000`.
 3. A cancelled event emits `STATUS:CANCELLED`.
 4. Commas, semicolons, backslashes, and newlines are escaped.
 5. A long summary is folded at 75 octets; the continuation begins with a space and a multi-byte character is not split.
 6. Output uses CRLF line endings.
 7. `DTSTAMP` and `LAST-MODIFIED` are UTC with a trailing `Z`.
 8. An empty event list still produces a valid calendar with no VEVENT.
-9. A stored 9:00 AM time renders as `T090000` under `Asia/Manila`, not `010000Z` or `170000`.
 
 ### Feed feature tests
 
