@@ -44,7 +44,6 @@ The schedule page already has a good month/week/day view. What it lacks is a dur
 | Cancelled games | Emitted with `STATUS:CANCELLED` when a published slot still exists |
 | Event identity | `match-{match_id}@hoopflow`, stable for the life of the match |
 | Revision signal | `SEQUENCE` from the slot's `updated_at` timestamp, plus `LAST-MODIFIED` |
-| Duplicate slots | One event per match; newest `published_at`, then highest `id` |
 | Timezone | League timezone from config, default `Asia/Manila`, fixed +08:00 |
 | Feed refresh | Client-controlled; `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` are hints only |
 | Entry point | **Subscribe** button and dialog on the existing schedule page |
@@ -78,7 +77,7 @@ The controller stays thin:
 
 Route binding handles an unknown tournament with the framework 404. A team that exists but never played in the tournament gets an explicit 404 rather than an empty calendar.
 
-### 2. Selection and deduplication
+### 2. Selection
 
 `ScheduleCalendarService` performs one query with the needed relations:
 
@@ -89,16 +88,12 @@ MatchSlot::query()
     ->when($team !== null, fn ($query) => $query->whereHas('match', fn ($match) => $match
         ->where('home_team_id', $team->id)
         ->orWhere('away_team_id', $team->id)))
-    ->with(['match.homeTeam', 'match.awayTeam', 'court.venue'])
-    ->orderByDesc('published_at')
-    ->orderByDesc('id')
-    ->get()
-    ->unique('match_id')
-    ->sortBy('start_at')
-    ->values();
+    ->with(['match.bracket', 'match.homeTeam', 'match.awayTeam', 'court.venue'])
+    ->orderBy('start_at')
+    ->get();
 ```
 
-The descending order before `unique('match_id')` makes the newest published slot win when a match has more than one slot. The final sort gives calendars a stable chronological order.
+The `match_slots.match_id` unique index enforces one slot per match, so no deduplication is needed. Ordering by `start_at` gives calendars a stable chronological order.
 
 Matches whose status is `cancelled` stay in the result when a slot exists; the writer marks them cancelled. Matches with no slot, byes, and slots that were never published are omitted.
 
@@ -220,7 +215,7 @@ The dialog also states the one-step instruction: *Google Calendar → Other cale
 | Class | Responsibility | Depends on |
 |---|---|---|
 | `ScheduleCalendarController` | Resolve models, enforce the team-in-tournament check, set response headers | Route binding, service |
-| `ScheduleCalendarService` | Choose published slots, filter by team, dedupe by match, map models into event arrays | Eloquent models, config, writer |
+| `ScheduleCalendarService` | Choose published slots, filter by team, map models into event arrays | Eloquent models, config, writer |
 | `IcsCalendarWriter` | Render a complete ICS string from event arrays, including envelope, VEVENT, timezone, escaping, and folding | Injected timezone and Carbon values; no models, HTTP, or config reads |
 
 The writer does not query, authorize, or read config. The service does not build response objects. The controller does not format calendar text. Each can be tested on its own.
@@ -266,7 +261,7 @@ public function write(
 |---|---|
 | `src/routes/features/calendar.php` | New public feed routes with numeric constraints and throttling. |
 | `src/app/Http/Controllers/ScheduleCalendarController.php` | New thin controller for both feeds. |
-| `src/app/Services/Calendar/ScheduleCalendarService.php` | New selection, filtering, dedupe, and event mapping. |
+| `src/app/Services/Calendar/ScheduleCalendarService.php` | New selection, filtering, and event mapping. |
 | `src/app/Services/Calendar/IcsCalendarWriter.php` | New pure ICS renderer. |
 | `src/config/hoopflow.php` | New `timezone` value, default `Asia/Manila`. |
 | `src/app/Livewire/Organizer/ScheduleShow.php` | Add subscribe state, actions, URL and team computed values. |
@@ -306,9 +301,8 @@ public function write(
 4. The team feed includes only matches where the team is home or away.
 5. A team with no match in the tournament gets 404; an unknown tournament gets 404.
 6. Rescheduling keeps the UID, changes `DTSTART`, and changes `SEQUENCE`.
-7. Two slots for one match produce a single event, and the newest slot wins.
-8. Both feeds include the correct calendar name.
-9. A tournament with no published games returns a valid empty calendar.
+7. Both feeds include the correct calendar name.
+8. A tournament with no published games returns a valid empty calendar.
 
 ### Livewire tests
 
@@ -330,7 +324,6 @@ public function write(
 | Subscribing to both the tournament and a team calendar shows the same game twice. | Expected behaviour of two calendars; the dialog explains the two options are alternatives. |
 | Stored wall-clock times could be converted twice. | The writer formats wall time with `TZID` and never calls `utc()` on event start/end; a dedicated test covers 9:00 AM. |
 | A feed URL is public. | The same games are already on public live/bracket pages; no private data is added, and routes are throttled. |
-| Duplicate slots create duplicate events. | `unique('match_id')` after sorting by `published_at` and `id`; covered by a test. |
 | A very large tournament creates a large response. | A 32-team bracket is tens of kilobytes; no cache is needed. The five-minute HTTP header limits repeated proxy fetches. |
 | Clipboard API is unavailable on an insecure origin. | Select-and-copy fallback; the URL remains visible and selectable regardless. |
 | A cancelled game whose slot is deleted disappears instead of showing cancelled. | Acceptable: the event leaves the feed and clients remove it on refresh, which is the correct outcome for a removed fixture. |
