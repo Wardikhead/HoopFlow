@@ -66,6 +66,24 @@ it('sends notes and tournament context to the configured model', function () {
     });
 });
 
+it('falls back to the default model when none is configured', function () {
+    config(['services.gemini.model' => null]);
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(
+            hfGeminiTextResponse(hfGeminiJsonPayload(
+                'Finals move to Court 1',
+                'All semifinal and final games will be played on Court 1. Gate opens early.',
+            )),
+        ),
+    ]);
+
+    (new AnnouncementDraftService)->draft('finals court 1, gate opens early');
+
+    Http::assertSent(fn (Request $request): bool => $request->url()
+        === 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent');
+});
+
 it('uses a placeholder when no tournament is selected', function () {
     Http::fake([
         'generativelanguage.googleapis.com/*' => Http::response(
