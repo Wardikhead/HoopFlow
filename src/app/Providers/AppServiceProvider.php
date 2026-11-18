@@ -3,8 +3,14 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
+use Livewire\Mechanisms\HandleRequests\RequireLivewireHeaders;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,5 +30,65 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-users', fn (User $user) => $user->hasRole('organizer'));
         Gate::define('reset-demo', fn (User $user) => $user->hasRole('organizer'));
         Gate::define('view-audit', fn (User $user) => $user->hasRole('organizer'));
+
+        $this->configureRateLimiting();
+        $this->configureLivewireUpdateRoute();
+    }
+
+    /**
+     * Register the named rate limiters used by the HTTP middleware.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('web', function (Request $request) {
+            // API, Livewire update, and Livewire asset/upload routes have their
+            // own limits. Skipping them here avoids double-counting requests.
+            if ($request->is('api/*', 'livewire-*/update', 'livewire/update')) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute((int) config('rate_limits.web.max_attempts', 120))
+                ->by($this->rateLimitKey($request));
+        });
+
+        RateLimiter::for('livewire', function (Request $request) {
+            return Limit::perMinute((int) config('rate_limits.livewire.max_attempts', 240))
+                ->by($this->rateLimitKey($request));
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            $key = 'ip:'.$request->ip();
+
+            return [
+                Limit::perMinute((int) config('rate_limits.register.per_minute', 5))
+                    ->by('minute|'.$key),
+                Limit::perHour((int) config('rate_limits.register.per_hour', 60))
+                    ->by('hour|'.$key),
+            ];
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute((int) config('rate_limits.api.max_attempts', 120))
+                ->by($this->rateLimitKey($request));
+        });
+    }
+
+    /**
+     * Keep Livewire's hash-based update path and add the dedicated throttle.
+     */
+    private function configureLivewireUpdateRoute(): void
+    {
+        Livewire::setUpdateRoute(function ($handle, $path) {
+            return Route::post($path, $handle)
+                ->middleware(['web', RequireLivewireHeaders::class, 'throttle:livewire'])
+                ->name('livewire.update');
+        });
+    }
+
+    private function rateLimitKey(Request $request): string
+    {
+        $userId = $request->user()?->getAuthIdentifier();
+
+        return $userId !== null ? 'user:'.$userId : 'ip:'.$request->ip();
     }
 }
