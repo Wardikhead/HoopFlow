@@ -41,7 +41,7 @@ class AnnouncementDraftService
                     'contents' => [[
                         'role' => 'user',
                         'parts' => [[
-                            'text' => 'Tournament: '.($tournament?->name ?? '(not specified)')."\n\nOrganizer notes:\n".$notes,
+                            'text' => 'Tournament: '.($tournament->name ?? '(not specified)')."\n\nOrganizer notes:\n".$notes,
                         ]],
                     ]],
                     'generationConfig' => [
