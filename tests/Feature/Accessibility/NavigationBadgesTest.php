@@ -244,3 +244,135 @@ it('counts today\'s matches and ignores other days', function () {
     expect(navBadgeCount($this->badgeService, $this->organizer, 'schedule'))
         ->toBe($before + 1);
 });
+
+function navBadgesXPath(string $html): DOMXPath
+{
+    $dom = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+
+    return new DOMXPath($dom);
+}
+
+it('renders count badges in the organizer rail', function () {
+    Announcement::factory()->create([
+        'audience' => 'all',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+    Tournament::factory()->create(['status' => 'registration-open']);
+
+    $registration = Registration::factory()->create(['status' => 'submitted']);
+    Payment::factory()->create([
+        'registration_id' => $registration->id,
+        'status' => 'pending',
+    ]);
+
+    MatchSlot::factory()->create([
+        'start_at' => now()->setTime(12, 0),
+        'end_at' => now()->setTime(13, 0),
+    ]);
+
+    $response = $this->actingAs($this->organizer)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+
+    foreach (['announcements', 'tournaments', 'submissions', 'payments', 'schedule'] as $key) {
+        $badge = $xpath->query(
+            "//a[@data-testid='nav-{$key}']//span[contains(@class, 'hf-nav-badge')]"
+        )->item(0);
+
+        expect($badge)->not->toBeNull("Missing badge on nav-{$key}");
+        expect(trim($badge->textContent))->toMatch('/^\d+\+?$/');
+    }
+});
+
+it('renders badges in the More sheet links', function () {
+    Announcement::factory()->create([
+        'audience' => 'all',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($this->organizer)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+    $badge = $xpath->query(
+        "//a[@data-more-link='announcements']//span[contains(@class, 'hf-nav-badge')]"
+    )->item(0);
+
+    expect($badge)->not->toBeNull();
+});
+
+it('hides submissions and payments from a fan', function () {
+    $response = $this->actingAs($this->fan)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+
+    expect($xpath->query("//a[@data-testid='nav-submissions']")->length)->toBe(0);
+    expect($xpath->query("//a[@data-testid='nav-payments']")->length)->toBe(0);
+});
+
+it('renders no badge or suffix for a zero count', function () {
+    $response = $this->actingAs($this->fan)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+    $link = $xpath->query("//a[@data-testid='nav-announcements']")->item(0);
+
+    expect($link)->not->toBeNull();
+    expect($xpath->query(".//span[contains(@class, 'hf-nav-badge')]", $link)->length)->toBe(0);
+    expect($xpath->query(".//span[contains(@class, 'hf-sr-only')]", $link)->length)->toBe(0);
+    expect($link->getAttribute('data-label'))->toBe('Announcements');
+});
+
+it('names the count in the screen-reader suffix and tooltip', function () {
+    Announcement::factory()->create([
+        'audience' => 'all',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($this->organizer)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+    $link = $xpath->query("//a[@data-testid='nav-announcements']")->item(0);
+    $suffix = $xpath->query(".//span[contains(@class, 'hf-sr-only')]", $link)->item(0);
+
+    expect($suffix)->not->toBeNull();
+    expect(trim($suffix->textContent))->toMatch('/^, \d+ new$/');
+    expect($link->getAttribute('data-label'))->toMatch('/^Announcements · \d+ new$/');
+});
+
+it('badges the mobile schedule tab', function () {
+    MatchSlot::factory()->create([
+        'start_at' => now()->setTime(12, 0),
+        'end_at' => now()->setTime(13, 0),
+    ]);
+
+    $response = $this->actingAs($this->fan)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+    $tab = $xpath->query("//a[@data-testid='mobile-nav-schedule']")->item(0);
+
+    expect($tab)->not->toBeNull();
+    expect($xpath->query(".//span[contains(@class, 'hf-nav-badge')]", $tab)->length)->toBe(1);
+
+    $suffix = $xpath->query(".//span[contains(@class, 'hf-sr-only')]", $tab)->item(0);
+    expect($suffix)->not->toBeNull();
+    expect(trim($suffix->textContent))->toMatch('/^, \d+ matches today$/');
+});
+
+it('marks the More tab with a dot when a sheet destination has a count', function () {
+    Announcement::factory()->create([
+        'audience' => 'all',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($this->organizer)->get(route('dashboard'))->assertOk();
+    $xpath = navBadgesXPath((string) $response->getContent());
+    $more = $xpath->query("//button[@data-testid='mobile-nav-more']")->item(0);
+
+    expect($more)->not->toBeNull();
+    expect($xpath->query(".//span[contains(@class, 'hf-nav-badge--dot')]", $more)->length)->toBe(1);
+
+    $suffix = $xpath->query(".//span[contains(@class, 'hf-sr-only')]", $more)->item(0);
+    expect($suffix)->not->toBeNull();
+    expect(trim($suffix->textContent))->toBe(', New items in More');
+});

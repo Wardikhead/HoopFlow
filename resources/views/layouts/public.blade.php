@@ -106,19 +106,20 @@
         @php
             $authUser = auth()->user();
             $role = $authUser->hasRole('organizer') ? 'organizer' : ($authUser->hasRole('coach') ? 'coach' : 'fan');
+            $navBadges = app(\App\Services\NavigationBadgeService::class)->forUser($authUser);
             $activeTournament = \App\Models\Tournament::whereNull('archived_at')->where('status', 'active')->first()
                 ?? \App\Models\Tournament::whereNull('archived_at')->first();
 
             $navItems = [
                 'dashboard' => ['label' => 'Dashboard', 'icon' => 'speedometer2', 'route' => 'dashboard'],
-                'tournaments' => ['label' => 'Tournaments', 'icon' => 'trophy', 'route' => 'tournaments'],
+                'tournaments' => ['label' => 'Tournaments', 'icon' => 'trophy', 'route' => 'tournaments', 'badge_sr' => 'open for registration'],
                 'teams' => ['label' => 'Teams', 'icon' => 'people', 'route' => 'teams'],
                 'bracket' => ['label' => 'Bracket', 'icon' => 'diagram-3', 'route' => 'bracket'],
-                'schedule' => ['label' => 'Schedule', 'icon' => 'calendar3', 'route' => 'schedule'],
+                'schedule' => ['label' => 'Schedule', 'icon' => 'calendar3', 'route' => 'schedule', 'badge_sr' => 'matches today'],
                 'standings' => ['label' => 'Standings', 'icon' => 'bar-chart', 'route' => 'standings'],
-                'announcements' => ['label' => 'Announcements', 'icon' => 'megaphone', 'route' => 'announcements'],
-                'submissions' => ['label' => 'Submissions', 'icon' => 'clipboard-check', 'route' => 'submissions'],
-                'payments' => ['label' => 'Payments', 'icon' => 'credit-card', 'route' => 'payments'],
+                'announcements' => ['label' => 'Announcements', 'icon' => 'megaphone', 'route' => 'announcements', 'badge_sr' => 'new'],
+                'submissions' => ['label' => 'Submissions', 'icon' => 'clipboard-check', 'route' => 'submissions', 'badge_sr' => 'pending review'],
+                'payments' => ['label' => 'Payments', 'icon' => 'credit-card', 'route' => 'payments', 'badge_sr' => 'unpaid'],
                 'audit' => ['label' => 'Audit log', 'icon' => 'clock-history', 'route' => 'audit'],
                 'myTeam' => ['label' => 'My team', 'icon' => 'person-lines-fill', 'route' => 'myTeam'],
                 'teamRegister' => ['label' => 'Register team', 'icon' => 'plus-circle', 'route' => 'teamRegister'],
@@ -127,6 +128,9 @@
                 'createTournament' => ['label' => 'Create tournament', 'icon' => 'plus-lg', 'route' => 'tournamentCreate'],
                 'profile' => ['label' => 'Profile', 'icon' => 'person', 'route' => 'profile'],
             ];
+
+            $moreBadgeCount = collect(['announcements', 'tournaments', 'submissions', 'payments'])
+                ->sum(fn (string $key): int => (int) ($navBadges[$key] ?? 0));
 
             $matchdayKeys = ['dashboard', 'tournaments', 'teams', 'bracket', 'schedule', 'standings', 'announcements'];
 
@@ -183,7 +187,7 @@
                     <x-brand size="md" on-dark tagline="Tournament ops" />
                 </a>
 
-                <x-app-nav variant="rail" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" />
+                <x-app-nav variant="rail" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" :badges="$navBadges" />
 
                 <div class="hf-rail-footer">
                     <x-user-menu />
@@ -226,11 +230,21 @@
                        @if ($isActive($tab['key'])) aria-current="page" @endif>
                         <i class="bi bi-{{ $tab['icon'] }}" aria-hidden="true"></i>
                         <span>{{ $tab['label'] }}</span>
+                        @if ($tab['key'] === 'schedule')
+                            <x-nav-badge :count="$navBadges['schedule'] ?? 0" />
+                            @if (($navBadges['schedule'] ?? 0) > 0)
+                                <span class="hf-sr-only">, {{ $navBadges['schedule'] }} matches today</span>
+                            @endif
+                        @endif
                     </a>
                 @endforeach
                 <button type="button" class="hf-nav-tab" data-more-sheet-open aria-haspopup="dialog" aria-controls="hf-more-sheet" data-testid="mobile-nav-more">
                     <i class="bi bi-grid" aria-hidden="true"></i>
                     <span>More</span>
+                    @if ($moreBadgeCount > 0)
+                        <x-nav-badge dot />
+                        <span class="hf-sr-only">, New items in More</span>
+                    @endif
                 </button>
             </nav>
 
@@ -263,7 +277,7 @@
                         </div>
                     </details>
 
-                    <x-app-nav variant="sheet" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" />
+                    <x-app-nav variant="sheet" :groups="$navGroups" :items="$navItems" :active-keys="$activeKeys" :badges="$navBadges" />
 
                     <div class="hf-sheet__group">
                         <span class="hf-rail-label">Account</span>
