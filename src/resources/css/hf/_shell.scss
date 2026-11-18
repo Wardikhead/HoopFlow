@@ -100,6 +100,7 @@
   grid-row: 1 / span 2;
   position: sticky;
   top: 0;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -230,7 +231,11 @@
     opacity 160ms ease;
 }
 
-.hf-rail-badge {
+.hf-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
   margin-left: auto;
   padding: 2px 7px;
   border-radius: var(--hf-pill);
@@ -238,6 +243,17 @@
   color: #1a1300;
   font-size: 11px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+.hf-nav-badge--dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .hf-rail-tooltip {
@@ -429,6 +445,7 @@
 }
 
 .hf-nav-tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -444,6 +461,26 @@
 
 .hf-nav-tab .bi {
   font-size: 20px;
+}
+
+.hf-nav-tab > .hf-nav-badge {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 5px);
+  min-width: 16px;
+  margin-left: 0;
+  padding: 1px 5px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.hf-nav-tab > .hf-nav-badge--dot {
+  top: 7px;
+  left: calc(50% + 6px);
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  padding: 0;
 }
 
 .hf-nav-tab.is-active {
@@ -526,6 +563,22 @@
     gap: 0;
     width: 52px;
     padding: 10px 0;
+  }
+
+  [data-nav='collapsed'] .hf-rail .hf-nav-badge:not(.hf-nav-badge--dot) {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
   }
 
   [data-nav='collapsed'] .hf-rail-footer {
