@@ -1,51 +1,62 @@
-# Production email setup (Mailtrap Email Sending)
+# Production email setup (Brevo SMTP)
 
 HoopFlow sends password reset and password changed messages through Laravel's
-mailer. Local development defaults to `MAIL_MAILER=log`; production uses
-Mailtrap Email Sending over SMTP.
+mailer. Local development defaults to `MAIL_MAILER=log`; production uses the
+Brevo SMTP relay. Mailtrap Email Sending is kept as a fallback.
 
-## 1. Verify the sending domain
+Brevo's free plan allows 300 emails per day and a single verified sender, so it
+works without owning a domain. A verified custom domain is still strongly
+recommended for production deliverability.
 
-1. Sign in to Mailtrap and open **Email Sending → Sending Domains**.
-2. Add the domain HoopFlow will send from, for example `hoopflow.ph`.
-3. Add the SPF, DKIM, and DMARC records Mailtrap provides to your DNS.
-4. Wait for the domain status to show as verified.
+## 1. Verify a sender
 
-Mail must be sent from an address on this verified domain. `MAIL_FROM_ADDRESS`
-must match it.
+1. Sign in to Brevo and open **Senders, Domains & Dedicated IPs → Senders**.
+2. Add the address HoopFlow will send from, for example
+   `no-reply@your-domain.com`.
+3. Open the verification email and confirm the address.
+
+`MAIL_FROM_ADDRESS` must match a verified sender. A freemail sender such as a
+Gmail address works for demos, but Brevo flags it as "Freemail domain is not
+recommended" and receivers are more likely to treat it as spam.
 
 ## 2. Get SMTP credentials
 
-Open **Email Sending → Sending Setup**, choose the verified domain, select the
-**Transactional** stream, and switch the view to **SMTP**.
-
-Use the credentials shown there:
+Open **SMTP & API → SMTP** in Brevo. The page shows the server, port, login, and
+your SMTP keys.
 
 | Variable | Value |
 |---|---|
 | `MAIL_MAILER` | `smtp` |
-| `MAIL_HOST` | `live.smtp.mailtrap.io` |
-| `MAIL_PORT` | `587` |
+| `MAIL_HOST` | `smtp-relay.brevo.com` |
+| `MAIL_PORT` | `587` (STARTTLS) |
 | `MAIL_SCHEME` | `null` |
-| `MAIL_USERNAME` | `api` |
-| `MAIL_PASSWORD` | your Mailtrap API token |
+| `MAIL_USERNAME` | the **Login** shown on the SMTP page |
+| `MAIL_PASSWORD` | an SMTP key, starting with `xsmtpsib-` |
 
-Mailtrap creates a separate token for each sending domain. Creating a new token
-invalidates the old one.
+Two details cause almost every `535 5.7.8 Authentication failed`:
+
+- The login is **not always your Brevo account email**. Newer accounts get a
+  generated login such as `123456001@smtp-brevo.com`. Copy the exact value from
+  the SMTP page.
+- SMTP keys and API keys are different. An API key (`xkeysib-`) will not
+  authenticate over SMTP.
 
 ## 3. Configure the application
 
 ```ini
 APP_URL=https://your-production-domain.example
 MAIL_MAILER=smtp
-MAIL_HOST=live.smtp.mailtrap.io
-MAIL_PORT=587
 MAIL_SCHEME=null
-MAIL_USERNAME=api
-MAIL_PASSWORD=your-mailtrap-api-token
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=your-brevo-smtp-login
+MAIL_PASSWORD=your-brevo-smtp-key
 MAIL_FROM_ADDRESS=no-reply@your-verified-domain.com
 MAIL_FROM_NAME="HoopFlow"
 ```
+
+`APP_URL` must be the public application URL. Reset links are built from it; if
+it points at `localhost`, recipients cannot use the link.
 
 Clear the cached config after changing values:
 
@@ -55,23 +66,56 @@ php artisan config:clear
 
 ## 4. Verify a send
 
-From the application, open `/forgot-password`, submit a real account email, and
-open the message in Mailtrap **Email Logs**. The reset button must point at
-`APP_URL`, not `localhost`.
+Open `/forgot-password`, submit a real account email, and confirm the message
+arrives. Check the spam folder on the first send and mark the message as "not
+spam" to improve later delivery.
 
-Without the API token or a verified domain, delivery fails. The application
-keeps the failure in `storage/logs/laravel.log`; it does not silently discard it.
+Brevo records every message under **Transactional → Logs**. A missing log entry
+means the application never reached Brevo; a log entry marked blocked or bounced
+means Brevo rejected the recipient or sender.
+
+Delivery failures are written to `storage/logs/laravel.log`; the application does
+not silently discard them.
+
+## Troubleshooting
+
+- **`535 Authentication failed`** — copy the Login and SMTP key again from
+  **SMTP & API → SMTP**, regenerate the key if it was revoked, and run
+  `php artisan config:clear`. Test the credentials directly with the Brevo
+  documentation's SMTP example before changing application code.
+- **`Connection could not be established`** — some hosts block outbound port
+  587. Try port `2525` (STARTTLS) or `465` with `MAIL_SCHEME=ssl`.
+- **Mail sends but never arrives** — confirm the sender is verified, check the
+  Brevo transactional log, and inspect the recipient's spam folder.
+- **Reset link points at `localhost`** — set `APP_URL` to the public URL and
+  clear the config cache.
+
+## Fallback: Mailtrap Email Sending
+
+Mailtrap requires a verified sending domain, so it cannot send from a freemail
+address. Use it only after you control a domain:
+
+1. Open **Email Sending → Sending Domains** and add the domain.
+2. Add the SPF, DKIM, and DMARC records Mailtrap provides, then wait for
+   verification.
+3. Open **Email Sending → Sending Setup**, select the **Transactional** stream,
+   and switch to the **SMTP** view.
+4. Use `live.smtp.mailtrap.io`, port `587`, username `api`, and the API token
+   shown for that domain.
+
+Mailtrap creates a separate token per sending domain; creating a new token
+invalidates the old one.
 
 ## Local development
 
 Keep `MAIL_MAILER=log` for local work. Reset emails are written to
 `storage/logs/laravel.log` and no external account is needed.
 
-To inspect real messages locally without a verified domain, use a Mailtrap Email
-Sandbox inbox instead of Email Sending: create a sandbox, copy its SMTP
-credentials, and keep the token in local `.env` only.
+To inspect rendered messages without sending them, use a Mailtrap Email Sandbox
+inbox: create a sandbox, copy its SMTP credentials, and keep the token in local
+`.env` only.
 
 ## Never commit secrets
 
-`.env` is ignored by git. Keep API tokens out of `.env.example`, source files,
-tests, and chat transcripts.
+`.env` is ignored by git. Keep SMTP keys and API tokens out of `.env.example`,
+source files, tests, and chat transcripts.
