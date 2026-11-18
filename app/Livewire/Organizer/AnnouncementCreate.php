@@ -2,19 +2,23 @@
 
 namespace App\Livewire\Organizer;
 
+use App\Exceptions\AnnouncementDraftException;
 use App\Livewire\SecureComponent;
 use App\Models\Announcement;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\AnnouncementDraftService;
 use App\Services\AnnouncementService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
 /**
+ * @property-read bool $aiDraftAvailable
  * @property-read Collection<int, Tournament> $tournaments
  * @property-read Collection<int, User> $users
  */
@@ -44,6 +48,10 @@ class AnnouncementCreate extends SecureComponent
     public array $target_user_ids = [];
 
     public bool $pinned = false;
+
+    public string $aiNotes = '';
+
+    public ?string $aiDraftError = null;
 
     public function mount(): void
     {
@@ -101,6 +109,85 @@ class AnnouncementCreate extends SecureComponent
             'target_user_ids.required_if' => 'Select at least one target user.',
             'target_user_ids.*.exists' => 'One of the selected users is no longer available.',
         ];
+    }
+
+    #[Computed]
+    public function aiDraftAvailable(): bool
+    {
+        return $this->hasGeminiKey();
+    }
+
+    public function draftWithAi(): void
+    {
+        if (! $this->hasGeminiKey()) {
+            return;
+        }
+
+        $this->aiDraftError = null;
+        $this->resetErrorBag('aiNotes');
+
+        $validated = $this->validate([
+            'aiNotes' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $allowed = RateLimiter::attempt(
+            'announcement-draft:'.$user->id,
+            5,
+            function () use ($validated): bool {
+                $tournament = null;
+
+                if ($this->tournament_id !== null) {
+                    $candidate = Tournament::query()
+                        ->whereNull('archived_at')
+                        ->find($this->tournament_id);
+
+                    if ($candidate instanceof Tournament) {
+                        $tournament = $candidate;
+                    }
+                }
+
+                try {
+                    $draft = app(AnnouncementDraftService::class)->draft(
+                        (string) $validated['aiNotes'],
+                        $tournament,
+                    );
+                } catch (AnnouncementDraftException $exception) {
+                    $this->aiDraftError = $this->draftErrorMessage($exception);
+
+                    return true;
+                }
+
+                $this->title = $draft['title'];
+                $this->body = $draft['body'];
+
+                return true;
+            },
+            60,
+        );
+
+        if ($allowed === false) {
+            $this->aiDraftError = "You've drafted a few times already. Wait a minute.";
+        }
+    }
+
+    private function draftErrorMessage(AnnouncementDraftException $exception): string
+    {
+        return $exception->reason === 'busy'
+            ? 'AI drafting is busy. Try again in a minute.'
+            : "Couldn't draft right now. Your notes are safe — try again or write it manually.";
+    }
+
+    private function hasGeminiKey(): bool
+    {
+        $key = config('services.gemini.key');
+
+        return is_string($key) && trim($key) !== '';
     }
 
     public function save(): void

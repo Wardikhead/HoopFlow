@@ -45,6 +45,49 @@
                     'target_user_ids' => 'announcementTargetUsers',
                 ]" />
                 <x-required-note class="hf-mb-2" />
+                @if ($this->aiDraftAvailable)
+                    <div class="hf-card hf-mb-3" data-testid="announcement-ai-card">
+                        <div class="hf-between hf-mb-2">
+                            <div>
+                                <span class="hf-kpi-label">Draft with AI</span>
+                                <p class="hf-small hf-muted hf-mb-0">Turn rough notes into a headline and message. Review it before publishing.</p>
+                            </div>
+                            <span class="hf-chip hf-chip--slate">Optional</span>
+                        </div>
+
+                        <div class="hf-field">
+                            <label class="hf-label" for="announcementAiNotes">Rough notes</label>
+                            <textarea class="hf-textarea" id="announcementAiNotes" rows="3" maxlength="500"
+                                      placeholder="Gate opens 45 minutes early. Finals moved to Court 1. Bring valid IDs."
+                                      wire:model.live.debounce.300ms="aiNotes"
+                                      @error('aiNotes') aria-invalid="true" aria-describedby="aiNotes-error" @enderror
+                                      data-testid="announcement-ai-notes"></textarea>
+                            <span class="hf-help">Keep notes about the event, not about individual children.</span>
+                            @error('aiNotes')
+                                <span class="hf-field-error" id="aiNotes-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="hf-flex hf-items-center hf-gap-2 hf-mt-2" wire:loading.attr="aria-busy" wire:target="draftWithAi">
+                            <button type="button" class="hf-btn hf-btn--primary" wire:click="draftWithAi"
+                                    wire:loading.attr="disabled" wire:loading.class="is-loading" wire:target="draftWithAi"
+                                    @disabled(mb_strlen(trim($aiNotes)) < 10)
+                                    data-testid="announcement-ai-draft">
+                                <span wire:loading.remove wire:target="draftWithAi"><i class="bi bi-stars" aria-hidden="true"></i> Draft with AI</span>
+                                <span wire:loading wire:target="draftWithAi">Drafting…</span>
+                            </button>
+                            <span class="hf-help hf-mb-0">AI drafts are suggestions. Nothing is published until you press Publish.</span>
+                        </div>
+
+                        @if ($aiDraftError)
+                            <x-callout tone="danger" class="hf-mt-2" data-testid="announcement-ai-error">{{ $aiDraftError }}</x-callout>
+                        @endif
+                    </div>
+                @else
+                    <x-callout tone="info" class="hf-mb-3" title="Draft with AI" data-testid="announcement-ai-unconfigured">
+                        AI drafting is not configured.
+                    </x-callout>
+                @endif
                 <div class="hf-card hf-mb-3">
                     <div class="hf-form-grid">
                         <div class="hf-field hf-field--full">
