@@ -27,8 +27,8 @@ is assistive only: an organizer reviews the text and publishes it manually.
 8. Send only the tournament name and the organizer's notes. Never send rosters, player names,
    birthdates, emails, or other personal data.
 9. Limit drafting to five requests per minute per organizer.
-10. Keep the model name configurable. The default is `gemini-3.8-flash`, the current stable
-    Flash model in the Gemini API at the time of writing.
+10. Keep the model name configurable. The default is `gemini-3.1-flash-lite`, chosen because
+    `gemini-3.8-flash` was capacity constrained (503s) during live verification.
 
 ## 3. User experience
 
@@ -94,7 +94,7 @@ Add a `gemini` block:
 ```php
 'gemini' => [
     'key' => env('GEMINI_API_KEY'),
-    'model' => env('GEMINI_MODEL', 'gemini-3.8-flash'),
+    'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
     'timeout' => 12,
 ],
 ```
@@ -108,7 +108,7 @@ Add commented documentation:
 # Create a key in Google AI Studio: https://aistudio.google.com/apikey
 # Leave blank to hide the drafting card and keep the manual composer.
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.8-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
 No real key is committed. The key is read only on the server; no `VITE_` variable is introduced.

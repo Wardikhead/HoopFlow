@@ -15,7 +15,7 @@
 - No migration, model, route, queue job, notification, or scheduled task.
 - Drafting never publishes, emails, or notifies anyone. A human must press **Publish announcement**.
 - The Gemini key is server-side only. Never render it, put it in a URL, log it, or use a `VITE_` variable.
-- Default model is `gemini-3.8-flash`; it must stay configurable through `GEMINI_MODEL`.
+- Default model is `gemini-3.1-flash-lite`; it must stay configurable through `GEMINI_MODEL`.
 - Send only the tournament name and the organizer's notes. No player, guardian, roster, or eligibility data.
 - All tests use `Http::fake()` and must pass without a real key or network access.
 - Existing announcement tests must pass without modification.
@@ -239,7 +239,7 @@ In `src/config/services.php`, add this block immediately after `return [`:
 ```php
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-3.8-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
         'timeout' => 12,
     ],
 ```
@@ -251,7 +251,7 @@ In `src/.env.example`, add this block after the mail section and before the AWS 
 # Create a key in Google AI Studio: https://aistudio.google.com/apikey
 # Leave blank to hide the drafting card and keep the manual composer.
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.8-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
 - [ ] **Step 4: Create the exception**
@@ -323,7 +323,7 @@ class AnnouncementDraftService
             throw AnnouncementDraftException::notConfigured();
         }
 
-        $model = is_string($model) && trim($model) !== '' ? $model : 'gemini-3.8-flash';
+        $model = is_string($model) && trim($model) !== '' ? $model : 'gemini-3.1-flash-lite';
         $timeout = (int) config('services.gemini.timeout', 12);
 
         try {

@@ -27,7 +27,7 @@ class AnnouncementDraftService
             throw AnnouncementDraftException::notConfigured();
         }
 
-        $model = is_string($model) && trim($model) !== '' ? $model : 'gemini-3.8-flash';
+        $model = is_string($model) && trim($model) !== '' ? $model : 'gemini-3.1-flash-lite';
         $timeout = (int) config('services.gemini.timeout', 12);
 
         try {
