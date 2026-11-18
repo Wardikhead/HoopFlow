@@ -161,7 +161,7 @@ constructors so the Livewire component can map failures without inspecting messa
   }],
   "generationConfig": {
     "temperature": 0.4,
-    "maxOutputTokens": 300,
+    "maxOutputTokens": 1024,
     "responseMimeType": "application/json"
   }
 }

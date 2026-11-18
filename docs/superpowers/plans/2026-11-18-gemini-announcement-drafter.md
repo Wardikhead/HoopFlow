@@ -118,7 +118,7 @@ it('sends notes and tournament context to the configured model', function () {
             && ! str_contains($request->url(), 'test-key')
             && $request['contents'][0]['parts'][0]['text'] === "Tournament: HoopFlow Summer Cup\n\nOrganizer notes:\ngate 45 min early, finals court 1"
             && $request['generationConfig']['responseMimeType'] === 'application/json'
-            && $request['generationConfig']['maxOutputTokens'] === 300;
+            && $request['generationConfig']['maxOutputTokens'] === 1024;
     });
 });
 
@@ -342,7 +342,7 @@ class AnnouncementDraftService
                     ]],
                     'generationConfig' => [
                         'temperature' => 0.4,
-                        'maxOutputTokens' => 300,
+                        'maxOutputTokens' => 1024,
                         'responseMimeType' => 'application/json',
                     ],
                 ]);
@@ -485,6 +485,8 @@ php artisan test tests/Unit/Services/AnnouncementDraftServiceTest.php
 Expected: Pint reports no remaining changes and the tests pass.
 
 - [ ] **Step 8: Commit Task 1**
+
+From the repository root:
 
 ```powershell
 git add src/config/services.php src/.env.example src/app/Exceptions/AnnouncementDraftException.php src/app/Services/AnnouncementDraftService.php src/tests/Unit/Services/AnnouncementDraftServiceTest.php
@@ -917,6 +919,8 @@ Only run this if a real `GEMINI_API_KEY` is available and the user has approved 
 7. Remove the key from `.env` when finished if it was temporary.
 
 - [ ] **Step 10: Commit Task 2**
+
+From the repository root:
 
 ```powershell
 git add src/app/Livewire/Organizer/AnnouncementCreate.php src/resources/views/livewire/organizer/announcement-create.blade.php src/tests/Feature/Pages/AnnouncementDraftTest.php
