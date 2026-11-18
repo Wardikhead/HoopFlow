@@ -3,7 +3,7 @@
 - **Date:** 2026-11-18
 - **Owner:** Jeward T. Mahinay
 - **Status:** Approved for planning
-- **Scope:** `src/routes/features`, `src/app/Http/Controllers`, `src/app/Services/Calendar`, `src/app/Livewire/Organizer/ScheduleShow.php`, `src/resources/views/livewire/organizer/schedule-show.blade.php`, `src/config/hoopflow.php`, `src/tests`. No migration, model change, Composer package, or npm package.
+- **Scope:** `src/routes/features`, `src/app/Http/Controllers`, `src/app/Services/Calendar`, `src/app/Providers/AppServiceProvider.php`, `src/app/Livewire/Organizer/ScheduleShow.php`, `src/resources/views/livewire/organizer/schedule-show.blade.php`, `src/config/hoopflow.php`, `src/tests`. No migration, model change, Composer package, or npm package.
 - **Related:** [[2026-11-07-phase-4e-schedule-design]], [[2026-11-12-bracket-series-schedule-ux-design]]
 
 ## Problem
@@ -222,10 +222,12 @@ The writer does not query, authorize, or read config. The service does not build
 
 ### 7. Writer API and event shape
 
-The service injects the configured league timezone into the writer, so the writer never reads config itself:
+The service injects the configured league timezone into the writer, so the writer never reads config itself. `AppServiceProvider::register()` binds:
 
 ```php
-new IcsCalendarWriter(config('hoopflow.timezone'));
+$this->app->bind(IcsCalendarWriter::class, fn (): IcsCalendarWriter => new IcsCalendarWriter(
+    (string) config('hoopflow.timezone', 'Asia/Manila'),
+));
 ```
 
 The writer exposes one method:
@@ -263,6 +265,7 @@ public function write(
 | `src/app/Http/Controllers/ScheduleCalendarController.php` | New thin controller for both feeds. |
 | `src/app/Services/Calendar/ScheduleCalendarService.php` | New selection, filtering, and event mapping. |
 | `src/app/Services/Calendar/IcsCalendarWriter.php` | New pure ICS renderer. |
+| `src/app/Providers/AppServiceProvider.php` | Bind the writer with the configured league timezone. |
 | `src/config/hoopflow.php` | New `timezone` value, default `Asia/Manila`. |
 | `src/app/Livewire/Organizer/ScheduleShow.php` | Add subscribe state, actions, URL and team computed values. |
 | `src/resources/views/livewire/organizer/schedule-show.blade.php` | Add Subscribe button and dialog with copy controls. |
