@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
 use App\Notifications\ResetPasswordNotification;
 use App\Services\SessionRegistry;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -103,6 +104,41 @@ it('resets the password, revokes sessions, audits, and notifies the owner', func
     ]);
 
     Notification::assertSentTo($user, PasswordChangedNotification::class);
+});
+
+it('still completes the reset when the confirmation email fails', function () {
+    $user = User::factory()->create([
+        'email' => 'reset@example.com',
+        'password' => 'old-password',
+    ]);
+
+    $token = Password::broker()->createToken($user);
+
+    app()->instance(Dispatcher::class, new class implements Dispatcher
+    {
+        public function send($notifiables, $notification)
+        {
+            throw new RuntimeException('SMTP unavailable');
+        }
+
+        public function sendNow($notifiables, $notification, ?array $channels = null)
+        {
+            throw new RuntimeException('SMTP unavailable');
+        }
+    });
+
+    $this->post(route('password.update'), [
+        'token' => $token,
+        'email' => 'reset@example.com',
+        'password' => 'New-secret-123',
+        'password_confirmation' => 'New-secret-123',
+    ])
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'Your password has been reset. Sign in with your new password.');
+
+    expect(Hash::check('New-secret-123', $user->fresh()->password))->toBeTrue();
+    $this->assertDatabaseHas('audit_logs', ['action' => 'auth.password_reset']);
+    $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'reset@example.com']);
 });
 
 it('rejects the old password and accepts the new password', function () {

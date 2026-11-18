@@ -107,7 +107,11 @@ class PasswordResetController extends Controller
         }
 
         if ($resetUser instanceof User) {
-            $resetUser->notify(new PasswordChangedNotification);
+            try {
+                $resetUser->notify(new PasswordChangedNotification);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
         return redirect()
