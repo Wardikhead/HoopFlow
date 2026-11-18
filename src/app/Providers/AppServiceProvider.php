@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\RequireLivewireHeaders;
 
@@ -65,6 +66,25 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour((int) config('rate_limits.register.per_hour', 60))
                     ->by('hour|'.$key),
             ];
+        });
+
+        RateLimiter::for('password-email', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+            $emailKey = $email !== '' ? hash('sha256', $email) : 'missing';
+
+            return [
+                Limit::perMinute((int) config('rate_limits.password_reset.request_per_minute', 5))
+                    ->by('password-email-minute|ip:'.$request->ip()),
+                Limit::perHour((int) config('rate_limits.password_reset.request_per_hour', 20))
+                    ->by('password-email-hour|ip:'.$request->ip()),
+                Limit::perMinute((int) config('rate_limits.password_reset.request_per_email_per_minute', 3))
+                    ->by('password-email-address|email:'.$emailKey),
+            ];
+        });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinute((int) config('rate_limits.password_reset.submit_per_minute', 10))
+                ->by('password-reset|ip:'.$request->ip());
         });
 
         RateLimiter::for('api', function (Request $request) {

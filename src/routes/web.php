@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LiveScoreboardController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TeamController;
 use App\Livewire\Coach\MyTeam;
@@ -29,6 +30,19 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.store')->mi
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
 Route::post('/register', [AuthController::class, 'register'])->name('register.store')->middleware(['guest', 'throttle:register']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+Route::get('/forgot-password', [PasswordResetController::class, 'showLinkRequestForm'])
+    ->name('password.request')
+    ->middleware('guest');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+    ->name('password.email')
+    ->middleware(['guest', 'throttle:password-email']);
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
+    ->name('password.reset')
+    ->middleware('guest');
+Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+    ->name('password.update')
+    ->middleware(['guest', 'throttle:password-reset']);
 
 Route::get('/', LandingController::class)->name('home');
 

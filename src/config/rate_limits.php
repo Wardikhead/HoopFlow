@@ -27,6 +27,13 @@ return [
         'per_hour' => (int) env('RATE_LIMIT_REGISTER_PER_HOUR', 60),
     ],
 
+    'password_reset' => [
+        'request_per_minute' => (int) env('RATE_LIMIT_PASSWORD_RESET_PER_MINUTE', 5),
+        'request_per_hour' => (int) env('RATE_LIMIT_PASSWORD_RESET_PER_HOUR', 20),
+        'request_per_email_per_minute' => (int) env('RATE_LIMIT_PASSWORD_RESET_PER_EMAIL_PER_MINUTE', 3),
+        'submit_per_minute' => (int) env('RATE_LIMIT_PASSWORD_RESET_SUBMIT_PER_MINUTE', 10),
+    ],
+
     'api' => [
         'max_attempts' => (int) env('RATE_LIMIT_API_MAX_ATTEMPTS', 120),
     ],
