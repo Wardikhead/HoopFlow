@@ -5,6 +5,7 @@ namespace App\Livewire\Organizer;
 use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\SchedulingService;
 use Carbon\Carbon;
@@ -31,6 +32,11 @@ use Livewire\Component;
  * @property-read array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null $calendarPlayoffWindow
  * @property-read array{games: int, courts: int, first: string} $daySummary
  * @property-read array<int, array{id: int, label: string, courtId: int, scheduledAt: string}> $scheduledMatchOptions
+ * @property-read Collection<int, MatchSlot> $publishedSlots
+ * @property-read bool $hasPublishedGames
+ * @property-read array<int, array{id: int, name: string}> $subscribeTeams
+ * @property-read string $tournamentCalendarUrl
+ * @property-read string|null $teamCalendarUrl
  * @property-read array<int, array{matchId: int, courtId: int, scheduledAt: string, round: string, game: string|null, match: string, court: string, slot: string, error: string|null, warning: string|null}> $previewRows
  * @property-read string $venueName
  * @property-read string $selectedDayLabel
@@ -61,6 +67,10 @@ class ScheduleShow extends Component
     public string $currentMonth = '';
 
     public ?string $selectedDay = null;
+
+    public bool $showSubscribe = false;
+
+    public ?int $subscribeTeamId = null;
 
     /** @var array<int, int> */
     public array $selectedCourtIds = [];
@@ -239,6 +249,17 @@ class ScheduleShow extends Component
     public function scheduledSlots(): Collection
     {
         return $this->matchSlots->values();
+    }
+
+    /**
+     * @return Collection<int, MatchSlot>
+     */
+    #[Computed]
+    public function publishedSlots(): Collection
+    {
+        return $this->scheduledSlots
+            ->filter(fn (MatchSlot $slot): bool => $slot->published_at !== null)
+            ->values();
     }
 
     /**
@@ -424,6 +445,65 @@ class ScheduleShow extends Component
     public function hasScheduledGames(): bool
     {
         return $this->scheduledSlots->isNotEmpty();
+    }
+
+    #[Computed]
+    public function hasPublishedGames(): bool
+    {
+        return $this->publishedSlots->isNotEmpty();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    #[Computed]
+    public function subscribeTeams(): array
+    {
+        /** @var array<int, string> $names */
+        $names = [];
+
+        foreach ($this->publishedSlots as $slot) {
+            foreach ([$slot->match?->homeTeam, $slot->match?->awayTeam] as $team) {
+                if (! $team instanceof Team) {
+                    continue;
+                }
+
+                $names[(int) $team->id] = (string) $team->name;
+            }
+        }
+
+        asort($names);
+
+        /** @var list<array{id: int, name: string}> $teams */
+        $teams = [];
+
+        foreach ($names as $id => $name) {
+            $teams[] = [
+                'id' => (int) $id,
+                'name' => $name,
+            ];
+        }
+
+        return $teams;
+    }
+
+    #[Computed]
+    public function tournamentCalendarUrl(): string
+    {
+        return route('calendar.tournament', $this->tournamentId);
+    }
+
+    #[Computed]
+    public function teamCalendarUrl(): ?string
+    {
+        if ((int) $this->subscribeTeamId < 1) {
+            return null;
+        }
+
+        return route('calendar.team', [
+            'tournament' => $this->tournamentId,
+            'team' => (int) $this->subscribeTeamId,
+        ]);
     }
 
     #[Computed]
@@ -769,6 +849,7 @@ class ScheduleShow extends Component
         $this->showPreview = true;
         $this->showConfirm = false;
         $this->showReschedule = false;
+        $this->showSubscribe = false;
         $this->resetValidation();
         $this->buildPreview();
     }
@@ -887,6 +968,19 @@ class ScheduleShow extends Component
     {
         $this->showPreview = false;
         $this->previewPlan = [];
+    }
+
+    public function openSubscribe(): void
+    {
+        $this->showSubscribe = true;
+        $this->showPreview = false;
+        $this->showReschedule = false;
+        $this->showConfirm = false;
+    }
+
+    public function closeSubscribe(): void
+    {
+        $this->showSubscribe = false;
     }
 
     public function publishSchedule(): void
@@ -1015,6 +1109,7 @@ class ScheduleShow extends Component
         $this->showReschedule = true;
         $this->showPreview = false;
         $this->showConfirm = false;
+        $this->showSubscribe = false;
         $this->resetValidation();
     }
 

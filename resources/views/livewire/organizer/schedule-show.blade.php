@@ -41,6 +41,11 @@
             <a class="hf-btn" href="{{ route('tournamentShow', ['tournament' => $tournament->id]) }}" data-testid="schedule-tournament"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tournament</a>
             <a class="hf-btn" href="{{ route('bracket', ['id' => $tournament->id]) }}" data-testid="schedule-bracket"><i class="bi bi-diagram-3" aria-hidden="true"></i> Bracket</a>
             <a class="hf-btn" href="{{ route('matches', ['id' => $tournament->id]) }}" data-testid="schedule-matches"><i class="bi bi-list-ul" aria-hidden="true"></i> Matchups</a>
+            @if ($this->hasPublishedGames)
+                <button type="button" class="hf-btn" wire:click="openSubscribe" data-testid="schedule-subscribe" wire:loading.attr="disabled" wire:loading.class="is-loading">
+                    <i class="bi bi-calendar-plus" aria-hidden="true"></i> Subscribe
+                </button>
+            @endif
             <button type="button" class="hf-btn" data-print-page><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
             @if ($this->isOrganizer && $this->hasScheduledGames && $this->resultsCount === 0)
                 <button type="button" class="hf-btn" wire:click="openRebuild" data-testid="schedule-rebuild" wire:loading.attr="disabled" wire:loading.class="is-loading">Rebuild schedule</button>
@@ -487,6 +492,106 @@
                 <div class="hf-dialog__foot">
                     <button type="button" class="hf-btn" wire:click="closeReschedule" data-testid="reschedule-cancel">Cancel</button>
                     <button type="button" class="hf-btn hf-btn--primary" wire:click="saveReschedule" data-testid="reschedule-save" wire:loading.attr="disabled">Save</button>
+                </div>
+            </dialog>
+        @endif
+
+        @if ($showSubscribe)
+            <dialog
+                class="hf-dialog"
+                x-data
+                x-init="if (! $el.open) $el.showModal()"
+                x-on:cancel.prevent="$wire.closeSubscribe()"
+                x-on:click="if ($event.target === $el) $wire.closeSubscribe()"
+                wire:key="schedule-subscribe-dialog"
+                data-testid="schedule-subscribe-dialog"
+                aria-labelledby="scheduleSubscribeDialogTitle">
+                <div class="hf-dialog__head">
+                    <h2 class="hf-dialog__title" id="scheduleSubscribeDialogTitle">Subscribe to this schedule</h2>
+                    <button type="button" class="hf-icon-btn" wire:click="closeSubscribe" aria-label="Close dialog" data-testid="dialog-close">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="hf-dialog__body">
+                    <p class="hf-small hf-muted">
+                        Paste the link into Google Calendar → Other calendars → From URL. Apple Calendar and Outlook accept the same address.
+                    </p>
+
+                    <div class="hf-field hf-mt-2" x-data="{ copied: false }">
+                        <label class="hf-label" for="subscribeTournamentUrl">All tournament games</label>
+                        <div class="hf-btn-row">
+                            <input
+                                id="subscribeTournamentUrl"
+                                class="hf-input"
+                                type="text"
+                                readonly
+                                value="{{ $this->tournamentCalendarUrl }}"
+                                x-ref="tournamentCalendarUrl"
+                                data-testid="subscribe-tournament-url">
+                            <button
+                                type="button"
+                                class="hf-btn"
+                                x-on:click="
+                                    const input = $refs.tournamentCalendarUrl;
+                                    const done = () => { copied = true; setTimeout(() => copied = false, 1500); };
+                                    if (navigator.clipboard && window.isSecureContext) {
+                                        navigator.clipboard.writeText(input.value).then(done).catch(() => { input.select(); document.execCommand('copy'); done(); });
+                                    } else {
+                                        input.select();
+                                        document.execCommand('copy');
+                                        done();
+                                    }
+                                "
+                                x-text="copied ? 'Copied' : 'Copy'"
+                                aria-live="polite"
+                                data-testid="subscribe-copy-tournament">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="hf-field hf-mt-3" x-data="{ copied: false }">
+                        <label class="hf-label" for="subscribeTeam">One team</label>
+                        <select id="subscribeTeam" class="hf-select" wire:model.live="subscribeTeamId" data-testid="subscribe-team">
+                            <option value="0">Choose a team</option>
+                            @foreach ($this->subscribeTeams as $team)
+                                <option value="{{ $team['id'] }}">{{ $team['name'] }}</option>
+                            @endforeach
+                        </select>
+
+                        @if ($this->teamCalendarUrl !== null)
+                            <div class="hf-btn-row hf-mt-2">
+                                <input
+                                    id="subscribeTeamUrl"
+                                    class="hf-input"
+                                    type="text"
+                                    readonly
+                                    value="{{ $this->teamCalendarUrl }}"
+                                    x-ref="teamCalendarUrl"
+                                    data-testid="subscribe-team-url">
+                                <button
+                                    type="button"
+                                    class="hf-btn"
+                                    x-on:click="
+                                        const input = $refs.teamCalendarUrl;
+                                        const done = () => { copied = true; setTimeout(() => copied = false, 1500); };
+                                        if (navigator.clipboard && window.isSecureContext) {
+                                            navigator.clipboard.writeText(input.value).then(done).catch(() => { input.select(); document.execCommand('copy'); done(); });
+                                        } else {
+                                            input.select();
+                                            document.execCommand('copy');
+                                            done();
+                                        }
+                                    "
+                                    x-text="copied ? 'Copied' : 'Copy'"
+                                    aria-live="polite"
+                                    data-testid="subscribe-copy-team">Copy</button>
+                            </div>
+                        @else
+                            <p class="hf-small hf-muted hf-mt-1" data-testid="subscribe-team-hint">Choose a team to get its link.</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="hf-dialog__foot">
+                    <button type="button" class="hf-btn" wire:click="closeSubscribe" data-testid="subscribe-close">Close</button>
                 </div>
             </dialog>
         @endif
