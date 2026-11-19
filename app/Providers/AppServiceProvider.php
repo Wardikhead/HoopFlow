@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Calendar\IcsCalendarWriter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -20,7 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(IcsCalendarWriter::class, fn (): IcsCalendarWriter => new IcsCalendarWriter(
+            (string) config('hoopflow.timezone', 'Asia/Manila'),
+        ));
     }
 
     /**
