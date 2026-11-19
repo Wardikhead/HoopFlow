@@ -99,8 +99,10 @@ class ScheduleCalendarService
         }
 
         $match = $slot->match;
-        $home = $match?->homeTeam?->name ?? 'TBD';
-        $away = $match?->awayTeam?->name ?? 'TBD';
+        $homeName = $match?->homeTeam?->name;
+        $awayName = $match?->awayTeam?->name;
+        $home = $homeName ?? 'TBD';
+        $away = $awayName ?? 'TBD';
         $round = $match?->roundLabel() ?? 'Match';
         $court = $slot->court?->name;
         $venue = $slot->court?->venue;
