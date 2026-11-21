@@ -1,0 +1,481 @@
+<style>
+  .hf-pick .cards { grid-template-columns: 1fr; }
+  .hf-pick .card { cursor: pointer; background: transparent; border: 2px solid var(--border); }
+  .hf-pick .card:hover { border-color: #ea580c; transform: translateY(-2px); }
+  .hf-pick .card.selected { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, .25); }
+  .hf-pick .card-image { aspect-ratio: auto; padding: 0; background: #080d17; display: block; }
+  .hf-pick .card-body { background: var(--bg-secondary); }
+
+  .m-boardwrap {
+    --ink: #f3f5f9;
+    --muted: #9aa6b8;
+    --line: rgba(243, 245, 249, .12);
+    --orange: #fb7a1e;
+    --gold: #f5b301;
+    --green: #34d399;
+    position: relative;
+    overflow: hidden;
+    padding: 18px 18px 20px;
+    background:
+      radial-gradient(circle at 88% 8%, rgba(234, 88, 12, .18), transparent 32%),
+      radial-gradient(circle at 12% 100%, rgba(29, 79, 145, .16), transparent 34%),
+      linear-gradient(180deg, #0b1220, #080d17 70%);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .m-boardwrap::before {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 79px, rgba(243, 245, 249, .035) 79px 80px),
+      repeating-linear-gradient(0deg, transparent 0 79px, rgba(243, 245, 249, .035) 79px 80px);
+    content: '';
+    mask-image: radial-gradient(circle at 50% 40%, #000 20%, transparent 78%);
+    pointer-events: none;
+  }
+  .m-boardwrap::after {
+    position: absolute;
+    top: -120px;
+    right: -80px;
+    width: 380px;
+    height: 380px;
+    border: 1px solid rgba(245, 179, 1, .14);
+    border-radius: 50%;
+    box-shadow: 0 0 0 44px rgba(245, 179, 1, .04), 0 0 0 88px rgba(245, 179, 1, .025);
+    content: '';
+    pointer-events: none;
+  }
+  .m-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--orange);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .m-kicker::before { width: 18px; height: 2px; background: var(--orange); content: ''; }
+  .m-title {
+    margin: 6px 0 0;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: .01em;
+    line-height: .95;
+    text-transform: uppercase;
+  }
+  .m-sub { margin: 4px 0 0; color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+  .m-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .m-toolbar { display: flex; align-items: center; gap: 6px; }
+  .m-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(243, 245, 249, .04);
+    color: var(--ink);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .m-tool.is-on { border-color: var(--orange); background: rgba(234, 88, 12, .16); color: #ffd9c7; }
+  .m-legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+  .m-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .m-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .m-dot--live { background: var(--orange); box-shadow: 0 0 0 3px rgba(234, 88, 12, .18); animation: m-pulse 1.8s ease-out infinite; }
+  .m-dot--gold { background: var(--gold); }
+
+  .m-board {
+    position: relative;
+    display: flex;
+    gap: 34px;
+    min-height: 430px;
+    padding: 2px 0;
+  }
+  .m-lines { position: absolute; inset: 0; z-index: 0; overflow: visible; pointer-events: none; }
+  .m-lines path { fill: none; stroke: rgba(243, 245, 249, .2); stroke-width: 1.5; }
+  .m-lines path.is-hot { stroke: var(--orange); stroke-width: 2; filter: drop-shadow(0 0 4px rgba(234, 88, 12, .55)); }
+  .m-round { position: relative; z-index: 1; display: flex; flex: 1; flex-direction: column; min-width: 0; }
+  .m-round__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-height: 34px;
+    margin-bottom: 8px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--line);
+  }
+  .m-round__head strong {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .m-round__head span { color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
+  .m-round__body { display: flex; flex: 1; flex-direction: column; justify-content: space-around; gap: 10px; }
+
+  .m-card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 4px;
+    padding: 7px 8px 8px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--orange);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(22, 32, 51, .96), rgba(13, 20, 33, .98));
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .18);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .m-card:hover {
+    z-index: 4;
+    border-color: rgba(251, 122, 30, .7);
+    box-shadow: 0 0 0 1px rgba(251, 122, 30, .25), 0 16px 34px rgba(0, 0, 0, .34);
+    transform: translateY(-2px);
+  }
+  .m-card.is-live { border-left-color: var(--orange); background: linear-gradient(180deg, rgba(58, 30, 12, .72), rgba(18, 22, 31, .98)); }
+  .m-card.is-final { border-left-color: var(--green); }
+  .m-card.is-gold { border: 1px solid rgba(245, 179, 1, .45); border-left: 4px solid var(--gold); background: linear-gradient(180deg, rgba(61, 46, 10, .6), rgba(18, 22, 31, .98)); box-shadow: 0 0 0 1px rgba(245, 179, 1, .1), 0 18px 40px rgba(0, 0, 0, .3); }
+  .m-card__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .m-card__slot { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .m-chip.is-live { border-color: rgba(251, 122, 30, .45); background: rgba(234, 88, 12, .14); color: #ffd9c7; }
+  .m-chip.is-final { border-color: rgba(52, 211, 153, .35); background: rgba(16, 185, 129, .1); color: #a7f3d0; }
+  .m-team { display: flex; align-items: center; gap: 6px; min-height: 23px; color: var(--muted); }
+  .m-team.is-winner { color: var(--ink); }
+  .m-team.is-loser { opacity: .62; }
+  .m-shield {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 23px;
+    height: 23px;
+    border-radius: 5px;
+    background: var(--c, #334155);
+    color: #fff;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .02em;
+  }
+  .m-name { flex: 1; min-width: 0; overflow: hidden; font-size: 9.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .m-team.is-winner .m-name { font-weight: 800; }
+  .m-score {
+    min-width: 18px;
+    color: var(--muted);
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: right;
+  }
+  .m-team.is-winner .m-score { color: var(--orange); }
+  .m-card.is-gold .m-team.is-winner .m-score { color: var(--gold); }
+  .m-series { display: flex; align-items: center; gap: 5px; margin-top: 1px; padding-top: 5px; border-top: 1px solid var(--line); color: var(--muted); font-size: 7px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .m-pips { display: inline-flex; gap: 2px; margin-left: auto; }
+  .m-pip { width: 5px; height: 5px; border: 1px solid rgba(243, 245, 249, .28); border-radius: 50%; }
+  .m-pip.is-on { border-color: var(--orange); background: var(--orange); }
+  .m-card.is-gold .m-pip.is-on { border-color: var(--gold); background: var(--gold); }
+  .m-trophy { color: var(--gold); }
+
+  .m-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; letter-spacing: .05em; }
+  .m-footer strong { color: var(--ink); font-weight: 700; }
+
+  /* Option B — spotlight */
+  .m-spotlight-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, .7fr); gap: 18px; align-items: stretch; }
+  .m-spotlight { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid rgba(251, 122, 30, .3); border-radius: 12px; background: linear-gradient(160deg, rgba(35, 26, 18, .95), rgba(13, 20, 33, .98)); }
+  .m-spotlight__label { color: var(--orange); font-size: 8px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  .m-spotlight__teams { display: grid; gap: 8px; }
+  .m-spot-team { display: flex; align-items: center; gap: 9px; }
+  .m-spot-team .m-shield { width: 34px; height: 34px; border-radius: 8px; font-size: 11px; }
+  .m-spot-team .m-name { font-size: 12px; }
+  .m-spot-score { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 800; line-height: .9; }
+  .m-spot-team.is-winner { color: var(--ink); }
+  .m-spot-team.is-winner .m-spot-score { color: var(--orange); }
+  .m-spot-team.is-loser { color: var(--muted); }
+  .m-spot-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .m-spot-meta div { display: grid; gap: 1px; }
+  .m-spot-meta span { color: var(--muted); font-size: 7px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .m-spot-meta strong { font-size: 9px; }
+  .m-cta { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; margin-top: auto; border: 1px solid var(--orange); border-radius: 8px; background: var(--orange); color: #1a0d04; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .m-road { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 8px; }
+  .m-road i { width: 5px; height: 5px; border-radius: 50%; background: rgba(243, 245, 249, .2); }
+  .m-road i.is-on { background: var(--orange); box-shadow: 0 0 0 2px rgba(234, 88, 12, .18); }
+
+  /* Option C — filmstrip */
+  .m-strip-tabs { display: flex; gap: 6px; overflow: hidden; margin-bottom: 14px; }
+  .m-strip-tab { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .m-strip-tab.is-active { border-color: var(--orange); background: rgba(234, 88, 12, .16); color: #ffd9c7; }
+  .m-strip { display: flex; gap: 10px; overflow: hidden; padding: 2px 0 8px; }
+  .m-strip .m-card { flex: 0 0 180px; }
+  .m-strip-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .m-strip-head h4 { margin: 0; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+  .m-strip-head span { color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+  .m-strip-progress { height: 3px; margin: 10px 0 14px; overflow: hidden; border-radius: 3px; background: rgba(243, 245, 249, .1); }
+  .m-strip-progress span { display: block; width: 50%; height: 100%; background: var(--orange); }
+  .m-strip-nav { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; }
+  .m-strip-nav b { color: var(--ink); }
+
+  @keyframes m-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(234, 88, 12, .5); }
+    70% { box-shadow: 0 0 0 7px rgba(234, 88, 12, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+  }
+  @media (max-width: 760px) {
+    .m-board { gap: 30px; }
+    .m-round { min-width: 140px; }
+    .m-spotlight-layout { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="hf-pick">
+  <h2>Pick the bracket direction</h2>
+  <p class="subtitle">All three keep the HoopFlow arena palette, Barlow Condensed headers, team shields, and the existing click-to-open match detail. A is the closest to an NBA playoff board.</p>
+
+  <div class="cards">
+
+    <div class="card" data-choice="arena-tree" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div class="m-boardwrap">
+          <div class="m-topbar">
+            <div>
+              <div class="m-kicker">Under 17 · Single elimination</div>
+              <h3 class="m-title">Road to the title</h3>
+              <p class="m-sub">16 teams · 4 rounds · HoopFlow North Arena</p>
+            </div>
+            <div class="m-toolbar">
+              <span class="m-tool">−</span><span class="m-tool is-on">Fit</span><span class="m-tool">+</span>
+            </div>
+          </div>
+
+          <div class="m-board" data-mock-board>
+            <svg class="m-lines"></svg>
+            <div class="m-round">
+              <div class="m-round__head"><strong>Round of 16</strong><span>8 games</span></div>
+              <div class="m-round__body">
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">R16 · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">78</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#f59e0b">KST</span><span class="m-name">Kalawaan Kestrels</span><span class="m-score">71</span></div></div>
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">R16 · 2</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#ef4444">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">84</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#a16207">BIB</span><span class="m-name">Bagong Ilog Bears</span><span class="m-score">80</span></div></div>
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">R16 · 3</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">69</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#475569">PLT</span><span class="m-name">Pinagbuhatan Pilots</span><span class="m-score">64</span></div></div>
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">R16 · 4</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#dc2626">RCK</span><span class="m-name">Rosario Rockets</span><span class="m-score">91</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#7c3aed">MVR</span><span class="m-name">Maybunga Mavericks</span><span class="m-score">88</span></div></div>
+                <div class="m-card is-live"><div class="m-card__top"><span class="m-card__slot">R16 · 5</span><span class="m-chip is-live"><span class="m-dot m-dot--live"></span>Live</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">54</span></div><div class="m-team"><span class="m-shield" style="--c:#0891b2">SMS</span><span class="m-name">Sumilang Spartans</span><span class="m-score">51</span></div><div class="m-series"><span>Q3 · 4:12</span><span class="m-pips"><span class="m-pip is-on"></span><span class="m-pip is-on"></span><span class="m-pip"></span></span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">R16 · 6</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#ea580c">TGR</span><span class="m-name">Mandalutong Tigers</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#15803d">STL</span><span class="m-name">Santolan Saints</span><span class="m-score">–</span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">R16 · 7</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#2563eb">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#b45309">KST</span><span class="m-name">Kalawaan Kestrels</span><span class="m-score">–</span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">R16 · 8</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#0f766e">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#9333ea">BIB</span><span class="m-name">Bagong Ilog Bears</span><span class="m-score">–</span></div></div>
+              </div>
+            </div>
+
+            <div class="m-round">
+              <div class="m-round__head"><strong>Quarterfinals</strong><span>4 games</span></div>
+              <div class="m-round__body">
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">QF · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">82</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#ef4444">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">79</span></div></div>
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">QF · 2</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">77</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#dc2626">RCK</span><span class="m-name">Rosario Rockets</span><span class="m-score">74</span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">QF · 3</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#ea580c">TGR</span><span class="m-name">Mandalutong Tigers</span><span class="m-score">–</span></div><div class="m-series"><span>Best of 3</span><span class="m-pips"><span class="m-pip is-on"></span><span class="m-pip"></span><span class="m-pip"></span></span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">QF · 4</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#2563eb">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#0f766e">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">–</span></div></div>
+              </div>
+            </div>
+
+            <div class="m-round">
+              <div class="m-round__head"><strong>Semifinals</strong><span>2 games</span></div>
+              <div class="m-round__body">
+                <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">SF · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">86</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">81</span></div><div class="m-series"><span>Best of 3</span><span class="m-pips"><span class="m-pip is-on"></span><span class="m-pip is-on"></span><span class="m-pip"></span></span></div></div>
+                <div class="m-card"><div class="m-card__top"><span class="m-card__slot">SF · 2</span><span class="m-chip is-live"><span class="m-dot m-dot--live"></span>Game 2</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">1</span></div><div class="m-team"><span class="m-shield" style="--c:#2563eb">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">0</span></div><div class="m-series"><span>Series</span><span class="m-pips"><span class="m-pip is-on"></span><span class="m-pip"></span><span class="m-pip"></span></span></div></div>
+              </div>
+            </div>
+
+            <div class="m-round">
+              <div class="m-round__head"><strong>Championship</strong><span>1 game</span></div>
+              <div class="m-round__body">
+                <div class="m-card is-gold">
+                  <div class="m-card__top"><span class="m-card__slot"><span class="m-trophy">🏆</span> Final</span><span class="m-chip is-live"><span class="m-dot m-dot--live"></span>Next</span></div>
+                  <div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div>
+                  <div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div>
+                  <div class="m-series"><span>Best of 3</span><span class="m-pips"><span class="m-pip"></span><span class="m-pip"></span><span class="m-pip"></span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="m-footer">
+            <span><strong>Hover any matchup</strong> to trace its path to the final</span>
+            <span class="m-legend"><span><i class="m-dot m-dot--live"></i>Live</span><span><i class="m-dot m-dot--gold"></i>Final</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>A · Arena Tree <span style="color:#ea580c;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase">Recommended</span></h3>
+        <p>True NBA-style tree: rounds align to their feeders, connector lines draw the path, the final becomes a gold trophy card, and hovering a matchup lights its road to the title. Sticky round headers, fit/zoom, horizontal scroll on smaller screens.</p>
+      </div>
+    </div>
+
+    <div class="card" data-choice="broadcast-spotlight" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div class="m-boardwrap">
+          <div class="m-topbar">
+            <div>
+              <div class="m-kicker">Under 17 · Double elimination</div>
+              <h3 class="m-title">Match spotlight</h3>
+              <p class="m-sub">Winners bracket · click a matchup to preview it</p>
+            </div>
+            <div class="m-toolbar"><span class="m-tool is-on">Live desk</span></div>
+          </div>
+
+          <div class="m-spotlight-layout">
+            <div class="m-board" style="min-height:360px;gap:40px" data-mock-board>
+              <svg class="m-lines"></svg>
+              <div class="m-round">
+                <div class="m-round__head"><strong>Winners QF</strong><span>4 games</span></div>
+                <div class="m-round__body">
+                  <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">WQF · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">82</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#ef4444">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">79</span></div></div>
+                  <div class="m-card is-live"><div class="m-card__top"><span class="m-card__slot">WQF · 2</span><span class="m-chip is-live"><span class="m-dot m-dot--live"></span>Live</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">48</span></div><div class="m-team"><span class="m-shield" style="--c:#dc2626">RCK</span><span class="m-name">Rosario Rockets</span><span class="m-score">45</span></div></div>
+                  <div class="m-card"><div class="m-card__top"><span class="m-card__slot">WQF · 3</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#ea580c">TGR</span><span class="m-name">Mandalutong Tigers</span><span class="m-score">–</span></div></div>
+                  <div class="m-card"><div class="m-card__top"><span class="m-card__slot">WQF · 4</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#2563eb">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#0f766e">KNG</span><span class="m-name">Kapitolyo Kings</span><span class="m-score">–</span></div></div>
+                </div>
+              </div>
+              <div class="m-round">
+                <div class="m-round__head"><strong>Winners SF</strong><span>2 games</span></div>
+                <div class="m-round__body">
+                  <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">WSF · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">86</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">81</span></div></div>
+                  <div class="m-card"><div class="m-card__top"><span class="m-card__slot">WSF · 2</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#2563eb">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div></div>
+                </div>
+              </div>
+              <div class="m-round">
+                <div class="m-round__head"><strong>Winners Final</strong><span>1 game</span></div>
+                <div class="m-round__body">
+                  <div class="m-card is-gold"><div class="m-card__top"><span class="m-card__slot"><span class="m-trophy">🏆</span> W Final</span><span class="m-chip">Best of 3</span></div><div class="m-team"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="m-spotlight">
+              <span class="m-spotlight__label">● Live now · WQF 2</span>
+              <div class="m-spotlight__teams">
+                <div class="m-spot-team is-winner"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-spot-score">48</span></div>
+                <div class="m-spot-team is-loser"><span class="m-shield" style="--c:#dc2626">RCK</span><span class="m-name">Rosario Rockets</span><span class="m-spot-score">45</span></div>
+              </div>
+              <div class="m-series"><span>Q3 · 2:41</span><span class="m-pips"><span class="m-pip is-on"></span><span class="m-pip is-on"></span><span class="m-pip"></span></span></div>
+              <div class="m-spot-meta">
+                <div><span>Court</span><strong>Court 2</strong></div>
+                <div><span>Tip-off</span><strong>10:30 AM</strong></div>
+                <div><span>Series</span><strong>1–0 UGU</strong></div>
+                <div><span>Format</span><strong>Best of 3</strong></div>
+              </div>
+              <div class="m-road"><span>Road</span><i class="is-on"></i><i class="is-on"></i><i></i><i></i><span>Final</span></div>
+              <span class="m-cta">Open match center →</span>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>B · Broadcast Spotlight</h3>
+        <p>The tree plus a live "match desk" rail: hovering or selecting a matchup previews the teams, series pips, court, and tip-off without opening a modal. Great for public viewing; clicking still opens the full match detail.</p>
+      </div>
+    </div>
+
+    <div class="card" data-choice="round-filmstrip" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div class="m-boardwrap">
+          <div class="m-topbar">
+            <div>
+              <div class="m-kicker">Under 15 · Round robin</div>
+              <h3 class="m-title">Matchday filmstrip</h3>
+              <p class="m-sub">Swipe or tap a round · 7 matchdays</p>
+            </div>
+          </div>
+          <div class="m-strip-tabs">
+            <span class="m-strip-tab">MD 1</span><span class="m-strip-tab">MD 2</span><span class="m-strip-tab is-active">MD 3</span><span class="m-strip-tab">MD 4</span><span class="m-strip-tab">MD 5</span><span class="m-strip-tab">MD 6</span><span class="m-strip-tab">MD 7</span>
+          </div>
+          <div class="m-strip-progress"><span></span></div>
+          <div class="m-strip-head"><h4>Matchday 3</h4><span>4 games · Court 1 &amp; 2</span></div>
+          <div class="m-strip">
+            <div class="m-card is-final"><div class="m-card__top"><span class="m-card__slot">MD3 · 1</span><span class="m-chip is-final">Final</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#0ea5e9">PSG</span><span class="m-name">Pasig Pirates</span><span class="m-score">78</span></div><div class="m-team is-loser"><span class="m-shield" style="--c:#f59e0b">KST</span><span class="m-name">Kalawaan Kestrels</span><span class="m-score">71</span></div></div>
+            <div class="m-card is-live"><div class="m-card__top"><span class="m-card__slot">MD3 · 2</span><span class="m-chip is-live"><span class="m-dot m-dot--live"></span>Live</span></div><div class="m-team is-winner"><span class="m-shield" style="--c:#16a34a">UGU</span><span class="m-name">Ugong United</span><span class="m-score">54</span></div><div class="m-team"><span class="m-shield" style="--c:#475569">PLT</span><span class="m-name">Pinagbuhatan Pilots</span><span class="m-score">51</span></div></div>
+            <div class="m-card"><div class="m-card__top"><span class="m-card__slot">MD3 · 3</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#dc2626">RCK</span><span class="m-name">Rosario Rockets</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#7c3aed">MVR</span><span class="m-name">Maybunga Mavericks</span><span class="m-score">–</span></div></div>
+            <div class="m-card"><div class="m-card__top"><span class="m-card__slot">MD3 · 4</span><span class="m-chip">Scheduled</span></div><div class="m-team"><span class="m-shield" style="--c:#db2777">DPZ</span><span class="m-name">Dela Paz Dragons</span><span class="m-score">–</span></div><div class="m-team"><span class="m-shield" style="--c:#0891b2">SMS</span><span class="m-name">Sumilang Spartans</span><span class="m-score">–</span></div></div>
+          </div>
+          <div class="m-strip-nav"><span><b>Back</b></span><span>3 of 7</span><span><b>Next</b></span></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>C · Round Filmstrip</h3>
+        <p>One round at a time as a horizontal filmstrip with snap scrolling, a big round header, and a progress bar. The easiest to read on phones, but it loses the "one glance at the whole bracket" NBA feel.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function mockDraw(board) {
+    const svg = board.querySelector('.m-lines');
+    if (!svg) return;
+    const box = board.getBoundingClientRect();
+    svg.setAttribute('viewBox', `0 0 ${board.clientWidth} ${board.clientHeight}`);
+    svg.setAttribute('width', board.clientWidth);
+    svg.setAttribute('height', board.clientHeight);
+    const rounds = [...board.querySelectorAll('.m-round')];
+    const cards = rounds.map((round) => [...round.querySelectorAll('.m-card')]);
+    let markup = '';
+    for (let i = 0; i < rounds.length - 1; i++) {
+      const prev = cards[i];
+      const next = cards[i + 1];
+      if (!prev.length || !next.length) continue;
+      const prevBox = rounds[i].getBoundingClientRect();
+      const nextBox = rounds[i + 1].getBoundingClientRect();
+      const midX = (prevBox.right + nextBox.left) / 2 - box.left;
+      const ratio = prev.length / next.length;
+      next.forEach((card, j) => {
+        const start = Math.floor(j * ratio);
+        const end = Math.max(start + 1, Math.floor((j + 1) * ratio));
+        const nextRect = card.getBoundingClientRect();
+        const nextY = nextRect.top + nextRect.height / 2 - box.top;
+        prev.slice(start, end).forEach((feeder) => {
+          const feederRect = feeder.getBoundingClientRect();
+          const feederY = feederRect.top + feederRect.height / 2 - box.top;
+          const x1 = feederRect.right - box.left;
+          const x2 = nextRect.left - box.left;
+          markup += `<path d="M${x1} ${feederY} H${midX} V${nextY} H${x2}" />`;
+        });
+      });
+    }
+    svg.innerHTML = markup;
+  }
+
+  function drawAll() {
+    document.querySelectorAll('[data-mock-board]').forEach(mockDraw);
+  }
+
+  window.addEventListener('resize', drawAll);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+  requestAnimationFrame(() => requestAnimationFrame(drawAll));
+</script>

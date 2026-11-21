@@ -277,20 +277,20 @@
                             @foreach ($this->quarters[$panel['side']] as $index => $value)
                                 <div class="hf-field">
                                     <label class="hf-label" for="ingameQ{{ $panel['side'] }}_{{ $index }}">{{ $labels[$index] ?? 'Q'.($index + 1) }}</label>
-                                    <input class="hf-input" id="ingameQ{{ $panel['side'] }}_{{ $index }}" type="number" min="0" max="199" wire:model.live="quarters.{{ $panel['side'] }}.{{ $index }}" data-testid="ingame-q-{{ $panel['side'] }}-{{ $index }}">
+                                    <input class="hf-input" id="ingameQ{{ $panel['side'] }}_{{ $index }}" type="number" min="0" max="199" inputmode="numeric" wire:model.live="quarters.{{ $panel['side'] }}.{{ $index }}" data-testid="ingame-q-{{ $panel['side'] }}-{{ $index }}">
                                 </div>
                             @endforeach
                         </div>
                         <p class="hf-small hf-mt-1 hf-mb-1">Running total: <strong>{{ array_sum($this->quarters[$panel['side']]) }}</strong></p>
                         <label class="hf-label" for="ingameFinal{{ $panel['side'] }}">Final score</label>
-                        <input class="hf-input" id="ingameFinal{{ $panel['side'] }}" type="number" min="0" max="199" wire:model.live="finals.{{ $panel['side'] }}" data-testid="ingame-final-{{ $panel['side'] }}">
+                        <input class="hf-input" id="ingameFinal{{ $panel['side'] }}" type="number" min="0" max="199" inputmode="numeric" wire:model.live="finals.{{ $panel['side'] }}" data-testid="ingame-final-{{ $panel['side'] }}">
                         @php
                             $playerPoints = $this->statPointsForSide($panel['side']);
                             $finalPoints = (int) $this->finals[$panel['side']];
                             $pointsGap = $finalPoints - $playerPoints;
                         @endphp
                         @if ($correctionMode)
-                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-mismatch-{{ $panel['side'] }}">
+                            <p class="hf-small hf-mt-1 hf-mb-0" aria-live="polite" data-testid="ingame-mismatch-{{ $panel['side'] }}">
                                 @if ($playerPoints === $finalPoints)
                                     Player points match the final score
                                 @elseif ($playerPoints < $finalPoints)
@@ -300,7 +300,7 @@
                                 @endif
                             </p>
                         @elseif ($pointsGap !== 0)
-                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-points-check-{{ $panel['side'] }}">
+                            <p class="hf-small hf-mt-1 hf-mb-0" aria-live="polite" data-testid="ingame-points-check-{{ $panel['side'] }}">
                                 <span class="hf-chip hf-chip--{{ $pointsGap > 0 ? 'warning' : 'danger' }}">
                                     @if ($pointsGap > 0)
                                         {{ $pointsGap }} points unassigned
@@ -310,7 +310,7 @@
                                 </span>
                             </p>
                         @else
-                            <p class="hf-small hf-mt-1 hf-mb-0" data-testid="ingame-points-check-{{ $panel['side'] }}">
+                            <p class="hf-small hf-mt-1 hf-mb-0" aria-live="polite" data-testid="ingame-points-check-{{ $panel['side'] }}">
                                 <span class="hf-chip hf-chip--success">Player points match the final score</span>
                             </p>
                         @endif
@@ -344,8 +344,15 @@
                         </div>
                         <input class="hf-input" type="search" placeholder="Search player" aria-label="Search {{ $block['team']?->name ?? 'team' }} players" wire:model.live.debounce.300ms="{{ $block['search'] }}" data-testid="ingame-player-search-{{ $block['side'] }}">
                     </div>
+                    @php
+                        $statLabels = [
+                            'fgm' => 'FG M', 'fga' => 'FG A', 'tpm' => '3PT M', 'tpa' => '3PT A',
+                            'ftm' => 'FT M', 'fta' => 'FT A', 'reb' => 'REB', 'ast' => 'AST',
+                            'stl' => 'STL', 'blk' => 'BLK', 'to' => 'TO', 'pf' => 'PF',
+                        ];
+                    @endphp
                     <div class="hf-table-wrap">
-                        <table class="hf-table">
+                        <table class="hf-table hf-table--stack hf-table--ingame">
                             <caption class="hf-sr-only">Player box score</caption>
                             <thead>
                                 <tr>
@@ -372,17 +379,17 @@
                                         $quarterStats = $this->stats[$block['side']][$row['id']]['quarters'][$activeQuarter] ?? [];
                                     @endphp
                                     <tr wire:key="ingame-stat-row-{{ $block['side'] }}-{{ $row['id'] }}-{{ $activeQuarter }}" data-testid="ingame-stat-row-{{ $block['side'] }}-{{ $loop->index }}" data-player-name="{{ mb_strtolower($row['name']) }}">
-                                        <td>
+                                        <td data-label="Player">
                                             <strong>#{{ $row['number'] ?? '–' }} {{ $row['name'] }}</strong>
                                             <span class="hf-small hf-muted hf-block">{{ $row['position'] ?: 'Player' }}</span>
                                         </td>
                                         @foreach (array_keys(\App\Services\GameStatsService::FIELDS) as $field)
-                                            <td class="is-num">
-                                                <input class="hf-input" type="number" min="0" max="199" aria-label="{{ $row['name'] }} {{ $field }} {{ $labels[$activeQuarter] ?? '' }}" wire:model.live="stats.{{ $block['side'] }}.{{ $row['id'] }}.quarters.{{ $activeQuarter }}.{{ $field }}" data-testid="ingame-stat-{{ $block['side'] }}-{{ $row['id'] }}-{{ $field }}">
+                                            <td class="is-num" data-label="{{ $statLabels[$field] ?? strtoupper($field) }}">
+                                                <input class="hf-input" type="number" min="0" max="199" inputmode="numeric" aria-label="{{ $row['name'] }} {{ $field }} {{ $labels[$activeQuarter] ?? '' }}" wire:model.live="stats.{{ $block['side'] }}.{{ $row['id'] }}.quarters.{{ $activeQuarter }}.{{ $field }}" data-testid="ingame-stat-{{ $block['side'] }}-{{ $row['id'] }}-{{ $field }}">
                                             </td>
                                         @endforeach
-                                        <td class="is-num"><strong>{{ $this->statPoints($quarterStats) }}</strong></td>
-                                        <td class="is-num">{{ $row['totals']['pts'] }}</td>
+                                        <td class="is-num" data-label="PTS"><strong>{{ $this->statPoints($quarterStats) }}</strong></td>
+                                        <td class="is-num" data-label="Totals">{{ $row['totals']['pts'] }}</td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -403,7 +410,7 @@
 
             <section class="hf-card hf-card--flat" data-testid="ingame-actions">
                 @if ($errorMessage !== '')
-                    <p class="hf-field-error hf-mb-2" data-testid="ingame-error">{{ $errorMessage }}</p>
+                    <p class="hf-field-error hf-mb-2" role="alert" aria-live="assertive" data-testid="ingame-error">{{ $errorMessage }}</p>
                 @endif
                 @if ($correctionMode)
                     <div class="hf-field hf-mb-2">

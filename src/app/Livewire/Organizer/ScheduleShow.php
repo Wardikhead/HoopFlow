@@ -8,6 +8,7 @@ use App\Models\MatchSlot;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\SchedulingService;
+use App\Support\RescheduledMatches;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -32,6 +33,7 @@ use Livewire\Component;
  * @property-read array{startDate: string, endDate: string, groupEndDate: string|null, dates: list<string>, dayCount: int, rounds: list<array{label: string, bestOf: int, days: int}>}|null $calendarPlayoffWindow
  * @property-read array{games: int, courts: int, first: string} $daySummary
  * @property-read array<int, array{id: int, label: string, courtId: int, scheduledAt: string}> $scheduledMatchOptions
+ * @property-read list<int> $rescheduledMatchIds
  * @property-read Collection<int, MatchSlot> $publishedSlots
  * @property-read bool $hasPublishedGames
  * @property-read array<int, array{id: int, name: string}> $subscribeTeams
@@ -249,6 +251,17 @@ class ScheduleShow extends Component
     public function scheduledSlots(): Collection
     {
         return $this->matchSlots->values();
+    }
+
+    /**
+     * Match ids with a recorded reschedule event, so the schedule can flag moved games.
+     *
+     * @return list<int>
+     */
+    #[Computed]
+    public function rescheduledMatchIds(): array
+    {
+        return RescheduledMatches::ids($this->matches->pluck('id'));
     }
 
     /**

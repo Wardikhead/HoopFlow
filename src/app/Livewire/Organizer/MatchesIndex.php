@@ -6,6 +6,7 @@ use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Tournament;
+use App\Support\RescheduledMatches;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -18,6 +19,7 @@ use Livewire\Component;
  * @property-read Tournament|null $currentTournament
  * @property-read Collection<int, MatchModel> $allMatches
  * @property-read SupportCollection<int, MatchModel> $matches
+ * @property-read list<int> $rescheduledMatchIds
  * @property-read SupportCollection<int, Court> $courts
  */
 #[Layout('layouts.public')]
@@ -147,6 +149,17 @@ class MatchesIndex extends Component
                 return ($aStart <=> $bStart) ?: ((int) $a->match_number <=> (int) $b->match_number);
             })
             ->values();
+    }
+
+    /**
+     * Match ids with a recorded reschedule event, so matchup cards can flag moved games.
+     *
+     * @return list<int>
+     */
+    #[Computed]
+    public function rescheduledMatchIds(): array
+    {
+        return RescheduledMatches::ids($this->allMatches->pluck('id'));
     }
 
     /**

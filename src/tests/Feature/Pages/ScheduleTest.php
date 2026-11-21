@@ -247,6 +247,29 @@ it('reschedules a match from the schedule dialog', function () {
     expect($slot->start_at?->format('Y-m-d H:i'))->toBe('2026-05-19 10:00');
 });
 
+it('flags a rescheduled match date with a visible label and color class', function () {
+    $user = User::where('email', 'organizer@hoopflow.ph')->first();
+    $slot = MatchSlot::query()
+        ->whereHas('match', fn ($query) => $query->where('status', 'scheduled'))
+        ->firstOrFail();
+    $court = Court::query()->whereKeyNot($slot->court_id)->firstOrFail();
+
+    Livewire::actingAs($user)
+        ->test(ScheduleShow::class)
+        ->set('selectedDay', '2026-05-19')
+        ->set('currentMonth', '2026-05')
+        ->call('openReschedule')
+        ->set('rescheduleMatchId', $slot->match_id)
+        ->set('rescheduleCourtId', $court->id)
+        ->set('rescheduleScheduledAt', '2026-05-19T10:00')
+        ->call('saveReschedule')
+        ->assertSeeHtml('data-testid="match-date-'.$slot->match_id.'"')
+        ->assertSeeHtml('data-testid="match-rescheduled-'.$slot->match_id.'"')
+        ->assertSeeHtml('data-rescheduled="true"')
+        ->assertSee('is-rescheduled')
+        ->assertSee('Rescheduled');
+});
+
 it('plans a schedule across the tournament courts', function () {
     $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
 

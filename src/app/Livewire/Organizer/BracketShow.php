@@ -10,6 +10,7 @@ use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\BracketService;
+use App\Support\RescheduledMatches;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +29,7 @@ use Livewire\Component;
  *     champion: Team|null
  * } $bracket
  * @property-read array{matchesPlayed: int, matchesScheduled: int, corrections: int} $kpis
+ * @property-read list<int> $rescheduledMatchIds
  * @property-read MatchModel|null $selectedMatch
  * @property-read Collection<int, MatchModel> $selectedSeriesGames
  * @property-read MatchModel|null $selectedSeriesAnchor
@@ -270,6 +272,21 @@ class BracketShow extends Component
         }
 
         return ['key' => $key, 'title' => $title, 'rounds' => $rounds->all()];
+    }
+
+    /**
+     * Match ids with a recorded reschedule event, so bracket cards can flag moved games.
+     *
+     * @return list<int>
+     */
+    #[Computed]
+    public function rescheduledMatchIds(): array
+    {
+        return RescheduledMatches::ids(
+            MatchModel::query()
+                ->where('tournament_id', $this->tournamentId)
+                ->pluck('id'),
+        );
     }
 
     /**

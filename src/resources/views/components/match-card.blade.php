@@ -1,4 +1,4 @@
-@props(['match', 'href', 'compact' => false, 'testid' => null])
+@props(['match', 'href', 'compact' => false, 'testid' => null, 'rescheduled' => false])
 
 @php
     $home = $match->homeTeam;
@@ -23,7 +23,14 @@
 >
     <div class="hf-match-head">
         <span>{{ $match->roundLabel() }}{{ $court ? ' · '.$court->name : '' }}</span>
-        <x-status-chip :status="$match->status" />
+        <span class="hf-match-head__statuses">
+            @if ($rescheduled)
+                <span class="hf-chip hf-chip--warning" data-testid="match-rescheduled-{{ $match->id }}">
+                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Rescheduled
+                </span>
+            @endif
+            <x-status-chip :status="$match->status" />
+        </span>
     </div>
     <div class="hf-match-team {{ $winnerHome ? 'is-winner' : ($match->status !== 'scheduled' ? 'is-loser' : '') }}">
         <x-team-shield :team="$home" />
@@ -37,7 +44,11 @@
     </div>
     @unless ($compact)
         <div class="hf-match-head">
-            <span>{{ $when }}</span>
+            <span
+                class="hf-match-date{{ $rescheduled ? ' is-rescheduled' : '' }}"
+                data-rescheduled="{{ $rescheduled ? 'true' : 'false' }}"
+                data-testid="match-date-{{ $match->id }}"
+            >{{ $when }}</span>
             <span>{{ $isBye ? 'Bye' : $match->roundLabel() }}</span>
         </div>
     @endunless

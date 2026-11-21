@@ -178,6 +178,7 @@
                                         :match="$slot->match"
                                         :href="route('gameStats', ['match' => $slot->match_id])"
                                         :testid="'schedule-match-'.$slot->match_id"
+                                        :rescheduled="in_array((int) $slot->match_id, $this->rescheduledMatchIds, true)"
                                     />
                                 @endif
                             @endforeach
