@@ -55,7 +55,7 @@ export default function initTabs() {
 
     const fromHash = window.location.hash.replace('#', '');
 
-    if (['bracket', 'schedule', 'standings'].includes(fromHash)) {
+    if (['bracket', 'calendar', 'standings'].includes(fromHash)) {
         activate(fromHash);
     } else {
         activate('bracket');

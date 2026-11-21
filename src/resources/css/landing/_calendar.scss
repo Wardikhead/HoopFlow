@@ -1,0 +1,159 @@
+.hf-lp-calendar {
+    display: grid;
+    gap: 12px;
+}
+
+.hf-lp-calendar__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 12px;
+}
+
+.hf-lp-calendar__month {
+    color: var(--hf-lp-arena-ink);
+    font-family: var(--hf-font-display);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.hf-lp-calendar__hint {
+    color: var(--hf-lp-arena-muted);
+    font-size: 11px;
+}
+
+.hf-lp-calendar__grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.hf-lp-calendar__weekday {
+    padding: 4px;
+    color: var(--hf-lp-arena-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.hf-lp-calendar__cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 4px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--hf-lp-arena-ink);
+    font-family: var(--hf-font-display);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.hf-lp-calendar__cell.is-blank {
+    cursor: default;
+    opacity: 0.25;
+}
+
+.hf-lp-calendar__cell.has-events {
+    border-color: rgba(234, 88, 12, 0.4);
+    background: rgba(234, 88, 12, 0.12);
+}
+
+.hf-lp-calendar__cell:hover {
+    background: rgba(234, 88, 12, 0.18);
+}
+
+.hf-lp-calendar__cell.is-active {
+    border-color: var(--hf-primary);
+    background: var(--hf-primary);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.hf-lp-calendar__dot {
+    width: 5px;
+    height: 5px;
+    margin-top: 2px;
+    border-radius: 50%;
+    background: var(--hf-primary);
+}
+
+.hf-lp-calendar__cell.is-active .hf-lp-calendar__dot {
+    background: #fff;
+}
+
+.hf-lp-calendar__detail {
+    min-height: 80px;
+}
+
+.hf-lp-calendar__day-games {
+    display: grid;
+    gap: 8px;
+}
+
+.hf-lp-calendar__day-title {
+    margin: 0 0 4px;
+    color: var(--hf-lp-arena-ink);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hf-lp-calendar__game {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(243, 245, 249, 0.1);
+    border-radius: 8px;
+    background: rgba(243, 245, 249, 0.04);
+}
+
+.hf-lp-calendar__time {
+    color: var(--hf-lp-arena-muted);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.hf-lp-calendar__matchup {
+    color: var(--hf-lp-arena-ink);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.hf-lp-calendar__vs {
+    margin: 0 4px;
+    color: var(--hf-lp-arena-muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.hf-lp-calendar__round {
+    color: var(--hf-lp-arena-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.hf-lp-calendar__empty {
+    color: var(--hf-lp-arena-muted);
+    font-size: 12px;
+    font-style: italic;
+}

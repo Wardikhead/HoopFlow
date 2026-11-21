@@ -35,7 +35,7 @@ it('renders the read-only feature lab with a bracket', function () {
         ->assertSeeText('Quarterfinals')
         ->assertSee('data-testid="landing-lab"', false)
         ->assertSee('data-testid="demo-tab-bracket"', false)
-        ->assertSee('data-testid="demo-tab-schedule"', false)
+        ->assertSee('data-testid="demo-tab-calendar"', false)
         ->assertSee('data-testid="demo-tab-standings"', false)
         ->assertSee('data-testid="demo-panel-bracket"', false);
 });
@@ -48,9 +48,9 @@ it('renders the schedule and standings previews', function () {
         ->assertSeeText('Sun, Nov 22')
         ->assertSeeText('Top 8 advance to the quarterfinals.')
         ->assertSeeText('Bayanihan Ballers')
-        ->assertSee('data-testid="demo-panel-schedule"', false)
+        ->assertSee('data-testid="demo-panel-calendar"', false)
         ->assertSee('data-testid="demo-panel-standings"', false)
-        ->assertSee('data-schedule-day="day1"', false)
+        ->assertSee('data-calendar', false)
         ->assertSee('data-count="78"', false);
 });
 

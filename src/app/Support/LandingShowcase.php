@@ -107,7 +107,7 @@ final class LandingShowcase
         return [
             'month' => 'November 2026',
             'year' => 2026,
-            'weeks' => array_values(array_chunk($cells, 7)),
+            'weeks' => array_chunk($cells, 7),
         ];
     }
 

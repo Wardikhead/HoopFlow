@@ -24,4 +24,6 @@
             <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">See how it runs</a>
         </div>
     </div>
+
+    @include('landing.developers')
 </section>

@@ -3,6 +3,7 @@
 @section('title', 'HoopFlow — Run the league, not the spreadsheet')
 
 @section('content')
+    @include('landing.splash')
     @php
         $teams = collect($showcase->teams())->keyBy('id');
     @endphp
@@ -18,6 +19,7 @@
         'tournament' => $showcase->tournament(),
         'bracket' => $showcase->bracket(),
         'schedule' => $showcase->schedule(),
+        'calendar' => $showcase->calendar(),
         'standings' => $showcase->standings(),
         'teams' => $teams,
     ])
