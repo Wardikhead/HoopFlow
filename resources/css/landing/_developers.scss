@@ -1,0 +1,94 @@
+.hf-lp-developers {
+    padding: 48px 0;
+}
+
+.hf-lp-developers__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+    .hf-lp-developers__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.hf-lp-developer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid rgba(243, 245, 249, 0.12);
+    border-radius: 12px;
+    background: rgba(243, 245, 249, 0.04);
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.hf-lp-developer:hover {
+    transform: translateY(-2px);
+    border-color: rgba(234, 88, 12, 0.4);
+    background: rgba(234, 88, 12, 0.06);
+}
+
+.hf-lp-developer__avatar {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--dev-color, #ea580c) 22%, transparent);
+    border: 2px solid color-mix(in srgb, var(--dev-color, #ea580c) 45%, transparent);
+    color: #fff;
+    font-family: var(--hf-font-display);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.hf-lp-developer__body {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.hf-lp-developer__body h3 {
+    margin: 0;
+    color: var(--hf-lp-arena-ink);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.hf-lp-developer__role {
+    color: var(--hf-lp-arena-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.hf-lp-developer__links {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.hf-lp-developer__link {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(243, 245, 249, 0.14);
+    color: var(--hf-lp-arena-muted);
+    font-size: 14px;
+    text-decoration: none;
+    transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.hf-lp-developer__link:hover {
+    color: var(--hf-lp-arena-ink);
+    border-color: var(--hf-primary);
+    background: rgba(234, 88, 12, 0.1);
+}

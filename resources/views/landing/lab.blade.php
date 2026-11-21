@@ -19,9 +19,9 @@
                         <span class="hf-lp-tab__icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
                         <span><strong>Bracket</strong><small>Every path to the final, settled.</small></span>
                     </button>
-                    <button type="button" class="hf-lp-tab" id="tab-schedule" role="tab" aria-selected="false" aria-controls="panel-schedule" tabindex="-1" data-demo-tab="schedule" data-testid="demo-tab-schedule">
+                    <button type="button" class="hf-lp-tab" id="tab-calendar" role="tab" aria-selected="false" aria-controls="panel-calendar" tabindex="-1" data-demo-tab="calendar" data-testid="demo-tab-calendar">
                         <span class="hf-lp-tab__icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                        <span><strong>Schedule</strong><small>Courts, rest, and tip-off times in one view.</small></span>
+                        <span><strong>Calendar</strong><small>Match days, courts, and tip-off times in one view.</small></span>
                     </button>
                     <button type="button" class="hf-lp-tab" id="tab-standings" role="tab" aria-selected="false" aria-controls="panel-standings" tabindex="-1" data-demo-tab="standings" data-testid="demo-tab-standings">
                         <span class="hf-lp-tab__icon"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
@@ -42,8 +42,8 @@
                     @include('landing.bracket-panel', ['bracket' => $bracket, 'teams' => $teams])
                 </div>
 
-                <div id="panel-schedule" class="hf-lp-panel" role="tabpanel" aria-labelledby="tab-schedule" tabindex="0" data-demo-panel="schedule" data-testid="demo-panel-schedule">
-                    @include('landing.schedule-panel', ['schedule' => $schedule, 'teams' => $teams])
+                <div id="panel-calendar" class="hf-lp-panel" role="tabpanel" aria-labelledby="tab-calendar" tabindex="0" data-demo-panel="calendar" data-testid="demo-panel-calendar">
+                    @include('landing.calendar-panel', ['calendar' => $calendar, 'teams' => $teams])
                 </div>
 
                 <div id="panel-standings" class="hf-lp-panel" role="tabpanel" aria-labelledby="tab-standings" tabindex="0" data-demo-panel="standings" data-testid="demo-panel-standings">
