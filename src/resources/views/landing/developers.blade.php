@@ -8,8 +8,8 @@
 
         <div class="hf-lp-developers__grid">
             @foreach ([
-                ['name' => 'Jeward Mahinay', 'role' => 'Full-stack developer', 'initials' => 'JM', 'color' => '#ea580c'],
-                ['name' => 'Rusty Japos', 'role' => 'Full-stack developer', 'initials' => 'RJ', 'color' => '#0f766e'],
+                ['name' => 'Jeward Mahinay', 'role' => 'Student', 'initials' => 'JM', 'color' => '#ea580c'],
+                ['name' => 'Rusty Japos', 'role' => 'Student', 'initials' => 'RJ', 'color' => '#0f766e'],
             ] as $dev)
                 <article class="hf-lp-developer" data-testid="landing-developer-{{ \Illuminate\Support\Str::slug($dev['name']) }}">
                     <span class="hf-lp-developer__avatar" style="--dev-color: {{ $dev['color'] }}" aria-hidden="true">
