@@ -505,6 +505,57 @@
   .hf-table--ingame {
     @include hf-table-stack;
   }
+
+  /* Polish: make each player a comfortable stat-entry card. */
+  .hf-table--ingame tbody tr {
+    background: var(--hf-surface);
+    border: 1px solid var(--hf-border);
+    border-radius: var(--hf-radius-md);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--hf-shadow);
+  }
+
+  .hf-table--ingame td {
+    min-height: 44px;
+    align-items: center;
+    padding: 6px 0;
+  }
+
+  .hf-table--ingame td[data-label='Player'] {
+    grid-template-columns: 1fr;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--hf-border);
+  }
+
+  .hf-table--ingame td[data-label='Player']::before {
+    display: none;
+  }
+
+  .hf-table--ingame td[data-label='Player'] strong {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .hf-table--ingame .hf-input {
+    min-height: 40px;
+    font-size: 16px; /* prevents iOS auto-zoom on focus */
+    text-align: center;
+    padding: 6px 8px;
+  }
+
+  .hf-table--ingame td[data-label='PTS'] strong,
+  .hf-table--ingame td[data-label='Totals'] {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--hf-primary-ink);
+  }
+
+  .hf-table--ingame td[data-label='PTS']::before,
+  .hf-table--ingame td[data-label='Totals']::before {
+    color: var(--hf-primary-ink);
+  }
 }
 
 .hf-table .hf-qual-line td {

@@ -88,6 +88,20 @@
         </div>
     </section>
 
+    <section id="password" class="hf-card" data-testid="profile-password">
+        <span class="hf-kpi-label">Security</span>
+        <h2 class="hf-section-title hf-mt-1">Password</h2>
+        <p class="hf-small hf-muted">Change your password. Other signed-in sessions will be signed out.</p>
+        @if (session('status') && str_contains(session('status'), 'password'))
+            <p class="hf-small hf-chip hf-chip--success hf-mb-2" role="status">{{ session('status') }}</p>
+        @endif
+        <div class="hf-btn-row hf-mt-2">
+            <a class="hf-btn hf-btn--primary" href="{{ route('profile.password') }}" data-testid="profile-change-password">
+                <i class="bi bi-key" aria-hidden="true"></i> Change password
+            </a>
+        </div>
+    </section>
+
     <section id="sessions" class="hf-card" data-testid="profile-sessions">
         <span class="hf-kpi-label">Security</span>
         <h2 class="hf-section-title hf-mt-1">Active sessions</h2>
