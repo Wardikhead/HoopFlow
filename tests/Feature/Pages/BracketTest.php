@@ -4,7 +4,9 @@ use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\TournamentShow;
 use App\Models\AuditLog;
 use App\Models\Bracket;
+use App\Models\Court;
 use App\Models\MatchModel;
+use App\Models\MatchSlot;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\BracketService;
@@ -67,6 +69,33 @@ it('renders bracket KPIs, team shields, and the mobile round pager', function ()
         ->assertSeeHtml('data-testid="bracket-round-tab-0"')
         ->assertDontSeeHtml('data-testid="bracket-regenerate"')
         ->assertDontSeeHtml('data-testid="bracket-edit-slots"');
+});
+
+it('labels every bracket slot with its match status', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $match = MatchModel::query()->where('status', 'scheduled')->firstOrFail();
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->assertSeeHtml('data-testid="bracket-status-'.$match->id.'"')
+        ->assertSeeHtml('data-testid="bracket-status-'.$match->id.'-mobile"');
+});
+
+it('labels a rescheduled match on the bracket and its detail dialog', function () {
+    $organizer = User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
+    $slot = MatchSlot::query()
+        ->whereHas('match', fn ($query) => $query->where('status', 'scheduled'))
+        ->firstOrFail();
+    $court = Court::query()->whereKeyNot($slot->court_id)->firstOrFail();
+
+    app(SchedulingService::class)->reschedule($slot->match, $court->id, '2026-05-19 10:00');
+
+    Livewire::actingAs($organizer)
+        ->test(BracketShow::class)
+        ->assertSeeHtml('data-testid="bracket-rescheduled-'.$slot->match_id.'"')
+        ->assertSeeHtml('data-testid="bracket-rescheduled-'.$slot->match_id.'-mobile"')
+        ->call('openMatchDetail', $slot->match_id)
+        ->assertSeeHtml('data-testid="bracket-detail-rescheduled-'.$slot->match_id.'"');
 });
 
 it('opens the match detail and score console for a scheduled game', function () {

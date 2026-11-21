@@ -88,6 +88,7 @@
                                 <x-match-card
                                     :match="$match"
                                     :href="route('gameStats', ['match' => $match->id])"
+                                    :rescheduled="in_array((int) $match->id, $this->rescheduledMatchIds, true)"
                                 />
                             @endforeach
                         </div>

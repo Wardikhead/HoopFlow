@@ -1,10 +1,12 @@
 <?php
 
 use App\Livewire\Organizer\MatchesIndex;
+use App\Models\Court;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\SchedulingService;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -29,6 +31,20 @@ function matchFor(int $round, int $number): MatchModel
 {
     return MatchModel::where('round_number', $round)->where('match_number', $number)->firstOrFail();
 }
+
+it('labels a rescheduled matchup card', function () {
+    $slot = MatchSlot::query()
+        ->whereHas('match', fn ($query) => $query->where('status', 'scheduled'))
+        ->firstOrFail();
+    $court = Court::query()->whereKeyNot($slot->court_id)->firstOrFail();
+
+    app(SchedulingService::class)->reschedule($slot->match, $court->id, '2026-05-19 10:00');
+
+    $this->actingAs(organizer())
+        ->get('/matches?id='.$slot->tournament_id)
+        ->assertOk()
+        ->assertSeeHtml('data-testid="match-rescheduled-'.$slot->match_id.'"');
+});
 
 it('renders the prototype matchups header and filters', function () {
     $tournament = summerCup();

@@ -1,4 +1,4 @@
-<div x-data="{ mobileRound: 0 }">
+<div>
     @php
         $tournament = $this->tournament;
         $bracket = $this->bracket;
@@ -16,6 +16,25 @@
         $sections = $bracket['sections'];
         $mobileRounds = collect($sections)->flatMap(fn ($section) => $section['rounds'])->values();
         $totalRounds = collect($sections)->sum(fn ($section) => count($section['rounds']));
+        $totalGames = collect($sections)->sum(
+            fn ($section) => collect($section['rounds'])->sum(
+                fn ($round) => $round['matches']->count()
+            )
+        );
+        $playedGames = collect($sections)->sum(
+            fn ($section) => collect($section['rounds'])->sum(
+                fn ($round) => $round['matches']->filter(
+                    fn ($match) => in_array($match->status, ['final', 'forfeit'], true)
+                )->count()
+            )
+        );
+        $progressPercent = $totalGames > 0 ? (int) round(($playedGames / $totalGames) * 100) : 0;
+        $mobileRoundCount = $mobileRounds->count();
+        $lastSection = collect($sections)->last();
+        $featuredMobileIndex = $lastSection !== null && $lastSection['key'] !== 'group'
+            ? $mobileRoundCount - 1
+            : null;
+        $hasTree = collect($sections)->contains(fn ($section) => $section['key'] !== 'group');
     @endphp
 
     @section('meta-description', 'Follow the live tournament bracket — every round, series score, court assignment, and final result in one HoopFlow view.')
@@ -131,65 +150,259 @@
                 <span>{{ $isOrganizer ? 'Select a match to enter or correct a score.' : 'Public bracket view. Scores are read-only for this role.' }}</span>
             </div>
 
-            <div class="hf-bracket-toolbar">
-                <span class="hf-small hf-muted">{{ $totalRounds }} rounds · {{ $approved->count() }} teams</span>
-                <div class="hf-btn-group" aria-label="Bracket zoom">
-                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="out" aria-label="Zoom out"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
-                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="reset">Fit</button>
-                    <button type="button" class="hf-btn hf-btn--sm" data-bracket-zoom="in" aria-label="Zoom in"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+            <div class="hf-arena" data-bracket-arena>
+                <div class="hf-arena__head">
+                    <div class="hf-arena__intro">
+                        <span class="hf-eyebrow hf-eyebrow--on-dark">{{ $hasTree ? 'Road to the title' : 'Matchday board' }}</span>
+                        <p class="hf-arena__summary">
+                            <strong>{{ $playedGames }}</strong> of {{ $totalGames }} games final
+                            <span aria-hidden="true">·</span> {{ $approved->count() }} teams
+                            <span aria-hidden="true">·</span> {{ $totalRounds }} {{ $hasTree ? 'rounds' : 'matchdays' }}
+                        </p>
+                    </div>
+                    @if ($hasTree)
+                        <div class="hf-arena__tools">
+                            <div class="hf-arena__zoom" role="group" aria-label="Bracket zoom">
+                                <button type="button" class="hf-arena__tool" data-bracket-zoom="out" aria-label="Zoom out"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
+                                <button type="button" class="hf-arena__tool" data-bracket-zoom="reset">Fit</button>
+                                <button type="button" class="hf-arena__tool" data-bracket-zoom="in" aria-label="Zoom in"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                            </div>
+                            <button type="button" class="hf-arena__tool hf-arena__tool--gold" data-bracket-jump="final">
+                                <i class="bi bi-trophy" aria-hidden="true"></i> Jump to final
+                            </button>
+                        </div>
+                    @endif
+                </div>
+
+                <div
+                    class="hf-arena__progress"
+                    role="progressbar"
+                    aria-label="Bracket progress"
+                    aria-valuemin="0"
+                    aria-valuemax="{{ max(1, $totalGames) }}"
+                    aria-valuenow="{{ $playedGames }}"
+                >
+                    <span style="width: {{ $progressPercent }}%"></span>
+                </div>
+
+                @foreach ($sections as $section)
+                    @php
+                        $sectionGames = collect($section['rounds'])->sum(fn ($round) => $round['matches']->count());
+                        $sectionRounds = count($section['rounds']);
+                        $isGoldSection = $section['key'] === 'grand_final';
+                    @endphp
+                    <section class="hf-bracket-section" data-testid="bracket-section-{{ $section['key'] }}">
+                        <header class="hf-bracket-section__head">
+                            <h2 class="hf-bracket-section__title{{ $isGoldSection ? ' hf-bracket-section__title--gold' : '' }}">{{ $section['title'] }}</h2>
+                            <span class="hf-bracket-section__meta">
+                                {{ $sectionRounds }} {{ \Illuminate\Support\Str::plural('round', $sectionRounds) }}
+                                <span aria-hidden="true">·</span>
+                                {{ $sectionGames }} {{ \Illuminate\Support\Str::plural('game', $sectionGames) }}
+                            </span>
+                        </header>
+
+                        @if ($section['key'] === 'grand_final' && $tournament->isModifiedDoubleElimination())
+                            <p class="hf-small hf-bracket-section__note" data-testid="bracket-grand-final-note">
+                                Best of {{ $tournament->grandFinalBestOf() }} — the series winner takes the title. No reset game is played.
+                            </p>
+                        @endif
+
+                        <div class="hf-bracket-viewport" data-bracket-viewport>
+                            <div
+                                class="hf-bracket {{ $section['key'] === 'group' ? 'hf-bracket--matchdays' : 'hf-bracket--tree' }}"
+                                data-testid="bracket-tree"
+                                @if ($section['key'] !== 'group') data-bracket-canvas @endif
+                                wire:loading.class="is-updating"
+                                wire:loading.attr="aria-busy"
+                            >
+                                <div class="hf-updating-pill" wire:loading wire:target="requestGenerate,requestGeneratePlayoffs,requestRegenerate,saveSlots,addScore,undoScore,requestFinalizeScore,requestCorrection,confirm">
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
+                                </div>
+
+                                @if ($section['key'] === 'group')
+                                    <div class="hf-bracket-matchdays">
+                                        @foreach ($section['rounds'] as $round)
+                                            @php
+                                                $roundGames = $round['matches']->count();
+                                                $roundDone = $round['matches']->filter(fn ($match) => in_array($match->status, ['final', 'forfeit'], true))->count();
+                                                $roundTitleId = 'bracket-round-'.$section['key'].'-'.$loop->index;
+                                            @endphp
+                                            <section class="hf-matchday-block" aria-labelledby="{{ $roundTitleId }}">
+                                                <div class="hf-matchday-block__head">
+                                                    <h3 class="hf-matchday-block__title" id="{{ $roundTitleId }}">{{ $round['label'] }}</h3>
+                                                    <span class="hf-matchday-block__meta">{{ $roundGames }} {{ \Illuminate\Support\Str::plural('game', $roundGames) }} · {{ $roundDone }} final</span>
+                                                </div>
+                                                <div class="hf-matchday-block__grid">
+                                                    @foreach ($round['matches'] as $match)
+                                                        <x-bracket-match
+                                                            :match="$match"
+                                                            :round-label="$round['label']"
+                                                            :rescheduled="in_array((int) $match->id, $this->rescheduledMatchIds, true)"
+                                                        />
+                                                    @endforeach
+                                                </div>
+                                            </section>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="hf-bracket-tree" data-bracket-tree>
+                                        <svg class="hf-bracket-lines" data-bracket-lines aria-hidden="true" wire:ignore></svg>
+
+                                        @foreach ($section['rounds'] as $round)
+                                            @php
+                                                $roundGames = $round['matches']->count();
+                                                $roundDone = $round['matches']->filter(fn ($match) => in_array($match->status, ['final', 'forfeit'], true))->count();
+                                                $roundPercent = $roundGames > 0 ? (int) round(($roundDone / $roundGames) * 100) : 0;
+                                                $isFeaturedRound = $loop->last && in_array($section['key'], ['main', 'playoffs', 'grand_final'], true);
+                                            @endphp
+                                            <div class="hf-bracket-round" data-bracket-round="{{ $loop->index }}" data-round-label="{{ $round['label'] }}">
+                                                <div class="hf-bracket-round-title">
+                                                    <span class="hf-bracket-round-title__label">{{ $round['label'] }}</span>
+                                                    <span class="hf-bracket-round-title__meta">{{ $roundGames }} {{ \Illuminate\Support\Str::plural('game', $roundGames) }}</span>
+                                                    <span class="hf-bracket-round-title__meter" aria-hidden="true"><span style="width: {{ $roundPercent }}%"></span></span>
+                                                </div>
+                                                <div class="hf-bracket-round__body">
+                                                    @foreach ($round['matches'] as $match)
+                                                        <x-bracket-match
+                                                            :match="$match"
+                                                            :round-label="$round['label']"
+                                                            :featured="$isFeaturedRound"
+                                                            :rescheduled="in_array((int) $match->id, $this->rescheduledMatchIds, true)"
+                                                        />
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                            <span class="hf-bracket-viewport__fade" aria-hidden="true"></span>
+                        </div>
+                    </section>
+                @endforeach
+
+                <div class="hf-arena__foot">
+                    @if ($hasTree)
+                        <span class="hf-arena__hint"><i class="bi bi-bezier2" aria-hidden="true"></i> Hover a matchup to trace its road to the title.</span>
+                    @else
+                        <span class="hf-arena__hint"><i class="bi bi-calendar3" aria-hidden="true"></i> Every matchday, every game, in one board.</span>
+                    @endif
+                    <span>Live results update the board automatically.</span>
                 </div>
             </div>
 
-            @foreach ($sections as $section)
-                <section class="hf-mb-3" data-testid="bracket-section-{{ $section['key'] }}">
-                    <h2 class="hf-section-title">{{ $section['title'] }}</h2>
-                    @if ($section['key'] === 'grand_final' && $tournament->isModifiedDoubleElimination())
-                        <p class="hf-small hf-muted" data-testid="bracket-grand-final-note">
-                            Best of {{ $tournament->grandFinalBestOf() }} — the series winner takes the title. No reset game is played.
-                        </p>
-                    @endif
-                    <div class="hf-bracket" data-testid="bracket-tree" data-bracket-canvas wire:loading.class="is-updating" wire:loading.attr="aria-busy">
-                <div class="hf-updating-pill" wire:loading wire:target="requestGenerate,requestGeneratePlayoffs,requestRegenerate,saveSlots,addScore,undoScore,requestFinalizeScore,requestCorrection,confirm">
-                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating…
-                </div>
-                        @foreach ($section['rounds'] as $round)
-                            <div class="hf-bracket-round">
-                                <div class="hf-bracket-round-title">{{ $round['label'] }} <span class="hf-small hf-muted">{{ $round['matches']->count() }}</span></div>
-                                @foreach ($round['matches'] as $match)
-                                    <x-bracket-match :match="$match" :round-label="$round['label']" />
-                                @endforeach
-                            </div>
+            <div
+                class="hf-bracket-mobile"
+                data-testid="bracket-mobile"
+                x-data="{
+                    mobileRound: 0,
+                    totalRounds: {{ $mobileRoundCount }},
+                    touchStartX: null,
+                    touchStartY: null,
+                    goToRound(index, focusTab = false) {
+                        this.mobileRound = Math.max(0, Math.min(this.totalRounds - 1, index));
+
+                        if (! focusTab) return;
+
+                        this.$nextTick(() => {
+                            if (! this.$refs.tabs) return;
+                            this.$refs.tabs.querySelectorAll('[role=tab]')[this.mobileRound]?.focus();
+                        });
+                    },
+                    onTouchStart(event) {
+                        const touch = event.changedTouches[0];
+                        this.touchStartX = touch.clientX;
+                        this.touchStartY = touch.clientY;
+                    },
+                    onTouchEnd(event) {
+                        if (this.touchStartX === null) return;
+
+                        const touch = event.changedTouches[0];
+                        const dx = touch.clientX - this.touchStartX;
+                        const dy = touch.clientY - this.touchStartY;
+                        this.touchStartX = null;
+                        this.touchStartY = null;
+
+                        if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+
+                        this.goToRound(this.mobileRound + (dx < 0 ? 1 : -1));
+                    }
+                }"
+                x-cloak
+                x-init="mobileRound = Math.min(mobileRound, {{ max(0, $mobileRoundCount - 1) }})"
+            >
+                <div class="hf-round-stepper">
+                    <div
+                        class="hf-round-pager"
+                        role="tablist"
+                        aria-label="Bracket rounds"
+                        x-ref="tabs"
+                        x-on:keydown.arrow-right.prevent="goToRound(mobileRound + 1, true)"
+                        x-on:keydown.arrow-left.prevent="goToRound(mobileRound - 1, true)"
+                        x-on:keydown.home.prevent="goToRound(0, true)"
+                        x-on:keydown.end.prevent="goToRound(totalRounds - 1, true)"
+                    >
+                        @foreach ($mobileRounds as $index => $round)
+                            <button
+                                type="button"
+                                role="tab"
+                                id="bracket-round-tab-{{ $index }}"
+                                aria-controls="bracket-round-panel-{{ $index }}"
+                                aria-selected="{{ $index === 0 ? 'true' : 'false' }}"
+                                tabindex="{{ $index === 0 ? '0' : '-1' }}"
+                                x-bind:aria-selected="mobileRound === {{ $index }} ? 'true' : 'false'"
+                                x-bind:tabindex="mobileRound === {{ $index }} ? 0 : -1"
+                                x-bind:class="{ 'is-active': mobileRound === {{ $index }} }"
+                                x-on:click="goToRound({{ $index }}, true)"
+                                data-testid="bracket-round-tab-{{ $index }}"
+                            >{{ $round['label'] }}</button>
                         @endforeach
                     </div>
-                </section>
-            @endforeach
+                    <div
+                        class="hf-round-progress"
+                        role="progressbar"
+                        aria-label="Round progress"
+                        aria-valuemin="1"
+                        aria-valuemax="{{ max(1, $mobileRoundCount) }}"
+                        aria-valuenow="1"
+                        x-bind:aria-valuenow="mobileRound + 1"
+                    >
+                        <span x-bind:style="'width: ' + (((mobileRound + 1) / {{ max(1, $mobileRoundCount) }}) * 100) + '%'"></span>
+                    </div>
+                </div>
 
-            @php $roundCount = $mobileRounds->count(); @endphp
-            <div class="hf-bracket-mobile" data-testid="bracket-mobile" x-cloak x-init="mobileRound = Math.min(mobileRound, {{ max(0, $roundCount - 1) }})">
-                <div class="hf-round-pager">
+                <div class="hf-round-panels" x-on:touchstart.passive="onTouchStart($event)" x-on:touchend.passive="onTouchEnd($event)">
                     @foreach ($mobileRounds as $index => $round)
-                        <button
-                            type="button"
-                            x-bind:class="{ 'is-active': mobileRound === {{ $index }} }"
-                            x-on:click="mobileRound = {{ $index }}"
-                            data-testid="bracket-round-tab-{{ $index }}"
-                        >{{ $round['label'] }}</button>
+                        <div
+                            id="bracket-round-panel-{{ $index }}"
+                            role="tabpanel"
+                            aria-labelledby="bracket-round-tab-{{ $index }}"
+                            x-show="mobileRound === {{ $index }}"
+                            x-cloak
+                        >
+                            <div class="hf-round-panel__head">
+                                <h3 class="hf-round-panel__title">{{ $round['label'] }}</h3>
+                                <span class="hf-small hf-muted">{{ $round['matches']->count() }} {{ \Illuminate\Support\Str::plural('game', $round['matches']->count()) }}</span>
+                            </div>
+                            @foreach ($round['matches'] as $match)
+                                <x-bracket-match
+                                    :match="$match"
+                                    :round-label="$round['label']"
+                                    :mobile="true"
+                                    :featured="$index === $featuredMobileIndex"
+                                    :rescheduled="in_array((int) $match->id, $this->rescheduledMatchIds, true)"
+                                />
+                            @endforeach
+                        </div>
                     @endforeach
                 </div>
-                <div class="hf-round-progress"><span x-bind:style="'width: ' + (((mobileRound + 1) / {{ $roundCount }}) * 100) + '%'"></span></div>
-                @foreach ($mobileRounds as $index => $round)
-                    <div x-show="mobileRound === {{ $index }}" x-cloak>
-                        @foreach ($round['matches'] as $match)
-                            <x-bracket-match :match="$match" :round-label="$round['label']" :mobile="true" />
-                        @endforeach
-                    </div>
-                @endforeach
+
                 <div class="hf-between hf-mt-2">
-                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.max(0, mobileRound - 1)" x-bind:disabled="mobileRound === 0" data-testid="bracket-prev-round">
+                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="goToRound(mobileRound - 1)" x-bind:disabled="mobileRound === 0" @if ($mobileRoundCount <= 1) disabled @endif data-testid="bracket-prev-round">
                         <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
                     </button>
-                    <span class="hf-small hf-muted" x-text="(mobileRound + 1) + ' of {{ $roundCount }}'"></span>
-                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="mobileRound = Math.min({{ $roundCount - 1 }}, mobileRound + 1)" x-bind:disabled="mobileRound === {{ $roundCount - 1 }}" data-testid="bracket-next-round">
+                    <span class="hf-small hf-muted" x-text="(mobileRound + 1) + ' of {{ $mobileRoundCount }}'"></span>
+                    <button type="button" class="hf-btn hf-btn--sm" x-on:click="goToRound(mobileRound + 1)" x-bind:disabled="mobileRound === {{ max(0, $mobileRoundCount - 1) }}" @if ($mobileRoundCount <= 1) disabled @endif data-testid="bracket-next-round">
                         Next <i class="bi bi-arrow-right" aria-hidden="true"></i>
                     </button>
                 </div>
@@ -313,6 +526,12 @@
                             <div><span>Date</span><strong>{{ $detailStart?->format('M j, Y') ?? 'TBD' }}</strong></div>
                             <div><span>Tip-off</span><strong>{{ $detailStart?->format('g:i A') ?? 'TBD' }}</strong></div>
                         </div>
+                        @if (in_array((int) $detailMatch->id, $this->rescheduledMatchIds, true))
+                            <div class="hf-flex hf-wrap hf-items-center hf-gap-2 hf-mt-2" data-testid="bracket-detail-rescheduled-{{ $detailMatch->id }}">
+                                <span class="hf-chip hf-chip--warning"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Rescheduled</span>
+                                <span class="hf-small hf-muted">This match has been moved from its original slot.</span>
+                            </div>
+                        @endif
                         @if ($detailSeriesAnchor)
                             <div class="hf-flex hf-wrap hf-items-center hf-gap-2 hf-mt-2" data-testid="bracket-series-summary">
                                 <span class="hf-chip hf-chip--slate">Best of {{ $detailSeriesAnchor->best_of }}</span>

@@ -1,4 +1,11 @@
 @media print {
+  /* A bracket reads best on one wide sheet. Named pages keep the rest of the
+     app on the default portrait paper. */
+  @page hf-bracket {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
   .hf-rail,
   .hf-topbar,
   .hf-bottom-nav,
@@ -39,6 +46,105 @@
 
   .hf-bracket {
     overflow: visible !important;
+  }
+
+  /* The board is a dark broadcast surface on screen; paper gets a clean
+     black-on-white bracket with no controls. Print CSS cannot re-measure the
+     connector SVG, so the whole tree keeps one zoom and scales uniformly. */
+  .hf-arena,
+  .hf-bracket-mobile {
+    page: hf-bracket;
+    border-color: #bbb !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+
+  .hf-arena::before,
+  .hf-arena::after,
+  .hf-arena__tools,
+  .hf-arena__progress,
+  .hf-arena__foot,
+  .hf-bracket-viewport__fade,
+  .hf-round-stepper,
+  .hf-round-panels,
+  .hf-bracket-mobile,
+  .hf-updating-pill {
+    display: none !important;
+  }
+
+  .hf-bracket-section {
+    display: block !important;
+    break-inside: avoid;
+  }
+
+  .hf-bracket-section + .hf-bracket-section {
+    border-top-color: #bbb !important;
+  }
+
+  .hf-bracket-section__title,
+  .hf-bracket-section__meta,
+  .hf-bracket-section__note,
+  .hf-arena__summary,
+  .hf-arena__summary strong,
+  .hf-bracket-round-title__label,
+  .hf-bracket-round-title__meta,
+  .hf-bracket-match,
+  .hf-bracket-match__slot,
+  .hf-bracket-match__name,
+  .hf-bracket-match__score,
+  .hf-bracket-match__meta,
+  .hf-bracket-match__series {
+    color: #000 !important;
+  }
+
+  .hf-bracket-round-title {
+    border-bottom-color: #999 !important;
+  }
+
+  .hf-bracket-round-title__meter {
+    display: none !important;
+  }
+
+  .hf-bracket-match {
+    border-color: #999 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .hf-bracket-match.is-featured {
+    border: 2px solid #000 !important;
+    background: #fff !important;
+  }
+
+  .hf-bracket-match.is-featured::after {
+    display: none !important;
+  }
+
+  .hf-arena .hf-chip {
+    border-color: #999 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .hf-bracket-lines path {
+    stroke: #999 !important;
+  }
+
+  /* Do not change the tree's gap, padding or width here: the connector SVG
+     was measured against the on-screen layout. One uniform zoom keeps every
+     line joined to its card while the board fits the sheet. */
+  .hf-bracket-tree {
+    zoom: 0.6 !important;
+  }
+
+  .hf-bracket--tree {
+    overflow: visible !important;
+  }
+
+  .hf-bracket-match {
+    transform: none !important;
   }
 
   a[href]::after {
