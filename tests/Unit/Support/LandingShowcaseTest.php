@@ -97,6 +97,24 @@ it('schedules the same seven matches across three days', function () {
         ->and($scheduledIds)->toBe($bracketIds);
 });
 
+it('builds a november calendar with three match days', function () {
+    $calendar = (new LandingShowcase)->calendar();
+
+    expect($calendar['month'])->toBe('November 2026')
+        ->and($calendar['weeks'])->toHaveCount(5);
+
+    $matchDays = 0;
+    foreach ($calendar['weeks'] as $week) {
+        foreach ($week as $cell) {
+            if ($cell['hasGames']) {
+                $matchDays++;
+            }
+        }
+    }
+
+    expect($matchDays)->toBe(3);
+});
+
 it('ships non-empty marketing content', function () {
     $showcase = new LandingShowcase;
 

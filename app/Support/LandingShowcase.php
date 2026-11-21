@@ -66,6 +66,52 @@ final class LandingShowcase
     }
 
     /**
+     * @return array{month: string, year: int, weeks: list<list<array{day: int|null, hasGames: bool, matches: list<array<string, mixed>>}>>}
+     */
+    public function calendar(): array
+    {
+        $daysByKey = [];
+        foreach ($this->schedule() as $day) {
+            $daysByKey[$day['key']] = $day;
+        }
+
+        $dateToDayKey = [
+            '2026-11-14' => 'day1',
+            '2026-11-21' => 'day2',
+            '2026-11-22' => 'day3',
+        ];
+
+        $first = new \DateTimeImmutable('2026-11-01');
+        $leadingBlanks = (int) $first->format('w');
+
+        $cells = [];
+        for ($i = 0; $i < $leadingBlanks; $i++) {
+            $cells[] = ['day' => null, 'hasGames' => false, 'matches' => []];
+        }
+
+        for ($day = 1; $day <= 30; $day++) {
+            $date = sprintf('2026-11-%02d', $day);
+            $dayKey = $dateToDayKey[$date] ?? null;
+            $matches = $dayKey !== null ? ($daysByKey[$dayKey]['matches'] ?? []) : [];
+            $cells[] = [
+                'day' => $day,
+                'hasGames' => $matches !== [],
+                'matches' => $matches,
+            ];
+        }
+
+        while (count($cells) % 7 !== 0) {
+            $cells[] = ['day' => null, 'hasGames' => false, 'matches' => []];
+        }
+
+        return [
+            'month' => 'November 2026',
+            'year' => 2026,
+            'weeks' => array_values(array_chunk($cells, 7)),
+        ];
+    }
+
+    /**
      * @return list<array{key: string, label: string, short: string, subtitle: string, matches: list<array<string, mixed>>}>
      */
     public function schedule(): array
