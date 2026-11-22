@@ -101,6 +101,9 @@
                     <a href="#features" data-demo-target="bracket">Bracket</a>
                     <a href="#features" data-demo-target="calendar">Calendar</a>
                     <a href="#features" data-demo-target="standings">Standings</a>
+                    <a href="#compare">Compare</a>
+                    <a href="#teams">Teams</a>
+                    <a href="#faq">FAQ</a>
                 </div>
                 <div class="hf-lp-footer__col">
                     <strong>Account</strong>

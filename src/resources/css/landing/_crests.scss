@@ -1,0 +1,99 @@
+.hf-lp-crestwall {
+  padding: clamp(72px, 9vw, 110px) 0;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--hf-lp-orange) 7%, transparent), transparent 42%),
+    var(--hf-lp-paper-2);
+}
+
+.hf-lp-crestwall__head {
+  max-width: 700px;
+  margin: 0 auto clamp(28px, 4vw, 44px);
+  text-align: center;
+}
+
+.hf-lp-crestwall__head h2 {
+  margin: 12px 0 14px;
+  font-family: var(--hf-lp-display);
+  font-size: clamp(38px, 5.2vw, 66px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.hf-lp-crestwall__head h2 em {
+  color: var(--hf-lp-orange-ink);
+  font-style: normal;
+}
+
+.hf-lp-crestwall__head p {
+  max-width: 46ch;
+  margin: 0 auto;
+  color: var(--hf-lp-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hf-lp-crestwall__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hf-lp-crestw {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 14px 18px;
+  overflow: hidden;
+  border: 1px solid var(--hf-lp-line);
+  border-radius: 18px;
+  background: var(--hf-lp-card);
+  box-shadow: 0 8px 22px rgba(16, 24, 32, 0.05);
+  text-align: center;
+}
+
+.hf-lp-crestw__name {
+  overflow: hidden;
+  max-width: 100%;
+  font-family: var(--hf-lp-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hf-lp-crestw__meta {
+  color: var(--hf-lp-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hf-lp-crestw__meta span {
+  color: var(--hf-lp-ink);
+}
+
+@media (max-width: 991.98px) {
+  .hf-lp-crestwall__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hf-lp-crestwall__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hf-lp-crestw {
+    padding: 18px 10px 14px;
+  }
+}

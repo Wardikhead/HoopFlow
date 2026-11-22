@@ -7,7 +7,7 @@
 
 <section class="hf-lp-hero" data-testid="landing-hero" aria-labelledby="landing-hero-title">
     <div class="hf-lp-hero__art" aria-hidden="true">
-        <svg class="hf-lp-court" viewBox="0 0 900 900" fill="none">
+        <svg class="hf-lp-court" data-parallax="1.6" viewBox="0 0 900 900" fill="none">
             <rect x="40" y="40" width="820" height="820" rx="16" />
             <path d="M450 40v820M40 450h820" />
             <circle cx="450" cy="450" r="118" />
@@ -41,12 +41,12 @@
                         <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                     </a>
                 @else
-                    <a class="hf-btn hf-btn--primary hf-lp-btn-lg" href="{{ route('register') }}">
+                    <a class="hf-btn hf-btn--primary hf-lp-btn-lg" href="{{ route('register') }}" data-magnetic>
                         Create your account
                         <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                     </a>
                 @endauth
-                <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features">
+                <a class="hf-btn hf-btn--ghost hf-lp-btn-lg" href="#features" data-magnetic>
                     See how it runs
                     <i class="bi bi-arrow-down" aria-hidden="true"></i>
                 </a>
@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <div class="hf-lp-hero__scene" aria-label="Sample live scoreboard">
+        <div class="hf-lp-hero__scene" aria-label="Sample live scoreboard" data-parallax="0.5">
             <article class="hf-lp-scoreboard hf-lp-tilt" data-hf-card style="--card-accent: #fb7a1e">
                 <div class="hf-lp-scoreboard__top">
                     <span class="hf-lp-scoreboard__tournament">{{ $tournament['name'] }}</span>

@@ -28,7 +28,7 @@
 .hf-lp-wire__track {
   display: flex;
   width: max-content;
-  animation: hf-lp-marquee 44s linear infinite;
+  animation: hf-lp-marquee var(--wire-duration, 44s) linear infinite;
 }
 
 .hf-lp-wire:hover .hf-lp-wire__track,

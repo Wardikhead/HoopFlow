@@ -1,5 +1,5 @@
 export default function initReveal() {
-    const elements = [...document.querySelectorAll('.hf-lp-reveal')];
+    const elements = [...document.querySelectorAll('.hf-lp-reveal, .hf-lp-wipe')];
     const bracket = document.querySelector('[data-bracket]');
     const targets = bracket ? [...elements, bracket] : elements;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
