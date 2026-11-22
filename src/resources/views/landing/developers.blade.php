@@ -4,13 +4,28 @@
             <span class="hf-eyebrow hf-lp-eyebrow">Built by two students</span>
             <h2 id="landing-developers-title">Made for the covered court.</h2>
             <p>
-                Two students built HoopFlow for the barangay leagues they grew up watching — every
-                bracket, box score, and matchday.
+                A student project from North Eastern Mindanao State University, Lianga Campus — two
+                students built HoopFlow for the barangay leagues they grew up watching, every bracket,
+                box score, and matchday.
             </p>
-            <span class="hf-lp-builders__note">
-                <i class="bi bi-mortarboard" aria-hidden="true"></i>
-                Student project · 2026
-            </span>
+            <div class="hf-lp-builders__notes">
+                <span class="hf-lp-builders__note hf-lp-builders__note--seal">
+                    <img
+                        class="hf-lp-builders__note-seal"
+                        src="{{ asset('img/brand/nemsu-lianga.png') }}"
+                        alt=""
+                        width="288"
+                        height="288"
+                        loading="lazy"
+                        decoding="async"
+                    >
+                    NEMSU · Lianga Campus
+                </span>
+                <span class="hf-lp-builders__note">
+                    <i class="bi bi-mortarboard" aria-hidden="true"></i>
+                    Student project · 2026
+                </span>
+            </div>
         </header>
 
         <div class="hf-lp-builders__grid">
@@ -19,7 +34,7 @@
                     <div
                         class="hf-lp-hang"
                         data-builder-hang
-                        style="--builder-accent: {{ $developer['accent'] }}; --builder-focal: {{ $developer['focal'] }}"
+                        style="--builder-accent: {{ $developer['accent'] }}; --builder-focal: {{ $developer['focal'] }}; --seal-delay: {{ $loop->index }}"
                     >
                         <span class="hf-lp-hang__ribbon" aria-hidden="true"></span>
                         <span class="hf-lp-hang__clip" aria-hidden="true"></span>
@@ -30,14 +45,37 @@
                             data-builder-card
                         >
                             <span class="hf-lp-builder__hole" aria-hidden="true"></span>
+                            <img
+                                class="hf-lp-builder__watermark"
+                                src="{{ asset('img/brand/nemsu-lianga.png') }}"
+                                alt=""
+                                width="288"
+                                height="288"
+                                loading="lazy"
+                                decoding="async"
+                                aria-hidden="true"
+                            >
                             <span class="hf-lp-builder__foil" aria-hidden="true"></span>
                             <span class="hf-lp-builder__holo" aria-hidden="true"></span>
                             <span class="hf-lp-builder__sheen" aria-hidden="true"></span>
 
                             <header class="hf-lp-builder__top">
                                 <span class="hf-lp-builder__brand">
-                                    <i class="bi bi-dribbble" aria-hidden="true"></i>
-                                    HoopFlow
+                                    <span class="hf-lp-builder__seal-wrap" aria-hidden="true">
+                                        <img
+                                            class="hf-lp-builder__seal"
+                                            src="{{ asset('img/brand/nemsu-lianga.png') }}"
+                                            alt=""
+                                            width="288"
+                                            height="288"
+                                            loading="lazy"
+                                            decoding="async"
+                                        >
+                                    </span>
+                                    <span class="hf-lp-builder__school">
+                                        <strong>NEMSU</strong>
+                                        <span>Lianga Campus</span>
+                                    </span>
                                 </span>
                                 <span class="hf-lp-builder__kind">Student ID</span>
                             </header>
@@ -71,8 +109,8 @@
                                         <dd>HF-26-{{ str_pad((string) $loop->iteration, 3, '0', STR_PAD_LEFT) }}</dd>
                                     </div>
                                     <div>
-                                        <dt>Valid thru</dt>
-                                        <dd>06 / 2026</dd>
+                                        <dt>Campus</dt>
+                                        <dd>Lianga</dd>
                                     </div>
                                 </dl>
 
