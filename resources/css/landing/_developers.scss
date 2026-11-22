@@ -1,94 +1,197 @@
-.hf-lp-developers {
-    padding: 48px 0;
+.hf-lp-builders {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(64px, 8vw, 104px) 0;
+  border-top: 1px solid rgba(243, 245, 249, 0.08);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(234, 88, 12, 0.18), transparent 36%),
+    var(--hf-lp-arena-2);
+  color: var(--hf-lp-arena-ink);
 }
 
-.hf-lp-developers__grid {
-    display: grid;
+.hf-lp-builders__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 6vw, 80px);
+  align-items: start;
+}
+
+.hf-lp-builders .hf-lp-eyebrow {
+  color: #fdba74;
+}
+
+.hf-lp-builders__head h2 {
+  max-width: 12ch;
+  margin: 12px 0 16px;
+  font-family: var(--hf-lp-display);
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.hf-lp-builders__head p {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--hf-lp-arena-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.hf-lp-builders__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 6px 10px;
+  border: 1px solid rgba(243, 245, 249, 0.14);
+  border-radius: 999px;
+  color: var(--hf-lp-arena-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hf-lp-builders__grid {
+  display: grid;
+  gap: 12px;
+}
+
+.hf-lp-builder {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border: 1px solid rgba(243, 245, 249, 0.12);
+  border-radius: 16px;
+  background: rgba(243, 245, 249, 0.04);
+  transition:
+    transform 180ms var(--hf-lp-ease),
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.hf-lp-builder::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--builder-accent);
+  content: '';
+  opacity: 0.8;
+}
+
+.hf-lp-builder:hover {
+  border-color: color-mix(in srgb, var(--builder-accent) 45%, transparent);
+  background: rgba(243, 245, 249, 0.06);
+  transform: translateY(-2px);
+}
+
+.hf-lp-builder__index {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  color: rgba(243, 245, 249, 0.16);
+  font-family: var(--hf-lp-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.hf-lp-builder__photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--builder-accent) 55%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--builder-accent) 18%, var(--hf-lp-arena));
+}
+
+.hf-lp-builder__initials {
+  color: var(--hf-lp-arena-ink);
+  font-family: var(--hf-lp-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.hf-lp-builder__photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--builder-focal, 50% 50%);
+}
+
+.hf-lp-builder__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hf-lp-builder__role {
+  color: #fdba74;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hf-lp-builder__body h3 {
+  margin: 0;
+  color: var(--hf-lp-arena-ink);
+  font-family: var(--hf-lp-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.hf-lp-builder__line {
+  color: var(--hf-lp-arena-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 991.98px) {
+  .hf-lp-builders__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-lp-builders__head h2 {
+    max-width: 20ch;
+  }
+
+  .hf-lp-builders__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    margin-top: 20px;
+  }
 }
 
 @media (max-width: 640px) {
-    .hf-lp-developers__grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
+  .hf-lp-builders__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-lp-builder__body h3 {
+    font-size: 24px;
+  }
 }
 
-.hf-lp-developer {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 18px;
-    border: 1px solid rgba(243, 245, 249, 0.12);
-    border-radius: 12px;
-    background: rgba(243, 245, 249, 0.04);
-    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
-}
+@media (prefers-reduced-motion: reduce) {
+  .hf-lp-builder {
+    transition: none;
+  }
 
-.hf-lp-developer:hover {
-    transform: translateY(-2px);
-    border-color: rgba(234, 88, 12, 0.4);
-    background: rgba(234, 88, 12, 0.06);
-}
-
-.hf-lp-developer__avatar {
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--dev-color, #ea580c) 22%, transparent);
-    border: 2px solid color-mix(in srgb, var(--dev-color, #ea580c) 45%, transparent);
-    color: #fff;
-    font-family: var(--hf-font-display);
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-}
-
-.hf-lp-developer__body {
-    min-width: 0;
-    display: grid;
-    gap: 2px;
-}
-
-.hf-lp-developer__body h3 {
-    margin: 0;
-    color: var(--hf-lp-arena-ink);
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.hf-lp-developer__role {
-    color: var(--hf-lp-arena-muted);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-}
-
-.hf-lp-developer__links {
-    display: flex;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-.hf-lp-developer__link {
-    display: inline-grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid rgba(243, 245, 249, 0.14);
-    color: var(--hf-lp-arena-muted);
-    font-size: 14px;
-    text-decoration: none;
-    transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
-}
-
-.hf-lp-developer__link:hover {
-    color: var(--hf-lp-arena-ink);
-    border-color: var(--hf-primary);
-    background: rgba(234, 88, 12, 0.1);
+  .hf-lp-builder:hover {
+    transform: none;
+  }
 }

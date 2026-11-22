@@ -229,7 +229,7 @@ final class LandingShowcase
             ],
             [
                 'title' => 'Run the night',
-                'copy' => 'Final scores advance winners, update standings, and notify the bleachers.',
+                'copy' => 'Final scores advance winners, update standings, and post to the matchday wire.',
                 'tag' => 'Live standings',
                 'icon' => 'broadcast',
             ],
@@ -246,7 +246,7 @@ final class LandingShowcase
                 'key' => 'organizer',
                 'eyebrow' => 'Organizer',
                 'title' => 'See the whole floor.',
-                'copy' => 'Eligibility, payments, brackets, schedule, and audit — the whole tournament in one place.',
+                'copy' => 'Eligibility, payments, brackets, schedule, and the audit trail — the whole tournament in one place.',
                 'accent' => '#ea580c',
             ],
             [
@@ -260,8 +260,33 @@ final class LandingShowcase
                 'key' => 'fan',
                 'eyebrow' => 'Fan / Parent',
                 'title' => 'Follow from the bleachers.',
-                'copy' => 'Bracket, schedule, standings, and announcements — readable on the phone in your pocket.',
+                'copy' => 'Bracket, schedule, live scores, standings, and announcements — readable on the phone in your pocket.',
                 'accent' => '#1d4ed8',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{name: string, role: string, photo: string, initials: string, accent: string, focal: string}>
+     */
+    public function developers(): array
+    {
+        return [
+            [
+                'name' => 'Jeward Mahinay',
+                'role' => 'Student developer',
+                'photo' => 'img/team/jeward-mahinay.jpg',
+                'initials' => 'JM',
+                'accent' => '#ea580c',
+                'focal' => '50% 38%',
+            ],
+            [
+                'name' => 'Rusty Japos',
+                'role' => 'Student developer',
+                'photo' => 'img/team/rusty-japos.jpg',
+                'initials' => 'RJ',
+                'accent' => '#0f766e',
+                'focal' => '50% 28%',
             ],
         ];
     }

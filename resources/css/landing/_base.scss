@@ -53,7 +53,11 @@
 .hf-lp-menu-btn:focus-visible,
 .hf-lp-footer a:focus-visible,
 .hf-lp-nav a:focus-visible,
-.hf-lp-header__brand:focus-visible {
+.hf-lp-header__brand:focus-visible,
+.hf-lp-calendar__cell:focus-visible,
+.hf-lp-lab__cta a:focus-visible,
+.hf-lp-scroll:focus-visible,
+.hf-lp-builder a:focus-visible {
   outline: 3px solid var(--hf-lp-orange);
   outline-offset: 2px;
 }

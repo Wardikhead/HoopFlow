@@ -3,6 +3,10 @@
         <header class="hf-lp-section-head">
             <span class="hf-eyebrow hf-lp-eyebrow">Built for the whole court</span>
             <h2 id="landing-roles-title">Everyone sees the game they need.</h2>
+            <p>
+                Organizers run the night, coaches keep the roster legal, and families follow every
+                basket from the bleachers.
+            </p>
         </header>
 
         <div class="hf-lp-roles">
