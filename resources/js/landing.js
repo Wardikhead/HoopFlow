@@ -8,6 +8,9 @@ import initSplash from './landing/splash';
 import initCountUp from './landing/countup';
 import initDevelopers from './landing/developers';
 import initCards from './landing/cards';
+import initStory from './landing/story';
+import initCompare from './landing/compare';
+import initEffects from './landing/effects';
 
 initHeader();
 initReveal();
@@ -19,3 +22,6 @@ initSplash();
 initCountUp();
 initDevelopers();
 initCards();
+initStory();
+initCompare();
+initEffects();

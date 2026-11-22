@@ -23,8 +23,34 @@ export default function initTabs() {
         });
     };
 
+    const supportsTransition =
+        typeof document.startViewTransition === 'function' &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const swap = (name, focus = false) => {
+        const current = panels.find((panel) => panel.classList.contains('is-active'));
+        const next = panels.find((panel) => panel.dataset.demoPanel === name);
+
+        if (!supportsTransition || !current || !next || current === next) {
+            activate(name, focus);
+            return;
+        }
+
+        current.style.viewTransitionName = 'hf-demo-panel';
+
+        const transition = document.startViewTransition(() => {
+            current.style.viewTransitionName = '';
+            activate(name, focus);
+            next.style.viewTransitionName = 'hf-demo-panel';
+        });
+
+        transition.finished.finally(() => {
+            next.style.viewTransitionName = '';
+        });
+    };
+
     tabs.forEach((tab, index) => {
-        tab.addEventListener('click', () => activate(tab.dataset.demoTab));
+        tab.addEventListener('click', () => swap(tab.dataset.demoTab));
 
         tab.addEventListener('keydown', (event) => {
             let next = null;
@@ -44,13 +70,13 @@ export default function initTabs() {
 
             if (next !== null) {
                 event.preventDefault();
-                activate(tabs[next].dataset.demoTab, true);
+                swap(tabs[next].dataset.demoTab, true);
             }
         });
     });
 
     document.querySelectorAll('[data-demo-target]').forEach((link) => {
-        link.addEventListener('click', () => activate(link.dataset.demoTarget));
+        link.addEventListener('click', () => swap(link.dataset.demoTarget));
     });
 
     const fromHash = window.location.hash.replace('#', '');
