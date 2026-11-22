@@ -6,6 +6,7 @@ import initSchedule from './landing/schedule';
 import initCalendar from './landing/calendar';
 import initSplash from './landing/splash';
 import initCountUp from './landing/countup';
+import initDevelopers from './landing/developers';
 
 initHeader();
 initReveal();
@@ -15,3 +16,4 @@ initSchedule();
 initCalendar();
 initSplash();
 initCountUp();
+initDevelopers();

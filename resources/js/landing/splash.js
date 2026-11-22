@@ -14,16 +14,27 @@ export default function initSplash() {
 
     sessionStorage.setItem('hf-lp-splash', '1');
 
-    const hide = () => {
-        splash.classList.add('is-hiding');
-        window.setTimeout(() => splash.remove(), reduceMotion ? 0 : 420);
-    };
-
     if (reduceMotion) {
         // Skip the animation entirely.
         splash.remove();
         return;
     }
 
-    window.setTimeout(hide, 1100);
+    let hiding = false;
+
+    const hide = () => {
+        if (hiding) {
+            return;
+        }
+
+        hiding = true;
+        splash.classList.add('is-hiding');
+        window.setTimeout(() => splash.remove(), 560);
+    };
+
+    ['pointerdown', 'keydown', 'wheel', 'touchmove'].forEach((event) => {
+        window.addEventListener(event, hide, { once: true, passive: true });
+    });
+
+    window.setTimeout(hide, 2300);
 }
