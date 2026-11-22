@@ -1,7 +1,9 @@
 .hf-lp-footer {
   padding: 56px 0 24px;
   border-top: 1px solid var(--hf-lp-line);
-  background: var(--hf-lp-paper);
+  background:
+    radial-gradient(circle at 6% 0%, color-mix(in srgb, var(--hf-lp-orange) 5%, transparent), transparent 30%),
+    var(--hf-lp-paper);
 }
 
 .hf-lp-footer__inner {
@@ -50,14 +52,17 @@
 }
 
 .hf-lp-footer__col a {
+  width: max-content;
   color: var(--hf-lp-ink);
   font-size: 12px;
   text-decoration: none;
+  transition: color 0.2s ease, transform 0.2s var(--hf-lp-ease);
 }
 
 .hf-lp-footer__col a:hover {
   color: var(--hf-lp-orange-ink);
   text-decoration: none;
+  transform: translateX(2px);
 }
 
 .hf-lp-footer__bottom {

@@ -1,6 +1,7 @@
 .hf-lp-roles-section {
   padding: clamp(72px, 9vw, 120px) 0;
   background:
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--hf-lp-orange) 6%, transparent), transparent 32%),
     linear-gradient(180deg, transparent, color-mix(in srgb, var(--hf-lp-orange) 4%, transparent)),
     var(--hf-lp-paper-2);
 }
@@ -12,10 +13,12 @@
 }
 
 .hf-lp-role {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 22px;
-  padding: 22px;
+  padding: 24px;
+  overflow: hidden;
   border: 1px solid var(--hf-lp-line);
   border-radius: var(--hf-lp-radius);
   background: var(--hf-lp-card);
@@ -26,18 +29,47 @@
     border-color 0.25s ease;
 }
 
+.hf-lp-role::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--hf-role-accent), transparent 88%);
+  content: '';
+  opacity: 0.75;
+}
+
+.hf-lp-role::after {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--hf-role-accent) 18%, transparent), transparent 68%);
+  content: '';
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
 .hf-lp-role:hover {
   border-color: color-mix(in srgb, var(--hf-role-accent) 45%, var(--hf-lp-line));
   box-shadow: 0 18px 40px rgba(16, 24, 32, 0.1);
   transform: translateY(-4px);
 }
 
+.hf-lp-role:hover::after {
+  opacity: 1;
+}
+
 .hf-lp-role__copy h3 {
   margin: 8px 0 8px;
   font-family: var(--hf-lp-display);
   font-size: 32px;
+  letter-spacing: 0.01em;
   line-height: 0.95;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .hf-lp-role__copy p {
@@ -50,6 +82,7 @@
 .hf-lp-role__vignette {
   margin-top: auto;
   padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--hf-role-accent) 12%, var(--hf-lp-line));
   border-radius: 12px;
   background: color-mix(in srgb, var(--hf-role-accent) 7%, var(--hf-lp-paper-2));
 }

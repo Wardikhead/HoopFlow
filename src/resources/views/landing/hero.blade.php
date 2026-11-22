@@ -55,6 +55,21 @@
             <p class="hf-lp-hero__micro">
                 Built for organizers, coaches, and the parents on the bleachers.
             </p>
+
+            <div class="hf-lp-hero__proof">
+                <span class="hf-lp-hero__crests" aria-hidden="true">
+                    @foreach ($teams->take(5) as $team)
+                        <x-landing.crest :team="$team" />
+                    @endforeach
+                    @if ($teams->count() > 5)
+                        <span class="hf-lp-hero__crest-more">+{{ $teams->count() - 5 }}</span>
+                    @endif
+                </span>
+                <span class="hf-lp-hero__proof-copy">
+                    <strong>{{ $teams->count() }} teams</strong>
+                    <span>· one tournament record</span>
+                </span>
+            </div>
         </div>
 
         <div class="hf-lp-hero__scene" aria-label="Sample live scoreboard">

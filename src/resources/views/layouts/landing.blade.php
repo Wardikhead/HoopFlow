@@ -78,6 +78,8 @@
                 @endauth
             </div>
         </div>
+
+        <span class="hf-lp-progress" data-landing-progress aria-hidden="true"></span>
     </header>
 
     <main id="main" tabindex="-1">

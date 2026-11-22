@@ -9,6 +9,24 @@
   border-bottom: 1px solid transparent;
 }
 
+.hf-lp-progress {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--hf-lp-orange), var(--hf-lp-gold));
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.hf-lp-header.is-scrolled .hf-lp-progress {
+  opacity: 1;
+}
+
 .hf-lp-header.is-scrolled {
   border-bottom-color: var(--hf-lp-line);
   background: color-mix(in srgb, var(--hf-lp-paper) 84%, transparent);
@@ -37,6 +55,7 @@
 }
 
 .hf-lp-nav a {
+  position: relative;
   color: var(--hf-lp-muted);
   font-size: 13px;
   font-weight: 600;
@@ -44,9 +63,29 @@
   transition: color 0.2s ease;
 }
 
-.hf-lp-nav a:hover {
+.hf-lp-nav a::after {
+  position: absolute;
+  right: 0;
+  bottom: -6px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hf-lp-orange);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.25s var(--hf-lp-ease);
+}
+
+.hf-lp-nav a:hover,
+.hf-lp-nav a:focus-visible {
   color: var(--hf-lp-ink);
   text-decoration: none;
+}
+
+.hf-lp-nav a:hover::after,
+.hf-lp-nav a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .hf-lp-header__actions {

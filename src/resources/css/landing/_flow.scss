@@ -1,13 +1,16 @@
 .hf-lp-flow-section {
+  position: relative;
   padding: clamp(72px, 9vw, 120px) 0;
-  background: var(--hf-lp-paper);
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--hf-lp-orange) 7%, transparent), transparent 34%),
+    var(--hf-lp-paper);
 }
 
 .hf-lp-flow {
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -15,27 +18,74 @@
 
 .hf-lp-flow::before {
   position: absolute;
-  top: 27px;
-  right: 7%;
-  left: 7%;
-  border-top: 1px dashed var(--hf-lp-line);
+  top: 45px;
+  right: 4%;
+  left: 4%;
+  z-index: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--hf-lp-line) 10%,
+    var(--hf-lp-line) 90%,
+    transparent
+  );
   content: '';
 }
 
 .hf-lp-flow__step {
   position: relative;
+  z-index: 1;
   display: grid;
   align-content: start;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 10px;
+  padding: 18px 18px 20px;
+  overflow: hidden;
+  border: 1px solid var(--hf-lp-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--hf-lp-card) 92%, transparent);
+  box-shadow: 0 10px 28px rgba(16, 24, 32, 0.05);
+  transition:
+    opacity 0.6s var(--hf-lp-ease),
+    transform 0.35s var(--hf-lp-ease),
+    box-shadow 0.35s var(--hf-lp-ease),
+    border-color 0.3s ease;
+}
+
+.hf-lp-flow__step::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--hf-lp-orange),
+    color-mix(in srgb, var(--hf-lp-gold) 60%, transparent)
+  );
+  content: '';
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hf-lp-flow__step:hover {
+  border-color: color-mix(in srgb, var(--hf-lp-orange) 32%, var(--hf-lp-line));
+  box-shadow: 0 22px 44px rgba(16, 24, 32, 0.12);
+  transform: translateY(-6px);
+}
+
+.hf-lp-flow__step:hover::before {
+  opacity: 1;
 }
 
 .hf-lp-flow__num {
-  color: var(--hf-lp-muted);
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  color: color-mix(in srgb, var(--hf-lp-ink) 13%, transparent);
   font-family: var(--hf-lp-display);
-  font-size: 14px;
+  font-size: 34px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .hf-lp-flow__dot {
@@ -44,10 +94,16 @@
   width: 54px;
   height: 54px;
   margin-bottom: 4px;
-  border: 1px solid var(--hf-lp-line);
+  border: 1px solid color-mix(in srgb, var(--hf-lp-orange) 26%, var(--hf-lp-line));
   border-radius: 50%;
-  background: var(--hf-lp-card);
-  box-shadow: 0 6px 18px rgba(16, 24, 32, 0.06);
+  background: linear-gradient(
+    160deg,
+    var(--hf-lp-card),
+    color-mix(in srgb, var(--hf-lp-orange) 9%, var(--hf-lp-paper-2))
+  );
+  box-shadow:
+    0 8px 20px rgba(16, 24, 32, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   color: var(--hf-lp-orange-ink);
   font-size: 20px;
 }
@@ -56,8 +112,10 @@
   margin: 0;
   font-family: var(--hf-lp-display);
   font-size: 24px;
+  letter-spacing: 0.01em;
   line-height: 1;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .hf-lp-flow__step p {
@@ -69,21 +127,22 @@
 
 .hf-lp-flow__tag {
   width: max-content;
-  margin-top: 4px;
-  padding: 4px 7px;
-  border: 1px solid var(--hf-lp-line);
+  margin-top: 2px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--hf-lp-orange) 24%, var(--hf-lp-line));
   border-radius: 999px;
-  color: var(--hf-lp-muted);
+  background: color-mix(in srgb, var(--hf-lp-orange) 6%, transparent);
+  color: var(--hf-lp-orange-ink);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 @media (max-width: 991.98px) {
   .hf-lp-flow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 18px;
+    gap: 16px;
   }
 
   .hf-lp-flow::before {
@@ -94,26 +153,39 @@
 @media (max-width: 575.98px) {
   .hf-lp-flow {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .hf-lp-flow__step {
-    grid-template-columns: 54px 1fr;
+    grid-template-columns: 46px minmax(0, 1fr);
     column-gap: 14px;
+    padding: 16px;
   }
 
   .hf-lp-flow__num {
-    grid-column: 2;
-    grid-row: 1;
+    top: 12px;
+    right: 14px;
+    font-size: 28px;
   }
 
   .hf-lp-flow__dot {
     grid-column: 1;
     grid-row: 1 / span 3;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 0;
+    font-size: 18px;
   }
 
   .hf-lp-flow__step h3,
   .hf-lp-flow__step p,
   .hf-lp-flow__tag {
     grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hf-lp-flow__step:hover {
+    transform: none;
   }
 }

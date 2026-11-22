@@ -44,6 +44,12 @@
             </div>
 
             <div class="hf-lp-lab__stage">
+                <div class="hf-lp-lab__chrome" aria-hidden="true">
+                    <span class="hf-lp-lab__dots"><i></i><i></i><i></i></span>
+                    <span class="hf-lp-lab__address"><i class="bi bi-lock-fill" aria-hidden="true"></i> hoopflow · preview</span>
+                    <span class="hf-lp-lab__signal"><i class="bi bi-broadcast" aria-hidden="true"></i></span>
+                </div>
+
                 <div class="hf-lp-lab__bar">
                     <span><i class="bi bi-lock" aria-hidden="true"></i> Read-only sample</span>
                     <span>{{ $tournament['name'] }} · {{ $tournament['division'] }}</span>
