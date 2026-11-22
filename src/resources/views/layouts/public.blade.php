@@ -93,7 +93,17 @@
             <a class="hf-auth-brand" href="{{ route('home') }}">
                 <x-brand size="sm" />
             </a>
-            <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
+            <nav class="hf-auth-topbar__actions" aria-label="Account">
+                @if (request()->routeIs('register'))
+                    <span class="hf-auth-topbar__hint">Already have an account?</span>
+                    <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
+                @elseif (request()->routeIs('login'))
+                    <span class="hf-auth-topbar__hint">New to HoopFlow?</span>
+                    <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('register') }}">Create account</a>
+                @else
+                    <a class="hf-btn hf-btn--ghost hf-btn--sm" href="{{ route('login') }}">Sign in</a>
+                @endif
+            </nav>
         </header>
 
         <main id="main" class="@yield('main-class')" tabindex="-1">
