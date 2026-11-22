@@ -73,7 +73,7 @@
         </div>
 
         <div class="hf-lp-hero__scene" aria-label="Sample live scoreboard">
-            <article class="hf-lp-scoreboard">
+            <article class="hf-lp-scoreboard hf-lp-tilt" data-hf-card style="--card-accent: #fb7a1e">
                 <div class="hf-lp-scoreboard__top">
                     <span class="hf-lp-scoreboard__tournament">{{ $tournament['name'] }}</span>
                     <span class="hf-lp-live"><span class="hf-lp-live__dot" aria-hidden="true"></span> Live</span>
@@ -103,7 +103,7 @@
                 </div>
             </article>
 
-            <article class="hf-lp-nextup">
+            <article class="hf-lp-nextup hf-lp-tilt" data-hf-card style="--card-accent: #ea580c">
                 <span class="hf-lp-nextup__eyebrow">Next up · {{ $next['round'] }}</span>
                 <strong>{{ $next['day_label'] }} · {{ $next['time'] }}</strong>
                 <span class="hf-lp-nextup__teams">

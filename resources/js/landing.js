@@ -7,6 +7,7 @@ import initCalendar from './landing/calendar';
 import initSplash from './landing/splash';
 import initCountUp from './landing/countup';
 import initDevelopers from './landing/developers';
+import initCards from './landing/cards';
 
 initHeader();
 initReveal();
@@ -17,3 +18,4 @@ initCalendar();
 initSplash();
 initCountUp();
 initDevelopers();
+initCards();

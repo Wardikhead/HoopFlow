@@ -24,7 +24,7 @@
         </div>
 
         <div class="hf-lp-elig__scene">
-            <article class="hf-lp-review">
+            <article class="hf-lp-review hf-lp-tilt" data-hf-card style="--card-rotate: 1.5deg; --card-accent: #c2410c">
                 <header class="hf-lp-review__head">
                     <div>
                         <span class="hf-lp-review__eyebrow">Roster check</span>
@@ -50,7 +50,7 @@
                 </div>
             </article>
 
-            <article class="hf-lp-payment">
+            <article class="hf-lp-payment hf-lp-tilt" data-hf-card style="--card-rotate: -2deg; --card-accent: #fb7a1e">
                 <span class="hf-lp-payment__eyebrow">Payment record</span>
                 @foreach ($eligibility['payments'] as $payment)
                     <div class="hf-lp-payment__row">
