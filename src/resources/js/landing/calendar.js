@@ -35,10 +35,6 @@ export default function initCalendar() {
     };
 
     dayButtons.forEach((button) => {
-        if (button.dataset.calendarHasGames !== 'true') {
-            return;
-        }
-
         button.addEventListener('click', () => {
             selected = button.dataset.calendarDay;
             apply();

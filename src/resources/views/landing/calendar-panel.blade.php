@@ -14,11 +14,15 @@
                 @if ($cell['day'] === null)
                     <div class="hf-lp-calendar__cell is-blank" aria-hidden="true"></div>
                 @else
+                    @php
+                        $gameCount = count($cell['matches']);
+                    @endphp
                     <button
                         type="button"
                         class="hf-lp-calendar__cell{{ $cell['hasGames'] ? ' has-events' : '' }}"
                         data-calendar-day="{{ $cell['day'] }}"
                         aria-pressed="false"
+                        aria-label="November {{ $cell['day'] }}, {{ $gameCount }} {{ \Illuminate\Support\Str::plural('game', $gameCount) }}"
                         @if ($cell['hasGames']) data-calendar-has-games="true" @endif
                     >
                         <span>{{ $cell['day'] }}</span>

@@ -6,8 +6,8 @@
             <span class="hf-eyebrow hf-lp-eyebrow">The feature lab · read-only preview</span>
             <h2 id="landing-lab-title">Poke around. <em>Nothing breaks.</em></h2>
             <p>
-                The real interface, loaded with a sample barangay league. Switch between the bracket,
-                schedule, and standings. Editing stays off.
+                A working preview, loaded with a sample barangay league. Switch between the bracket,
+                calendar, and standings. Editing stays off.
             </p>
             <span class="hf-lp-badge"><i class="bi bi-lock" aria-hidden="true"></i> Preview only · changes disabled</span>
         </header>
@@ -27,6 +27,17 @@
                         <span class="hf-lp-tab__icon"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
                         <span><strong>Standings</strong><small>The cut line, without the manual math.</small></span>
                     </button>
+                </div>
+
+                <div class="hf-lp-lab__also">
+                    <span class="hf-lp-lab__also-label">Also inside</span>
+                    <ul>
+                        <li>Live scoring</li>
+                        <li>Eligibility queue</li>
+                        <li>Payments</li>
+                        <li>Announcements</li>
+                        <li>Audit trail</li>
+                    </ul>
                 </div>
 
                 <p class="hf-lp-lab__note">This is a read-only sample. Sign in to run your own league.</p>

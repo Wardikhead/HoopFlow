@@ -97,7 +97,7 @@
                     <strong>Product</strong>
                     <a href="#features">Features</a>
                     <a href="#features" data-demo-target="bracket">Bracket</a>
-                    <a href="#features" data-demo-target="schedule">Schedule</a>
+                    <a href="#features" data-demo-target="calendar">Calendar</a>
                     <a href="#features" data-demo-target="standings">Standings</a>
                 </div>
                 <div class="hf-lp-footer__col">

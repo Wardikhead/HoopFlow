@@ -9,15 +9,17 @@
             <span class="hf-eyebrow hf-lp-eyebrow">The unglamorous part, handled</span>
             <h2 id="landing-elig-title">The paperwork is part of the tournament.</h2>
             <p>
-                Age and residency checks, guardian consent, and cash or GCash payments are first-class
-                steps in HoopFlow. Review them in one queue, with a reason for every decision.
+                Birthdate eligibility, guardian consent, and document review are first-class steps in
+                HoopFlow — alongside GCash, Maya, bank, and cash payments. Review every player in one
+                queue, with a written reason on each rejection.
             </p>
 
             <ul class="hf-lp-elig__checklist">
-                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Age &amp; residency checks</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Birthdate eligibility</li>
                 <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Guardian consent</li>
-                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Cash &amp; GCash references</li>
-                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> A reason for every decision</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Birth certificate &amp; document review</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> GCash, Maya, bank &amp; cash</li>
+                <li><i class="bi bi-check2-circle" aria-hidden="true"></i> A written reason on every rejection</li>
             </ul>
         </div>
 

@@ -29,4 +29,5 @@
     @include('landing.eligibility', ['eligibility' => $showcase->eligibility()])
     @include('landing.wire', ['announcements' => $showcase->announcements()])
     @include('landing.closing')
+    @include('landing.developers', ['developers' => $showcase->developers()])
 @endsection
