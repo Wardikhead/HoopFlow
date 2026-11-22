@@ -47,6 +47,7 @@ export function registerPasswordMeter() {
             password: '',
             showPassword: false,
             focused: false,
+            submitting: false,
 
             get evaluation() {
                 return evaluatePassword(this.password);
