@@ -8,7 +8,7 @@
 
         <ol class="hf-lp-flow">
             @foreach ($steps as $step)
-                <li class="hf-lp-flow__step hf-lp-reveal" style="--i: {{ $loop->index }}">
+                <li class="hf-lp-flow__step hf-lp-reveal hf-lp-tilt" data-hf-card style="--i: {{ $loop->index }}; --card-accent: var(--hf-lp-orange)">
                     <span class="hf-lp-flow__num">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                     <span class="hf-lp-flow__dot"><i class="bi bi-{{ $step['icon'] }}" aria-hidden="true"></i></span>
                     <h3>{{ $step['title'] }}</h3>

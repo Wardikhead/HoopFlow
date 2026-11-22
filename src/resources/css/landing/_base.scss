@@ -243,18 +243,19 @@
   --i: 0;
 }
 
+/* Reveal moves with `translate` so the card tilt can keep owning `transform`. */
 .hf-js .hf-lp-reveal {
   opacity: 0;
-  transform: translateY(24px);
+  translate: 0 24px;
   transition:
     opacity 0.7s var(--hf-lp-ease),
-    transform 0.7s var(--hf-lp-ease);
+    translate 0.7s var(--hf-lp-ease);
   transition-delay: calc(var(--i) * 70ms);
 }
 
 .hf-js .hf-lp-reveal.is-in {
   opacity: 1;
-  transform: none;
+  translate: none;
 }
 
 [data-theme='dark'] .hf-lp-review,
@@ -355,7 +356,7 @@
 @media (prefers-reduced-motion: reduce) {
   .hf-js .hf-lp-reveal {
     opacity: 1;
-    transform: none;
+    translate: none;
     transition: none;
   }
 

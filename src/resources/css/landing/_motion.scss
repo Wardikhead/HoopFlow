@@ -51,14 +51,6 @@
     position: relative;
 }
 
-.hf-lp-flow__step {
-    transition: transform 220ms ease, opacity 220ms ease;
-}
-
-.hf-lp-flow__step:hover {
-    transform: translateY(-3px);
-}
-
 .hf-lp-developer {
     transition: transform 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }

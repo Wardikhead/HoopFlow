@@ -69,7 +69,6 @@
 .hf-lp-flow__step:hover {
   border-color: color-mix(in srgb, var(--hf-lp-orange) 32%, var(--hf-lp-line));
   box-shadow: 0 22px 44px rgba(16, 24, 32, 0.12);
-  transform: translateY(-6px);
 }
 
 .hf-lp-flow__step:hover::before {

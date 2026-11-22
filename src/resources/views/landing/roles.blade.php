@@ -11,7 +11,7 @@
 
         <div class="hf-lp-roles">
             @foreach ($roles as $role)
-                <article class="hf-lp-role hf-lp-role--{{ $role['key'] }} hf-lp-reveal" style="--i: {{ $loop->index }}; --hf-role-accent: {{ $role['accent'] }}">
+                <article class="hf-lp-role hf-lp-role--{{ $role['key'] }} hf-lp-reveal hf-lp-tilt" data-hf-card style="--i: {{ $loop->index }}; --card-accent: {{ $role['accent'] }}; --hf-role-accent: {{ $role['accent'] }}">
                     <div class="hf-lp-role__copy">
                         <span class="hf-eyebrow hf-lp-eyebrow">{{ $role['eyebrow'] }}</span>
                         <h3>{{ $role['title'] }}</h3>

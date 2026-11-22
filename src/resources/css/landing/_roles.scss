@@ -55,7 +55,6 @@
 .hf-lp-role:hover {
   border-color: color-mix(in srgb, var(--hf-role-accent) 45%, var(--hf-lp-line));
   box-shadow: 0 18px 40px rgba(16, 24, 32, 0.1);
-  transform: translateY(-4px);
 }
 
 .hf-lp-role:hover::after {
