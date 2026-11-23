@@ -91,6 +91,12 @@ class DemoSeeder extends Seeder
         $this->organization = Organization::query()->where('slug', 'default')->firstOrFail();
         $this->seedUsers();
 
+        // Supabase (and other managed Postgres providers) impose a default
+        // statement/idle-in-transaction timeout that the long-running demo seed
+        // exceeds. Disable both for this session.
+        DB::statement('SET statement_timeout = 0');
+        DB::statement('SET idle_in_transaction_session_timeout = 0');
+
         DB::transaction(function (): void {
             $this->purgeDemoData();
             $this->seedTeams();

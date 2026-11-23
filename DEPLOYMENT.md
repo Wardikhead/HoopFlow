@@ -15,7 +15,7 @@ read/write split, so point both hosts at the same Supabase instance.
 ## 2. Railway
 
 1. Create a new project → **Deploy from GitHub repo** → select `Wardikhead/HoopFlow`.
-2. Railway will auto-detect the `Dockerfile` and build the app with PHP 8.4.
+2. Railway will auto-detect `nixpacks.toml` and build the app.
 3. Open the service → **Variables** and set:
 
    | Variable | Value |
@@ -30,7 +30,7 @@ read/write split, so point both hosts at the same Supabase instance.
    | `DB_PORT` | `5432` |
    | `DB_DATABASE` | `postgres` |
    | `DB_USERNAME` | `postgres` |
-   | `DB_PASSWORD` | `<supabase password>` |
+   | `DB_PASSWORD` |  |
    | `DB_READ_HOST` | `db.<ref>.supabase.co` |
    | `DB_READ_PORT` | `5432` |
    | `DB_WRITE_HOST` | `db.<ref>.supabase.co` |
@@ -48,14 +48,13 @@ read/write split, so point both hosts at the same Supabase instance.
 
 ## 3. Migrations & seeding
 
-The `Dockerfile` entrypoint runs `php artisan migrate --force` and seeds `DemoSeeder`
+The `nixpacks.toml` start command runs `php artisan migrate --force` and seeds `DemoSeeder`
 only when the database is empty, so redeploys do not wipe data. The first boot will take a
 little longer while the demo dataset is seeded.
 
-If you prefer to seed manually, remove the seeding block from `docker-entrypoint.sh` and set
-the Railway **Release Command** to:
+If you prefer to seed manually, set the Railway **Release Command** to:
 ```
-php artisan db:seed --class=DemoSeeder --force
+php artisan migrate --force && php artisan db:seed --class=DemoSeeder --force
 ```
 and remove the seeding part from the start command.
 

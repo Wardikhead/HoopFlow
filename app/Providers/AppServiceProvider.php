@@ -37,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiting();
         $this->configureLivewireUpdateRoute();
+
+        if ($this->app->environment('production')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 
     /**
