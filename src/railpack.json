@@ -1,0 +1,6 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "deploy": {
+    "startCommand": "php artisan tinker --execute=\"if (App\\\\Models\\\\Tournament::count() === 0) { Artisan::call('db:seed', ['--class' => 'Database\\\\Seeders\\\\DemoSeeder', '--force' => true]); }\" && /start-container.sh"
+  }
+}
