@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.railpack.com",
   "deploy": {
-    "startCommand": "php artisan db:seed --class='Database\\Seeders\\DemoSeeder' --force; RAILPACK_SKIP_MIGRATIONS=true /start-container.sh"
+    "startCommand": "RAILPACK_SKIP_MIGRATIONS=true /start-container.sh"
   }
 }
