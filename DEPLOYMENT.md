@@ -15,7 +15,7 @@ read/write split, so point both hosts at the same Supabase instance.
 ## 2. Railway
 
 1. Create a new project → **Deploy from GitHub repo** → select `Wardikhead/HoopFlow`.
-2. Railway will auto-detect `railpack.json` and build the app with PHP 8.4.
+2. Railway will auto-detect the `Dockerfile` and build the app with PHP 8.4.
 3. Open the service → **Variables** and set:
 
    | Variable | Value |
@@ -48,14 +48,12 @@ read/write split, so point both hosts at the same Supabase instance.
 
 ## 3. Migrations & seeding
 
-The `railpack.json` start command runs `php artisan migrate --force` (via Railpack's
-Laravel start script) and seeds `DemoSeeder` only when the database is empty, so
-redeploys do not wipe data. The first boot will take a little longer while the demo
-dataset is seeded.
+The `Dockerfile` entrypoint runs `php artisan migrate --force` and seeds `DemoSeeder`
+only when the database is empty, so redeploys do not wipe data. The first boot will take a
+little longer while the demo dataset is seeded.
 
-If you prefer to seed manually, set `RAILPACK_SKIP_MIGRATIONS=true` is not needed;
-instead remove the seeding part from `railpack.json` and set the Railway **Release
-Command** to:
+If you prefer to seed manually, remove the seeding block from `docker-entrypoint.sh` and set
+the Railway **Release Command** to:
 ```
 php artisan db:seed --class=DemoSeeder --force
 ```
