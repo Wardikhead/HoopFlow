@@ -1,8 +1,10 @@
-# Production email setup (Brevo SMTP)
+# Production email setup (Brevo)
 
 HoopFlow sends password reset and password changed messages through Laravel's
-mailer. Local development defaults to `MAIL_MAILER=log`; production uses the
-Brevo SMTP relay. Mailtrap Email Sending is kept as a fallback.
+mailer. Local development defaults to `MAIL_MAILER=log`; production sends
+through Brevo. Railway's Free, Trial, and Hobby plans block outbound SMTP, so
+production uses Brevo's HTTPS API. The SMTP relay remains available for hosts
+that allow outbound SMTP, including Railway Pro.
 
 Brevo's free plan allows 300 emails per day and a single verified sender, so it
 works without owning a domain. A verified custom domain is still strongly
@@ -19,10 +21,25 @@ recommended for production deliverability.
 Gmail address works for demos, but Brevo flags it as "Freemail domain is not
 recommended" and receivers are more likely to treat it as spam.
 
-## 2. Get SMTP credentials
+## 2. Get credentials
 
-Open **SMTP & API → SMTP** in Brevo. The page shows the server, port, login, and
-your SMTP keys.
+### HTTPS API (production on Railway)
+
+Open **SMTP & API → API Keys** and create a key. API keys start with
+`xkeysib-`.
+
+| Variable | Value |
+|---|---|
+| `MAIL_MAILER` | `brevo` |
+| `BREVO_API_KEY` | an API key starting with `xkeysib-` |
+
+The `brevo` transport is registered in `AppServiceProvider` through
+`symfony/brevo-mailer`, and sends over HTTPS to `api.brevo.com`.
+
+### SMTP relay (Railway Pro or other hosts)
+
+Open **SMTP & API → SMTP**. The page shows the server, port, login, and your
+SMTP keys.
 
 | Variable | Value |
 |---|---|
@@ -39,18 +56,15 @@ Two details cause almost every `535 5.7.8 Authentication failed`:
   generated login such as `123456001@smtp-brevo.com`. Copy the exact value from
   the SMTP page.
 - SMTP keys and API keys are different. An API key (`xkeysib-`) will not
-  authenticate over SMTP.
+  authenticate over SMTP, and an SMTP key (`xsmtpsib-`) will not authenticate
+  against the API.
 
 ## 3. Configure the application
 
 ```ini
 APP_URL=https://your-production-domain.example
-MAIL_MAILER=smtp
-MAIL_SCHEME=null
-MAIL_HOST=smtp-relay.brevo.com
-MAIL_PORT=587
-MAIL_USERNAME=your-brevo-smtp-login
-MAIL_PASSWORD=your-brevo-smtp-key
+MAIL_MAILER=brevo
+BREVO_API_KEY=xkeysib-your-brevo-api-key
 MAIL_FROM_ADDRESS=no-reply@your-verified-domain.com
 MAIL_FROM_NAME="HoopFlow"
 ```
@@ -79,12 +93,17 @@ not silently discard them.
 
 ## Troubleshooting
 
-- **`535 Authentication failed`** — copy the Login and SMTP key again from
-  **SMTP & API → SMTP**, regenerate the key if it was revoked, and run
-  `php artisan config:clear`. Test the credentials directly with the Brevo
-  documentation's SMTP example before changing application code.
-- **`Connection could not be established`** — some hosts block outbound port
-  587. Try port `2525` (STARTTLS) or `465` with `MAIL_SCHEME=ssl`.
+- **`BREVO_API_KEY is not configured`** — set the API key in the environment and
+  clear the cached config.
+- **`Unable to send an email: ... (code 401)`** — the API key is invalid or
+  revoked. Create a new key under **SMTP & API → API Keys**.
+- **`Unable to send an email: ... (code 400)`** — usually an unverified sender
+  address or a malformed recipient. Check the Brevo transactional log.
+- **`Maximum execution time ... SocketStream.php`** — the host is blocking
+  outbound SMTP. On Railway, switch to `MAIL_MAILER=brevo` with an API key.
+- **`535 Authentication failed`** — only applies to SMTP. Copy the Login and
+  SMTP key again from **SMTP & API → SMTP**, regenerate the key if it was
+  revoked, and run `php artisan config:clear`.
 - **Mail sends but never arrives** — confirm the sender is verified, check the
   Brevo transactional log, and inspect the recipient's spam folder.
 - **Reset link points at `localhost`** — set `APP_URL` to the public URL and
@@ -111,9 +130,10 @@ invalidates the old one.
 Keep `MAIL_MAILER=log` for local work. Reset emails are written to
 `storage/logs/laravel.log` and no external account is needed.
 
-To inspect rendered messages without sending them, use a Mailtrap Email Sandbox
-inbox: create a sandbox, copy its SMTP credentials, and keep the token in local
-`.env` only.
+To send real mail locally, set `MAIL_MAILER=brevo` and a `BREVO_API_KEY` in
+`.env`. To inspect rendered messages without sending them, use a Mailtrap Email
+Sandbox inbox: create a sandbox, copy its SMTP credentials, and keep the token
+in local `.env` only.
 
 ## Never commit secrets
 

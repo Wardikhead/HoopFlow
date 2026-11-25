@@ -30,12 +30,18 @@ return [
     | your mailers below. You may also add additional mailers if needed.
     |
     | Supported: "smtp", "sendmail", "mailgun", "ses", "ses-v2",
-    |            "postmark", "resend", "log", "array",
+    |            "postmark", "resend", "brevo", "log", "array",
     |            "failover", "roundrobin"
     |
     */
 
     'mailers' => [
+
+        // Brevo's HTTPS API. Required on Railway plans that block outbound
+        // SMTP; registered in AppServiceProvider.
+        'brevo' => [
+            'transport' => 'brevo',
+        ],
 
         'smtp' => [
             'transport' => 'smtp',
