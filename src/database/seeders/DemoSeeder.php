@@ -88,35 +88,37 @@ class DemoSeeder extends Seeder
     {
         $this->call([OrganizationSeeder::class, RoleSeeder::class]);
 
-        fwrite(STDERR, "DEMO: seeders called\n");
-
         $this->organization = Organization::query()->where('slug', 'default')->firstOrFail();
-        fwrite(STDERR, 'DEMO: org found id='.$this->organization->id."\n");
         $this->seedUsers();
-        fwrite(STDERR, "DEMO: users seeded\n");
 
+        // Supabase (and other managed Postgres providers) impose a default
+        // statement/idle-in-transaction timeout that the long-running demo seed
+        // exceeds. Disable both for this session when running on Postgres.
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('SET statement_timeout = 0');
             DB::statement('SET idle_in_transaction_session_timeout = 0');
         }
-        fwrite(STDERR, "DEMO: timeouts set\n");
 
+        // Purge in its own short transaction so a later failure does not leave
+        // a half-seeded dataset behind on the next run (purge runs again first).
         DB::transaction(function (): void {
-            fwrite(STDERR, "DEMO: entering transaction\n");
             $this->purgeDemoData();
-            fwrite(STDERR, "DEMO: purge done\n");
-            $this->seedTeams();
-            fwrite(STDERR, "DEMO: teams seeded\n");
-            $this->seedReferees();
-            $this->seedCompletedSingleElimination();
-            $this->seedCompletedRoundRobin();
-            $this->seedActiveBestOfThree();
-            $this->seedCompletedDoubleElimination();
-            $this->seedRegistrationOpenTournament();
-            $this->attachMatchOfficials();
-            $this->seedAnnouncements();
-            $this->seedAuditTrail();
         });
+
+        // Seed each phase without one long-running transaction: every match
+        // publish already wraps its own work in a transaction, so holding a
+        // single transaction open for minutes (which Supabase/network drops)
+        // is avoided.
+        $this->seedTeams();
+        $this->seedReferees();
+        $this->seedCompletedSingleElimination();
+        $this->seedCompletedRoundRobin();
+        $this->seedActiveBestOfThree();
+        $this->seedCompletedDoubleElimination();
+        $this->seedRegistrationOpenTournament();
+        $this->attachMatchOfficials();
+        $this->seedAnnouncements();
+        $this->seedAuditTrail();
     }
 
     protected function seedUsers(): void
@@ -207,7 +209,6 @@ class DemoSeeder extends Seeder
     protected function seedTeams(): void
     {
         foreach ($this->teamDefinitions as $index => $definition) {
-            fwrite(STDERR, 'DEMO: seeding team '.$index.'\\n');
             $team = Team::create([
                 'organization_id' => $this->organization()->id,
                 'name' => $definition['name'],
@@ -222,7 +223,6 @@ class DemoSeeder extends Seeder
 
             $this->teams[$index] = $team;
             $this->seedRoster($team, $index, $index < 16 ? 'verified' : 'pending');
-            fwrite(STDERR, 'DEMO: team '.$index.' done\\n');
         }
 
         $vipers = $this->teams[8] ?? null;
@@ -449,7 +449,6 @@ class DemoSeeder extends Seeder
 
     protected function seedCompletedSingleElimination(): void
     {
-        fwrite(STDERR, 'DEMO: starting Founders Cup\\n');
         $tournament = $this->createTournament([
             'name' => 'HoopFlow Founders Cup 2026',
             'slug' => 'founders-cup-2026',
@@ -466,7 +465,6 @@ class DemoSeeder extends Seeder
             'venue_address' => 'M. Suarez Ave, Pasig City',
             'courts' => ['Court 1', 'Court 2'],
         ]);
-        fwrite(STDERR, 'DEMO: Founders Cup tournament created\\n');
 
         $specs = [];
 
