@@ -7,12 +7,15 @@ use App\Services\Calendar\IcsCalendarWriter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\RequireLivewireHeaders;
+use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoApiTransport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,12 +38,32 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('reset-demo', fn (User $user) => $user->hasRole('organizer'));
         Gate::define('view-audit', fn (User $user) => $user->hasRole('organizer'));
 
+        $this->configureMailTransport();
         $this->configureRateLimiting();
         $this->configureLivewireUpdateRoute();
 
         if ($this->app->environment('production')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+            URL::forceScheme('https');
         }
+    }
+
+    /**
+     * Register the Brevo HTTPS API transport.
+     *
+     * Railway blocks outbound SMTP on its Free, Trial, and Hobby plans, so
+     * production sends through Brevo's API instead of the SMTP relay.
+     */
+    private function configureMailTransport(): void
+    {
+        Mail::extend('brevo', function (): BrevoApiTransport {
+            $key = (string) config('services.brevo.key');
+
+            if ($key === '') {
+                throw new \RuntimeException('BREVO_API_KEY is not configured.');
+            }
+
+            return new BrevoApiTransport($key);
+        });
     }
 
     /**
