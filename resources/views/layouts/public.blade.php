@@ -232,7 +232,8 @@
                 </div>
             </header>
 
-            <nav class="hf-bottom-nav" aria-label="Mobile navigation">
+            <nav class="hf-bottom-nav" aria-label="Mobile navigation" data-bottom-nav>
+                <span class="hf-bottom-nav__indicator" aria-hidden="true"></span>
                 @foreach ($roleTabs as $tab)
                     <a class="hf-nav-tab{{ $isActive($tab['key']) ? ' is-active' : '' }}"
                        href="{{ route($tab['route']) }}"

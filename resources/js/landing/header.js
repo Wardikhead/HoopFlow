@@ -27,23 +27,68 @@ export default function initHeader() {
         return;
     }
 
-    const close = () => {
+    const icon = button.querySelector('i');
+    const MENU_MS = 420;
+    let closeTimer = null;
+
+    const motionAllowed = () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        && document.documentElement.dataset.motion !== 'reduced';
+
+    const setIcon = (open) => {
+        if (!icon) return;
+
+        icon.classList.toggle('bi-list', !open);
+        icon.classList.toggle('bi-x-lg', open);
+    };
+
+    const open = () => {
+        window.clearTimeout(closeTimer);
+        menu.hidden = false;
+
+        // Let the closed state paint before opening so the height transition runs.
+        window.requestAnimationFrame(() => menu.classList.add('is-open'));
+
+        button.setAttribute('aria-expanded', 'true');
+        button.setAttribute('aria-label', 'Close menu');
+        setIcon(true);
+    };
+
+    const settle = () => {
         menu.hidden = true;
+        menu.classList.remove('is-open');
+    };
+
+    const close = ({ instant = false } = {}) => {
+        window.clearTimeout(closeTimer);
         button.setAttribute('aria-expanded', 'false');
         button.setAttribute('aria-label', 'Open menu');
+        setIcon(false);
+
+        if (menu.hidden) return;
+
+        menu.classList.remove('is-open');
+
+        if (instant || !motionAllowed()) {
+            settle();
+
+            return;
+        }
+
+        closeTimer = window.setTimeout(settle, MENU_MS);
     };
 
     button.addEventListener('click', () => {
-        const open = menu.hidden;
-        menu.hidden = !open;
-        button.setAttribute('aria-expanded', String(open));
-        button.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        if (button.getAttribute('aria-expanded') === 'true') {
+            close();
+        } else {
+            open();
+        }
     });
 
-    menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', close));
+    menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => close()));
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && !menu.hidden) {
             close();
         }
     });
@@ -52,5 +97,9 @@ export default function initHeader() {
         if (!menu.hidden && !menu.contains(event.target) && !button.contains(event.target)) {
             close();
         }
+    });
+
+    window.matchMedia('(min-width: 992px)').addEventListener('change', (event) => {
+        if (event.matches) close({ instant: true });
     });
 }
