@@ -88,18 +88,23 @@ class DemoSeeder extends Seeder
     {
         $this->call([OrganizationSeeder::class, RoleSeeder::class]);
 
-        $this->organization = Organization::query()->where('slug', 'default')->firstOrFail();
-        $this->seedUsers();
+        fwrite(STDERR, "DEMO: seeders called\n");
 
-        // Supabase (and other managed Postgres providers) impose a default
-        // statement/idle-in-transaction timeout that the long-running demo seed
-        // exceeds. Disable both for this session.
+        $this->organization = Organization::query()->where('slug', 'default')->firstOrFail();
+        fwrite(STDERR, 'DEMO: org found id='.$this->organization->id."\n");
+        $this->seedUsers();
+        fwrite(STDERR, "DEMO: users seeded\n");
+
         DB::statement('SET statement_timeout = 0');
         DB::statement('SET idle_in_transaction_session_timeout = 0');
+        fwrite(STDERR, "DEMO: timeouts set\n");
 
         DB::transaction(function (): void {
+            fwrite(STDERR, "DEMO: entering transaction\n");
             $this->purgeDemoData();
+            fwrite(STDERR, "DEMO: purge done\n");
             $this->seedTeams();
+            fwrite(STDERR, "DEMO: teams seeded\n");
             $this->seedReferees();
             $this->seedCompletedSingleElimination();
             $this->seedCompletedRoundRobin();
@@ -200,6 +205,7 @@ class DemoSeeder extends Seeder
     protected function seedTeams(): void
     {
         foreach ($this->teamDefinitions as $index => $definition) {
+            fwrite(STDERR, 'DEMO: seeding team '.$index.'\\n');
             $team = Team::create([
                 'organization_id' => $this->organization()->id,
                 'name' => $definition['name'],
@@ -214,6 +220,7 @@ class DemoSeeder extends Seeder
 
             $this->teams[$index] = $team;
             $this->seedRoster($team, $index, $index < 16 ? 'verified' : 'pending');
+            fwrite(STDERR, 'DEMO: team '.$index.' done\\n');
         }
 
         $vipers = $this->teams[8] ?? null;
@@ -440,6 +447,7 @@ class DemoSeeder extends Seeder
 
     protected function seedCompletedSingleElimination(): void
     {
+        fwrite(STDERR, 'DEMO: starting Founders Cup\\n');
         $tournament = $this->createTournament([
             'name' => 'HoopFlow Founders Cup 2026',
             'slug' => 'founders-cup-2026',
@@ -456,6 +464,7 @@ class DemoSeeder extends Seeder
             'venue_address' => 'M. Suarez Ave, Pasig City',
             'courts' => ['Court 1', 'Court 2'],
         ]);
+        fwrite(STDERR, 'DEMO: Founders Cup tournament created\\n');
 
         $specs = [];
 
