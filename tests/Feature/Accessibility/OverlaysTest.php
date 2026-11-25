@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Overlays test. */
+
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -10,6 +12,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Overlay x path.
+ *
+ * @param  string  $html  The html.
+ * @return DOMXPath The result.
+ */
 function overlayXPath(string $html): DOMXPath
 {
     $dom = new DOMDocument;

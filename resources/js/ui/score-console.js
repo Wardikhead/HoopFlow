@@ -1,5 +1,11 @@
+// Front-end script for Score console.
+
 let initialized = false;
 
+/**
+ * Init score console.
+ * @returns {*} The result.
+ */
 export function initScoreConsole() {
     if (initialized) return;
     initialized = true;

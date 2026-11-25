@@ -1,5 +1,7 @@
 <?php
 
+/** Configuration for App. */
+
 return [
 
     /*

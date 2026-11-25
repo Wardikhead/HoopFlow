@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Tournament show. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Announcement;
@@ -64,6 +66,12 @@ class TournamentShow extends Component
     /** @var array<string, mixed> */
     public array $previewPlan = [];
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|Tournament|null  $tournament  The tournament.
+     * @return void Nothing.
+     */
     public function mount(int|string|Tournament|null $tournament = null): void
     {
         $id = $tournament instanceof Tournament
@@ -81,6 +89,11 @@ class TournamentShow extends Component
         $this->tournamentId = $id ?? 0;
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
@@ -100,6 +113,11 @@ class TournamentShow extends Component
             ->find($this->tournamentId);
     }
 
+    /**
+     * Role.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function role(): string
     {
@@ -116,6 +134,11 @@ class TournamentShow extends Component
         return 'fan';
     }
 
+    /**
+     * Coach team.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function coachTeam(): ?Team
     {
@@ -156,18 +179,33 @@ class TournamentShow extends Component
             ->values();
     }
 
+    /**
+     * Approved count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function approvedCount(): int
     {
         return $this->registrations->where('status', 'approved')->count();
     }
 
+    /**
+     * Pending count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function pendingCount(): int
     {
         return $this->registrations->whereIn('status', ['submitted', 'pending'])->count();
     }
 
+    /**
+     * Matches played.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function matchesPlayed(): int
     {
@@ -177,12 +215,22 @@ class TournamentShow extends Component
             ->count() ?? 0;
     }
 
+    /**
+     * Matches scheduled.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function matchesScheduled(): int
     {
         return $this->tournament?->matches->where('status', 'scheduled')->count() ?? 0;
     }
 
+    /**
+     * Collected.
+     *
+     * @return float The result.
+     */
     #[Computed]
     public function collected(): float
     {
@@ -195,6 +243,11 @@ class TournamentShow extends Component
             });
     }
 
+    /**
+     * Expected.
+     *
+     * @return float The result.
+     */
     #[Computed]
     public function expected(): float
     {
@@ -203,6 +256,11 @@ class TournamentShow extends Component
         return $billable * ($this->tournament?->entryFee() ?? 0.0);
     }
 
+    /**
+     * Collection rate.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function collectionRate(): int
     {
@@ -211,12 +269,22 @@ class TournamentShow extends Component
             : 0;
     }
 
+    /**
+     * Has bracket.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasBracket(): bool
     {
         return $this->tournament?->matches->isNotEmpty() ?? false;
     }
 
+    /**
+     * Bracket rounds.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function bracketRounds(): int
     {
@@ -226,6 +294,11 @@ class TournamentShow extends Component
             ->count() ?? 0;
     }
 
+    /**
+     * Champion.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function champion(): ?Team
     {
@@ -236,6 +309,11 @@ class TournamentShow extends Component
         return app(BracketService::class)->champion($this->tournament);
     }
 
+    /**
+     * Can generate bracket.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canGenerateBracket(): bool
     {
@@ -244,6 +322,11 @@ class TournamentShow extends Component
             && $this->approvedCount >= 2;
     }
 
+    /**
+     * Can generate schedule.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canGenerateSchedule(): bool
     {
@@ -322,6 +405,11 @@ class TournamentShow extends Component
         }, $assignments);
     }
 
+    /**
+     * Request generate bracket.
+     *
+     * @return void Nothing.
+     */
     public function requestGenerateBracket(): void
     {
         $tournament = $this->tournament;
@@ -353,6 +441,11 @@ class TournamentShow extends Component
         );
     }
 
+    /**
+     * Request archive tournament.
+     *
+     * @return void Nothing.
+     */
     public function requestArchiveTournament(): void
     {
         $tournament = $this->tournament;
@@ -378,6 +471,11 @@ class TournamentShow extends Component
         );
     }
 
+    /**
+     * Request restore tournament.
+     *
+     * @return void Nothing.
+     */
     public function requestRestoreTournament(): void
     {
         $tournament = $this->tournament;
@@ -403,6 +501,11 @@ class TournamentShow extends Component
         );
     }
 
+    /**
+     * Request delete tournament.
+     *
+     * @return void Nothing.
+     */
     public function requestDeleteTournament(): void
     {
         $tournament = $this->tournament;
@@ -422,6 +525,11 @@ class TournamentShow extends Component
         );
     }
 
+    /**
+     * Request generate schedule.
+     *
+     * @return void Nothing.
+     */
     public function requestGenerateSchedule(): void
     {
         $tournament = $this->tournament;
@@ -454,12 +562,22 @@ class TournamentShow extends Component
         }
     }
 
+    /**
+     * Close schedule preview.
+     *
+     * @return void Nothing.
+     */
     public function closeSchedulePreview(): void
     {
         $this->showSchedulePreview = false;
         $this->previewPlan = [];
     }
 
+    /**
+     * Publish schedule.
+     *
+     * @return void Nothing.
+     */
     public function publishSchedule(): void
     {
         $tournament = $this->tournament;
@@ -481,6 +599,11 @@ class TournamentShow extends Component
         }
     }
 
+    /**
+     * Confirm.
+     *
+     * @return void Nothing.
+     */
     public function confirm(): void
     {
         $action = $this->confirmAction;
@@ -517,6 +640,13 @@ class TournamentShow extends Component
         }
     }
 
+    /**
+     * Confirm lifecycle action.
+     *
+     * @param  string  $action  The action.
+     * @param  Tournament  $tournament  The tournament.
+     * @return void Nothing.
+     */
     protected function confirmLifecycleAction(string $action, Tournament $tournament): void
     {
         $lifecycle = app(TournamentLifecycleService::class);
@@ -554,11 +684,26 @@ class TournamentShow extends Component
         };
     }
 
+    /**
+     * Cancel confirm.
+     *
+     * @return void Nothing.
+     */
     public function cancelConfirm(): void
     {
         $this->resetConfirm();
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @return void Nothing.
+     */
     protected function openConfirm(
         string $title,
         string $message,
@@ -574,6 +719,11 @@ class TournamentShow extends Component
         $this->showConfirm = true;
     }
 
+    /**
+     * Reset confirm.
+     *
+     * @return void Nothing.
+     */
     protected function resetConfirm(): void
     {
         $this->showConfirm = false;
@@ -584,11 +734,24 @@ class TournamentShow extends Component
         $this->confirmAction = '';
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.tournament-show');

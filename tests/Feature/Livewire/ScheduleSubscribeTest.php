@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Schedule subscribe test. */
+
 use App\Livewire\Organizer\ScheduleShow;
 use App\Models\Bracket;
 use App\Models\Division;

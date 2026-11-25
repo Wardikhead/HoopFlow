@@ -1,3 +1,5 @@
+// Front-end tests for Live scores.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeSnapshot, pollInterval } from '../../resources/js/ui/live-scores.js';

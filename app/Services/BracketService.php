@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Bracket service. */
+
 namespace App\Services;
 
 use App\Models\AuditLog;
@@ -21,7 +23,9 @@ use Illuminate\Support\Facades\DB;
 class BracketService
 {
     /**
-     * @return array{matches: int, games: int, byes: int}
+     * Generate a tournament bracket and persist its matches.
+     *
+     * @return array{matches: int, games: int, byes: int} The generated counts
      */
     public function generate(
         Tournament $tournament,
@@ -237,6 +241,11 @@ class BracketService
         });
     }
 
+    /**
+     * Reserve the next match identifier for a generated bracket.
+     *
+     * @return int The result.
+     */
     protected function nextMatchId(): int
     {
         if (DB::getDriverName() === 'pgsql') {
@@ -471,6 +480,12 @@ class BracketService
         ];
     }
 
+    /**
+     * Copy series metadata onto every game in the same series.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return void Nothing.
+     */
     public function syncSeriesTeams(MatchModel $anchor): void
     {
         if ($anchor->best_of <= 1 || $anchor->series_id !== null) {
@@ -485,6 +500,12 @@ class BracketService
             ]);
     }
 
+    /**
+     * Fill or remove placeholder matches for bracket byes.
+     *
+     * @param  Bracket  $bracket  The bracket.
+     * @return void Nothing.
+     */
     public function resolveStructuralByes(Bracket $bracket): void
     {
         $anchorCount = MatchModel::where('bracket_id', $bracket->id)->whereNull('series_id')->count();
@@ -542,6 +563,12 @@ class BracketService
         }
     }
 
+    /**
+     * Return the display state of a bracket slot.
+     *
+     * @param  BracketSlot  $slot  The slot.
+     * @return string The result.
+     */
     protected function slotState(BracketSlot $slot): string
     {
         if ($slot->team_id !== null) {
@@ -571,6 +598,13 @@ class BracketService
         return $source->winner_team_id !== null ? 'known' : 'pending';
     }
 
+    /**
+     * Advance a team through a bye without playing a game.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $winnerId  The winner id.
+     * @return void Nothing.
+     */
     protected function applyBye(MatchModel $match, int $winnerId): void
     {
         if ($match->best_of > 1) {
@@ -597,6 +631,12 @@ class BracketService
         $this->propagateMatchResult($match, $winnerId);
     }
 
+    /**
+     * Mark a match cancelled and clear its downstream results.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     protected function cancelMatch(MatchModel $match): void
     {
         if ($match->best_of > 1) {
@@ -618,6 +658,13 @@ class BracketService
         $match->save();
     }
 
+    /**
+     * Remove matches and slots for a bracket before regenerating it.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  string  $format  The format.
+     * @return void Nothing.
+     */
     protected function deleteBracketData(Tournament $tournament, string $format): void
     {
         $divisionIds = $tournament->divisions()->pluck('id');
@@ -741,6 +788,15 @@ class BracketService
         });
     }
 
+    /**
+     * Correct a recorded score and audit the reason.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $score1  The score1.
+     * @param  int  $score2  The score2.
+     * @param  string  $reason  The reason.
+     * @return void Nothing.
+     */
     public function correctScore(MatchModel $match, int $score1, int $score2, string $reason): void
     {
         $reason = trim($reason);
@@ -842,6 +898,12 @@ class BracketService
         });
     }
 
+    /**
+     * Create or remove the grand final reset game.
+     *
+     * @param  MatchModel  $grandFinal  The grand final.
+     * @return void Nothing.
+     */
     public function syncGrandFinalReset(MatchModel $grandFinal): void
     {
         if ($grandFinal->stage !== 'grand_final' || $grandFinal->best_of > 1) {
@@ -890,6 +952,12 @@ class BracketService
         }
     }
 
+    /**
+     * Return the tournament champion, if one is decided.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return ?Team The result.
+     */
     public function champion(Tournament $tournament): ?Team
     {
         $format = $tournament->format();
@@ -918,6 +986,12 @@ class BracketService
             : $this->singleEliminationChampion($bracket);
     }
 
+    /**
+     * Find the champion from the single-elimination bracket.
+     *
+     * @param  Bracket  $bracket  The bracket.
+     * @return ?Team The result.
+     */
     protected function singleEliminationChampion(Bracket $bracket): ?Team
     {
         $final = MatchModel::where('bracket_id', $bracket->id)
@@ -933,6 +1007,12 @@ class BracketService
         return $final->winnerTeam instanceof Team ? $final->winnerTeam : null;
     }
 
+    /**
+     * Find the champion from the double-elimination bracket.
+     *
+     * @param  Bracket  $bracket  The bracket.
+     * @return ?Team The result.
+     */
     protected function doubleEliminationChampion(Bracket $bracket): ?Team
     {
         $grandFinal = MatchModel::where('bracket_id', $bracket->id)
@@ -970,6 +1050,12 @@ class BracketService
         return null;
     }
 
+    /**
+     * Check whether any later match already has a result.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return bool The result.
+     */
     protected function downstreamHasResults(MatchModel $anchor): bool
     {
         $slots = BracketSlot::where('source_match_id', $anchor->id)->get();
@@ -1012,6 +1098,12 @@ class BracketService
         return false;
     }
 
+    /**
+     * Clear results and participants in matches after the source match.
+     *
+     * @param  MatchModel  $source  The source.
+     * @return void Nothing.
+     */
     protected function clearDownstream(MatchModel $source): void
     {
         $slots = BracketSlot::where('source_match_id', $source->id)->get();
@@ -1057,6 +1149,14 @@ class BracketService
         }
     }
 
+    /**
+     * Store a match score and update the bracket.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $score1  The score1.
+     * @param  int  $score2  The score2.
+     * @return void Nothing.
+     */
     public function recordScore(MatchModel $match, int $score1, int $score2): void
     {
         if ($score1 < 0 || $score2 < 0) {
@@ -1092,6 +1192,13 @@ class BracketService
         });
     }
 
+    /**
+     * Record a forfeit result for one side of a match.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $forfeitSide  The forfeit side.
+     * @return void Nothing.
+     */
     public function recordForfeit(MatchModel $match, int $forfeitSide): void
     {
         if (! in_array($forfeitSide, [1, 2], true)) {
@@ -1127,6 +1234,12 @@ class BracketService
         });
     }
 
+    /**
+     * Mark a match complete and propagate its outcome.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     public function finalizeMatch(MatchModel $match): void
     {
         DB::transaction(function () use ($match): void {
@@ -1210,6 +1323,12 @@ class BracketService
         return ['winnerId' => $winnerId, 'loserId' => $loserId];
     }
 
+    /**
+     * Mark the tournament complete when its final match is decided.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     protected function syncTournamentCompletion(MatchModel $match): void
     {
         $tournament = $match->tournament;
@@ -1224,11 +1343,23 @@ class BracketService
         );
     }
 
+    /**
+     * Return the wins required to take a best-of series.
+     *
+     * @param  int  $bestOf  The best of.
+     * @return int The result.
+     */
     public function seriesWinsNeeded(int $bestOf): int
     {
         return intdiv($bestOf, 2) + 1;
     }
 
+    /**
+     * Keep all games in a series consistent with their anchor result.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return void Nothing.
+     */
     public function syncSeries(MatchModel $anchor): void
     {
         if ($anchor->series_id !== null) {
@@ -1307,6 +1438,12 @@ class BracketService
         $this->activateNextSeriesGame($anchor);
     }
 
+    /**
+     * Cancel unplayed games after a series is decided.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return void Nothing.
+     */
     public function cancelRemainingSeriesGames(MatchModel $anchor): void
     {
         $childIds = MatchModel::where('series_id', $anchor->id)
@@ -1333,6 +1470,12 @@ class BracketService
         }
     }
 
+    /**
+     * Open the next undecided game in a series.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return void Nothing.
+     */
     protected function activateNextSeriesGame(MatchModel $anchor): void
     {
         $games = MatchModel::where('series_id', $anchor->id)
@@ -1390,6 +1533,13 @@ class BracketService
         ]);
     }
 
+    /**
+     * Push a match winner into the next bracket slot.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  ?int  $winnerId  The winner id.
+     * @return void Nothing.
+     */
     protected function propagateMatchResult(MatchModel $match, ?int $winnerId): void
     {
         if ($match->series_id !== null) {
@@ -1445,6 +1595,13 @@ class BracketService
         }
     }
 
+    /**
+     * Update legacy single-elimination standings after a result.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  ?int  $winnerId  The winner id.
+     * @return void Nothing.
+     */
     protected function propagateLegacySingleElimination(MatchModel $match, ?int $winnerId): void
     {
         if ($winnerId === null) {

@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Payment factory. */
+
 namespace Database\Factories;
 
 use App\Models\Payment;
@@ -12,6 +14,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PaymentFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

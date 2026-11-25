@@ -1,3 +1,4 @@
+{{-- Blade view for 403. --}}
 <x-error-page
     code="403"
     title="You don’t have access"

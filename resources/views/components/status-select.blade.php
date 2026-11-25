@@ -1,3 +1,4 @@
+{{-- Blade view for Status select. --}}
 @props([
     'value',
     'options',

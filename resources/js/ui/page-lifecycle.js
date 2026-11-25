@@ -1,3 +1,5 @@
+// Front-end script for Page lifecycle.
+
 import { initBracketZoom } from './bracket';
 import { initCalendar } from './calendar';
 import { initCardMenus } from './card-menu';
@@ -23,11 +25,19 @@ let liveScores = null;
 let lastUrl = null;
 let globalsReady = false;
 
+/**
+ * Sync document state.
+ * @returns {*} The result.
+ */
 function syncDocumentState() {
     applyPreferences();
     syncNavRail();
 }
 
+/**
+ * Init globals.
+ * @returns {*} The result.
+ */
 function initGlobals() {
     if (globalsReady) return;
     globalsReady = true;
@@ -66,6 +76,13 @@ function initGlobals() {
     });
 }
 
+/**
+ * Init page.
+ *
+ * @param {*} { focus  The { focus.
+ * @param {*} animate  The animate.
+ * @returns {*} The result.
+ */
 function initPage({ focus = true, animate = true } = {}) {
     if (animate) {
         applyReveal();
@@ -89,6 +106,10 @@ function initPage({ focus = true, animate = true } = {}) {
     consumeFlashToast();
 }
 
+/**
+ * Teardown page.
+ * @returns {*} The result.
+ */
 function teardownPage() {
     liveScores?.stop();
     liveScores = null;
@@ -98,16 +119,28 @@ function teardownPage() {
     document.querySelector('.hf-rail-tooltip')?.remove();
 }
 
+/**
+ * Focus main.
+ * @returns {*} The result.
+ */
 function focusMain() {
     document.getElementById('main')?.focus({ preventScroll: true });
 }
 
+/**
+ * Announce page.
+ * @returns {*} The result.
+ */
 function announcePage() {
     const region = document.querySelector('[data-hf-page-announcer]');
 
     if (region) region.textContent = document.title;
 }
 
+/**
+ * Consume flash toast.
+ * @returns {*} The result.
+ */
 function consumeFlashToast() {
     const dispatch = () => {
         window.setTimeout(() => {
@@ -135,6 +168,10 @@ function consumeFlashToast() {
     document.addEventListener('DOMContentLoaded', dispatch, { once: true });
 }
 
+/**
+ * Init page lifecycle.
+ * @returns {*} The result.
+ */
 export function initPageLifecycle() {
     initGlobals();
 

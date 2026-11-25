@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Verify session fingerprint. */
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -9,6 +11,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VerifySessionFingerprint
 {
+    /**
+     * Handle.
+     *
+     * @param  Request  $request  The request.
+     * @param  Closure  $next  The next.
+     * @return Response The result.
+     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

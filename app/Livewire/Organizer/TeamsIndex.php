@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Teams index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Registration;
@@ -34,6 +36,11 @@ class TeamsIndex extends Component
 
     public string $search = '';
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $requested = request()->query('tournament');
@@ -78,6 +85,11 @@ class TeamsIndex extends Component
         }
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->status = '';
@@ -85,6 +97,11 @@ class TeamsIndex extends Component
         $this->search = '';
     }
 
+    /**
+     * Role.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function role(): string
     {
@@ -142,6 +159,11 @@ class TeamsIndex extends Component
         );
     }
 
+    /**
+     * Selected tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function selectedTournament(): ?Tournament
     {
@@ -289,11 +311,22 @@ class TeamsIndex extends Component
         ];
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.teams-index');
     }
 
+    /**
+     * Registration for.
+     *
+     * @param  Team  $team  The team.
+     * @return ?Registration The result.
+     */
     protected function registrationFor(Team $team): ?Registration
     {
         $registration = $team->registrations->firstWhere('tournament_id', $this->tournament);
@@ -301,6 +334,12 @@ class TeamsIndex extends Component
         return $registration instanceof Registration ? $registration : null;
     }
 
+    /**
+     * Registration status.
+     *
+     * @param  string  $status  The status.
+     * @return string The result.
+     */
     protected function registrationStatus(string $status): string
     {
         return $status === 'pending' ? 'submitted' : $status;

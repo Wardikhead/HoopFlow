@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Announcements index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Announcement;
@@ -34,6 +36,11 @@ class AnnouncementsIndex extends Component
 
     public bool $confirmingDelete = false;
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $requested = request()->query('id') ?? request()->query('tournament');
@@ -51,6 +58,11 @@ class AnnouncementsIndex extends Component
         $this->search = (string) (request()->query('q') ?? '');
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->tournament = 'all';
@@ -58,6 +70,12 @@ class AnnouncementsIndex extends Component
         $this->search = '';
     }
 
+    /**
+     * Open announcement.
+     *
+     * @param  int  $announcementId  The announcement id.
+     * @return void Nothing.
+     */
     public function openAnnouncement(int $announcementId): void
     {
         if (! Announcement::query()->whereKey($announcementId)->exists()) {
@@ -68,12 +86,22 @@ class AnnouncementsIndex extends Component
         $this->confirmingDelete = false;
     }
 
+    /**
+     * Close announcement.
+     *
+     * @return void Nothing.
+     */
     public function closeAnnouncement(): void
     {
         $this->viewingId = null;
         $this->confirmingDelete = false;
     }
 
+    /**
+     * Toggle pin.
+     *
+     * @return void Nothing.
+     */
     public function togglePin(): void
     {
         $this->ensureOrganizer();
@@ -92,6 +120,11 @@ class AnnouncementsIndex extends Component
         $this->dispatch('hf-toast', message: $pinned ? 'Pinned.' : 'Unpinned.', tone: 'success');
     }
 
+    /**
+     * Confirm delete.
+     *
+     * @return void Nothing.
+     */
     public function confirmDelete(): void
     {
         if (! $this->viewingAnnouncement instanceof Announcement) {
@@ -101,11 +134,21 @@ class AnnouncementsIndex extends Component
         $this->confirmingDelete = true;
     }
 
+    /**
+     * Cancel delete.
+     *
+     * @return void Nothing.
+     */
     public function cancelDelete(): void
     {
         $this->confirmingDelete = false;
     }
 
+    /**
+     * Delete announcement.
+     *
+     * @return void Nothing.
+     */
     public function deleteAnnouncement(): void
     {
         $this->ensureOrganizer();
@@ -216,6 +259,11 @@ class AnnouncementsIndex extends Component
         ];
     }
 
+    /**
+     * Viewing announcement.
+     *
+     * @return ?Announcement The result.
+     */
     #[Computed]
     public function viewingAnnouncement(): ?Announcement
     {
@@ -228,11 +276,21 @@ class AnnouncementsIndex extends Component
             ->find($this->viewingId);
     }
 
+    /**
+     * Ensure organizer.
+     *
+     * @return void Nothing.
+     */
     protected function ensureOrganizer(): void
     {
         abort_unless(auth()->user()?->hasRole('organizer') === true, 403);
     }
 
+    /**
+     * Actor.
+     *
+     * @return ?User The result.
+     */
     protected function actor(): ?User
     {
         $user = auth()->user();
@@ -240,6 +298,11 @@ class AnnouncementsIndex extends Component
         return $user instanceof User ? $user : null;
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.announcements-index');

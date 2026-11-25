@@ -1,3 +1,5 @@
+// Front-end tests for Spa nav.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { shouldInterceptLink } from '../../resources/js/ui/spa-nav.js';

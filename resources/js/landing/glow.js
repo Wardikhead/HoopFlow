@@ -1,3 +1,5 @@
+// Front-end script for Glow.
+
 export default function initGlow() {
     const lab = document.querySelector('[data-landing-lab]');
 

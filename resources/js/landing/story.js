@@ -1,3 +1,5 @@
+// Front-end script for Story.
+
 export default function initStory() {
     const story = document.querySelector('[data-story]');
 

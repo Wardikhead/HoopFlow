@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Ics calendar writer test. */
+
 use App\Services\Calendar\IcsCalendarWriter;
 use Carbon\CarbonImmutable;
 

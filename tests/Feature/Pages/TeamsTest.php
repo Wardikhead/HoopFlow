@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Teams test. */
+
 use App\Livewire\Coach\MyTeam;
 use App\Livewire\Organizer\TeamsIndex;
 use App\Models\Division;

@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Announcement factory. */
+
 namespace Database\Factories;
 
 use App\Models\Announcement;
@@ -12,6 +14,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class AnnouncementFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

@@ -1,3 +1,4 @@
+{{-- Blade view for Schedule panel. --}}
 <div class="hf-lp-schedule" data-schedule>
     <div class="hf-lp-schedule__controls">
         <div class="hf-lp-chip-group" role="group" aria-label="Schedule day">

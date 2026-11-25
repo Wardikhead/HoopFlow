@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Tournament. */
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
@@ -22,6 +24,11 @@ class Tournament extends Model
     /** @use HasFactory<Factory> */
     use BelongsToOrganization, HasFactory, SoftDeletes;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [
@@ -32,6 +39,11 @@ class Tournament extends Model
         ];
     }
 
+    /**
+     * Is archived.
+     *
+     * @return bool The result.
+     */
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
@@ -47,6 +59,13 @@ class Tournament extends Model
         return is_array($rules) ? $rules : [];
     }
 
+    /**
+     * Rule value.
+     *
+     * @param  string  $key  The key.
+     * @param  mixed  $default  The default.
+     * @return mixed The result.
+     */
     public function ruleValue(string $key, mixed $default = null): mixed
     {
         $rules = $this->rules();
@@ -60,6 +79,11 @@ class Tournament extends Model
         return $rules[$snakeKey] ?? $default;
     }
 
+    /**
+     * Slot count.
+     *
+     * @return int The result.
+     */
     public function slotCount(): int
     {
         $slots = $this->ruleValue('slots');
@@ -73,6 +97,11 @@ class Tournament extends Model
         return is_numeric($maxTeams) ? (int) $maxTeams : 0;
     }
 
+    /**
+     * Entry fee.
+     *
+     * @return float The result.
+     */
     public function entryFee(): float
     {
         $entryFee = $this->firstDivision()?->entry_fee;
@@ -86,6 +115,11 @@ class Tournament extends Model
         return is_numeric($fee) ? (float) $fee : 0.0;
     }
 
+    /**
+     * Format.
+     *
+     * @return string The result.
+     */
     public function format(): string
     {
         $format = $this->ruleValue('format');
@@ -95,6 +129,11 @@ class Tournament extends Model
             : 'single-elimination';
     }
 
+    /**
+     * Grand final best of.
+     *
+     * @return int The result.
+     */
     public function grandFinalBestOf(): int
     {
         $bestOf = $this->ruleValue('best_of_final', 1);
@@ -111,6 +150,11 @@ class Tournament extends Model
         return $this->format() === 'double-elimination' && $this->grandFinalBestOf() > 1;
     }
 
+    /**
+     * Format label.
+     *
+     * @return string The result.
+     */
     public function formatLabel(): string
     {
         return match ($this->format()) {
@@ -122,6 +166,11 @@ class Tournament extends Model
         };
     }
 
+    /**
+     * Status label.
+     *
+     * @return string The result.
+     */
     public function statusLabel(): string
     {
         return match ($this->status) {
@@ -134,6 +183,11 @@ class Tournament extends Model
         };
     }
 
+    /**
+     * Slot minutes.
+     *
+     * @return int The result.
+     */
     public function slotMinutes(): int
     {
         $minutes = $this->ruleValue('slotMinutes');
@@ -141,6 +195,11 @@ class Tournament extends Model
         return is_numeric($minutes) && (int) $minutes >= 10 ? (int) $minutes : 30;
     }
 
+    /**
+     * Rest minutes.
+     *
+     * @return int The result.
+     */
     public function restMinutes(): int
     {
         $minutes = $this->ruleValue('restMinutes');
@@ -154,6 +213,11 @@ class Tournament extends Model
         return is_numeric($rule?->rest_minutes) ? max(0, (int) $rule->rest_minutes) : 15;
     }
 
+    /**
+     * Resolved venue.
+     *
+     * @return ?Venue The result.
+     */
     public function resolvedVenue(): ?Venue
     {
         $venueId = $this->ruleValue('venue_id');
@@ -173,6 +237,11 @@ class Tournament extends Model
         return $slot?->court?->venue;
     }
 
+    /**
+     * Venue name.
+     *
+     * @return string The result.
+     */
     public function venueName(): string
     {
         $venue = $this->resolvedVenue();
@@ -180,6 +249,11 @@ class Tournament extends Model
         return $venue instanceof Venue ? $venue->name : 'Venue';
     }
 
+    /**
+     * Court count.
+     *
+     * @return int The result.
+     */
     public function courtCount(): int
     {
         $venue = $this->resolvedVenue();
@@ -195,6 +269,11 @@ class Tournament extends Model
         return $slots->pluck('court_id')->filter()->unique()->count();
     }
 
+    /**
+     * Seeds locked.
+     *
+     * @return bool The result.
+     */
     public function seedsLocked(): bool
     {
         if ($this->relationLoaded('matches')) {
@@ -204,6 +283,11 @@ class Tournament extends Model
         return $this->matches()->exists();
     }
 
+    /**
+     * First division.
+     *
+     * @return ?Division The result.
+     */
     protected function firstDivision(): ?Division
     {
         return $this->relationLoaded('divisions')
@@ -211,6 +295,11 @@ class Tournament extends Model
             : $this->divisions()->first();
     }
 
+    /**
+     * First game rule.
+     *
+     * @return ?GameRule The result.
+     */
     protected function firstGameRule(): ?GameRule
     {
         return $this->relationLoaded('gameRules')

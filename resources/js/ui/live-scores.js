@@ -1,6 +1,14 @@
+// Front-end script for Live scores.
+
 const DEFAULT_INTERVAL = 20000;
 const MIN_INTERVAL = 5000;
 
+/**
+ * Normalize snapshot.
+ *
+ * @param {*} payload The payload.
+ * @returns {*} The result.
+ */
 export function normalizeSnapshot(payload) {
     const data = payload && typeof payload === 'object' && payload.data ? payload.data : payload;
 
@@ -14,12 +22,26 @@ export function normalizeSnapshot(payload) {
     };
 }
 
+/**
+ * Poll interval.
+ *
+ * @param {*} value The value.
+ * @returns {*} The result.
+ */
 export function pollInterval(value) {
     const parsed = Number(value);
 
     return Number.isFinite(parsed) && parsed >= MIN_INTERVAL ? parsed : DEFAULT_INTERVAL;
 }
 
+/**
+ * El.
+ *
+ * @param {*} tag The tag.
+ * @param {*} className The class name.
+ * @param {*} text The text.
+ * @returns {*} The result.
+ */
 function el(tag, className, text) {
     const node = document.createElement(tag);
 
@@ -29,6 +51,15 @@ function el(tag, className, text) {
     return node;
 }
 
+/**
+ * Team block.
+ *
+ * @param {*} team The team.
+ * @param {*} score The score.
+ * @param {*} away The away.
+ * @param {*} leading The leading.
+ * @returns {*} The result.
+ */
 function teamBlock(team, score, away, leading) {
     const wrap = el('div', `hf-live-match__team${away ? ' hf-live-match__team--away' : ''}${leading ? ' is-leading' : ''}`);
     wrap.append(
@@ -39,6 +70,12 @@ function teamBlock(team, score, away, leading) {
     return wrap;
 }
 
+/**
+ * Build row.
+ *
+ * @param {*} match The match.
+ * @returns {*} The result.
+ */
 function buildRow(match) {
     const isLive = match.status === 'in_progress';
     const hasScore = match.home_score !== null && match.away_score !== null;
@@ -66,6 +103,13 @@ function buildRow(match) {
     return row;
 }
 
+/**
+ * Render.
+ *
+ * @param {*} list The list.
+ * @param {*} matches The matches.
+ * @returns {*} The result.
+ */
 function render(list, matches) {
     if (!matches.length) {
         list.replaceChildren(el('p', 'hf-empty', 'No matches have been scheduled yet.'));
@@ -80,6 +124,10 @@ function render(list, matches) {
 
 let active = null;
 
+/**
+ * Init live scores.
+ * @returns {*} The result.
+ */
 export function initLiveScores() {
     active?.stop();
 
@@ -113,6 +161,10 @@ export function initLiveScores() {
         timer = setTimeout(poll, interval);
     };
 
+    /**
+     * Poll.
+     * @returns {*} The result.
+     */
     async function poll() {
         if (document.hidden) return;
 

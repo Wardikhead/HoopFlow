@@ -1,5 +1,7 @@
 <?php
 
+/** Validation rule for Not common password. */
+
 namespace App\Rules;
 
 use Closure;
@@ -51,6 +53,14 @@ class NotCommonPassword implements ValidationRule
         'whatever',
     ];
 
+    /**
+     * Validate.
+     *
+     * @param  string  $attribute  The attribute.
+     * @param  mixed  $value  The value.
+     * @param  Closure  $fail  The fail.
+     * @return void Nothing.
+     */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {

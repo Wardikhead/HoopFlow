@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Tournament lifecycle test. */
+
 use App\Livewire\Organizer\AuditLogIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\AuditLog;
@@ -18,6 +20,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Tls playable match.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @return ?MatchModel The result.
+ */
 function tlsPlayableMatch(Tournament $tournament): ?MatchModel
 {
     return MatchModel::query()
@@ -29,6 +37,13 @@ function tlsPlayableMatch(Tournament $tournament): ?MatchModel
         ->first();
 }
 
+/**
+ * Tls play out.
+ *
+ * @param  BracketService  $service  The service.
+ * @param  Tournament  $tournament  The tournament.
+ * @return void Nothing.
+ */
 function tlsPlayOut(BracketService $service, Tournament $tournament): void
 {
     $guard = 0;
@@ -46,6 +61,14 @@ function tlsPlayOut(BracketService $service, Tournament $tournament): void
     throw new RuntimeException('The bracket did not finish within 500 results.');
 }
 
+/**
+ * Tls play until final.
+ *
+ * @param  BracketService  $service  The service.
+ * @param  Tournament  $tournament  The tournament.
+ * @param  MatchModel  $final  The final.
+ * @return void Nothing.
+ */
 function tlsPlayUntilFinal(BracketService $service, Tournament $tournament, MatchModel $final): void
 {
     $guard = 0;

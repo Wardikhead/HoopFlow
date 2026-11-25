@@ -1,3 +1,10 @@
+/**
+ * Format value.
+ *
+ * @param {*} element The element.
+ * @param {*} value The value.
+ * @returns {*} The result.
+ */
 function formatValue(element, value) {
     if (element.dataset.format !== 'signed') {
         return String(value);

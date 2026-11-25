@@ -1,3 +1,4 @@
+{{-- Blade view for 429. --}}
 <x-error-page
     code="429"
     title="Too many attempts"

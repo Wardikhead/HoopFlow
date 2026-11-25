@@ -1,3 +1,5 @@
+// Front-end script for Cards.
+
 export default function initCards() {
     const cards = [...document.querySelectorAll('[data-hf-card]')];
 

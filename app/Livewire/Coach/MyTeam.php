@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for My team. */
+
 namespace App\Livewire\Coach;
 
 use App\Livewire\SecureComponent;
@@ -81,6 +83,11 @@ class MyTeam extends SecureComponent
 
     public string $paymentReference = '';
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $user = auth()->user();
@@ -139,6 +146,11 @@ class MyTeam extends SecureComponent
             ->get();
     }
 
+    /**
+     * Team.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function team(): ?Team
     {
@@ -163,6 +175,12 @@ class MyTeam extends SecureComponent
             ->find($this->teamId);
     }
 
+    /**
+     * Registration for team.
+     *
+     * @param  Team  $team  The team.
+     * @return ?Registration The result.
+     */
     protected function registrationForTeam(Team $team): ?Registration
     {
         $registrations = $team->registrations;
@@ -191,6 +209,11 @@ class MyTeam extends SecureComponent
         return $statuses;
     }
 
+    /**
+     * Registration.
+     *
+     * @return ?Registration The result.
+     */
     #[Computed]
     public function registration(): ?Registration
     {
@@ -199,6 +222,11 @@ class MyTeam extends SecureComponent
         return $team instanceof Team ? $this->registrationForTeam($team) : null;
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
@@ -213,6 +241,11 @@ class MyTeam extends SecureComponent
             : null;
     }
 
+    /**
+     * Division.
+     *
+     * @return ?Division The result.
+     */
     #[Computed]
     public function division(): ?Division
     {
@@ -225,6 +258,11 @@ class MyTeam extends SecureComponent
         return $this->tournament?->divisions()->first();
     }
 
+    /**
+     * Payment.
+     *
+     * @return ?Payment The result.
+     */
     #[Computed]
     public function payment(): ?Payment
     {
@@ -246,6 +284,11 @@ class MyTeam extends SecureComponent
             : ['wins' => 0, 'losses' => 0];
     }
 
+    /**
+     * Next match.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function nextMatch(): ?MatchModel
     {
@@ -274,6 +317,11 @@ class MyTeam extends SecureComponent
             ->first();
     }
 
+    /**
+     * Roster locked.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function rosterLocked(): bool
     {
@@ -283,6 +331,11 @@ class MyTeam extends SecureComponent
             && ($registration->roster_locked_at !== null || $registration->status === 'approved');
     }
 
+    /**
+     * Entry fee.
+     *
+     * @return float The result.
+     */
     #[Computed]
     public function entryFee(): float
     {
@@ -295,12 +348,22 @@ class MyTeam extends SecureComponent
         return (float) ($this->tournament?->entryFee() ?? 0.0);
     }
 
+    /**
+     * Venue name.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function venueName(): string
     {
         return $this->tournament?->venueName() ?? 'Venue';
     }
 
+    /**
+     * Payment chip status.
+     *
+     * @return string The result.
+     */
     public function paymentChipStatus(): string
     {
         $status = $this->payment->status ?? 'pending';
@@ -308,11 +371,21 @@ class MyTeam extends SecureComponent
         return $status === 'verified' ? 'paid' : $status;
     }
 
+    /**
+     * Payment status text.
+     *
+     * @return string The result.
+     */
     public function paymentStatusText(): string
     {
         return $this->paymentChipStatus();
     }
 
+    /**
+     * Coach name.
+     *
+     * @return string The result.
+     */
     public function coachName(): string
     {
         $team = $this->team;
@@ -328,6 +401,12 @@ class MyTeam extends SecureComponent
         return $team->coachUser->name ?? 'Coach';
     }
 
+    /**
+     * Open player dialog.
+     *
+     * @param  ?int  $playerId  The player id.
+     * @return void Nothing.
+     */
     public function openPlayerDialog(?int $playerId = null): void
     {
         $team = $this->team;
@@ -373,6 +452,11 @@ class MyTeam extends SecureComponent
         $this->showPlayerDialog = true;
     }
 
+    /**
+     * Close player dialog.
+     *
+     * @return void Nothing.
+     */
     public function closePlayerDialog(): void
     {
         $this->showPlayerDialog = false;
@@ -380,6 +464,11 @@ class MyTeam extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Save player.
+     *
+     * @return void Nothing.
+     */
     public function savePlayer(): void
     {
         $team = $this->team;
@@ -475,6 +564,12 @@ class MyTeam extends SecureComponent
         );
     }
 
+    /**
+     * Confirm remove player.
+     *
+     * @param  int  $playerId  The player id.
+     * @return void Nothing.
+     */
     public function confirmRemovePlayer(int $playerId): void
     {
         $team = $this->team;
@@ -494,6 +589,11 @@ class MyTeam extends SecureComponent
         $this->showRemoveDialog = true;
     }
 
+    /**
+     * Cancel remove player.
+     *
+     * @return void Nothing.
+     */
     public function cancelRemovePlayer(): void
     {
         $this->showRemoveDialog = false;
@@ -501,6 +601,11 @@ class MyTeam extends SecureComponent
         $this->removingPlayerName = '';
     }
 
+    /**
+     * Remove player.
+     *
+     * @return void Nothing.
+     */
     public function removePlayer(): void
     {
         $team = $this->team;
@@ -538,6 +643,11 @@ class MyTeam extends SecureComponent
         $this->dispatch('hf-toast', title: 'Roster updated', message: $name.' removed from the roster.', tone: 'success');
     }
 
+    /**
+     * Open payment dialog.
+     *
+     * @return void Nothing.
+     */
     public function openPaymentDialog(): void
     {
         $payment = $this->payment;
@@ -550,12 +660,22 @@ class MyTeam extends SecureComponent
         $this->showPaymentDialog = true;
     }
 
+    /**
+     * Close payment dialog.
+     *
+     * @return void Nothing.
+     */
     public function closePaymentDialog(): void
     {
         $this->showPaymentDialog = false;
         $this->resetValidation();
     }
 
+    /**
+     * Save payment.
+     *
+     * @return void Nothing.
+     */
     public function savePayment(): void
     {
         $team = $this->team;
@@ -655,6 +775,12 @@ class MyTeam extends SecureComponent
         ];
     }
 
+    /**
+     * Position index.
+     *
+     * @param  ?string  $position  The position.
+     * @return int The result.
+     */
     protected function positionIndex(?string $position): int
     {
         $index = array_search($position, self::POSITIONS, true);
@@ -683,6 +809,11 @@ class MyTeam extends SecureComponent
         ]);
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.coach.my-team');

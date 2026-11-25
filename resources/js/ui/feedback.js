@@ -1,12 +1,22 @@
+// Front-end script for Feedback.
+
 let activeRequests = 0;
 let startedAt = 0;
 let showTimer = null;
 let hideTimer = null;
 
+/**
+ * Progress el.
+ * @returns {*} The result.
+ */
 function progressEl() {
     return document.querySelector('[data-hf-progress]');
 }
 
+/**
+ * Show progress.
+ * @returns {*} The result.
+ */
 function showProgress() {
     const bar = progressEl();
     if (!bar) return;
@@ -14,6 +24,10 @@ function showProgress() {
     bar.setAttribute('aria-hidden', 'false');
 }
 
+/**
+ * Hide progress.
+ * @returns {*} The result.
+ */
 function hideProgress() {
     const bar = progressEl();
     if (!bar) return;
@@ -21,6 +35,10 @@ function hideProgress() {
     bar.setAttribute('aria-hidden', 'true');
 }
 
+/**
+ * Start progress.
+ * @returns {*} The result.
+ */
 function startProgress() {
     activeRequests += 1;
     if (activeRequests !== 1) return;
@@ -29,6 +47,10 @@ function startProgress() {
     showTimer = window.setTimeout(showProgress, 150);
 }
 
+/**
+ * Finish progress.
+ * @returns {*} The result.
+ */
 function finishProgress() {
     activeRequests = Math.max(0, activeRequests - 1);
     if (activeRequests !== 0) return;
@@ -37,10 +59,20 @@ function finishProgress() {
     hideTimer = window.setTimeout(hideProgress, Math.max(0, 300 - elapsed));
 }
 
+/**
+ * Toast.
+ *
+ * @param {*} detail The detail.
+ * @returns {*} The result.
+ */
 function toast(detail) {
     window.dispatchEvent(new CustomEvent('hf-toast', { detail }));
 }
 
+/**
+ * Init offline.
+ * @returns {*} The result.
+ */
 function initOffline() {
     const banner = document.querySelector('[data-hf-offline]');
     if (!banner) return;
@@ -62,6 +94,10 @@ function initOffline() {
     sync();
 }
 
+/**
+ * Init requests.
+ * @returns {*} The result.
+ */
 function initRequests() {
     if (!window.Livewire) return;
 
@@ -106,15 +142,27 @@ function initRequests() {
     });
 }
 
+/**
+ * Init feedback.
+ * @returns {*} The result.
+ */
 export function initFeedback() {
     initOffline();
     initRequests();
 }
 
+/**
+ * Begin navigation.
+ * @returns {*} The result.
+ */
 export function beginNavigation() {
     startProgress();
 }
 
+/**
+ * Finish navigation.
+ * @returns {*} The result.
+ */
 export function finishNavigation() {
     finishProgress();
 }

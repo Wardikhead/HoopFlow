@@ -1,5 +1,7 @@
 <?php
 
+/** Application class App service provider. */
+
 namespace App\Providers;
 
 use App\Models\User;
@@ -135,6 +137,12 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Rate limit key.
+     *
+     * @param  Request  $request  The request.
+     * @return string The result.
+     */
     private function rateLimitKey(Request $request): string
     {
         $userId = $request->user()?->getAuthIdentifier();

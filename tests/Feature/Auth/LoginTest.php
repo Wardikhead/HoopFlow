@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Login test. */
+
 use Database\Seeders\PrototypeSeeder;
 
 beforeEach(function () {

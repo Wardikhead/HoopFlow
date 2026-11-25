@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Authentication hardening test. */
+
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Support\Facades\Hash;

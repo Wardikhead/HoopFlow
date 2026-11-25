@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Bracket slot factory. */
+
 namespace Database\Factories;
 
 use App\Models\Bracket;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class BracketSlotFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

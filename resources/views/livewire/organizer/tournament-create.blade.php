@@ -1,3 +1,4 @@
+{{-- Blade view for Tournament create. --}}
 <div>
     @section('title', 'Create tournament')
     @section('meta-description', 'Create a tournament - name, venue, dates, divisions, and game rules in one HoopFlow setup flow.')

@@ -1,3 +1,4 @@
+{{-- Blade view for Bracket show. --}}
 <div>
     @php
         $tournament = $this->tournament;

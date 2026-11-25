@@ -1,3 +1,5 @@
+// Front-end script for Loading.
+
 import { beginNavigation, finishNavigation } from './feedback';
 
 const SHOW_DELAY = 160;
@@ -6,10 +8,18 @@ const SAFETY_TIMEOUT = 12000;
 let safetyTimer = null;
 let navigationWatchdog = null;
 
+/**
+ * Loader element.
+ * @returns {*} The result.
+ */
 function loaderElement() {
     return document.querySelector('[data-hf-page-loader]');
 }
 
+/**
+ * Show page loader.
+ * @returns {*} The result.
+ */
 export function showPageLoader() {
     const loader = loaderElement();
 
@@ -27,6 +37,10 @@ export function showPageLoader() {
     safetyTimer = window.setTimeout(hidePageLoader, SAFETY_TIMEOUT);
 }
 
+/**
+ * Hide page loader.
+ * @returns {*} The result.
+ */
 export function hidePageLoader() {
     const loader = loaderElement();
 
@@ -42,6 +56,10 @@ export function hidePageLoader() {
     if (status) status.textContent = '';
 }
 
+/**
+ * Init page loader.
+ * @returns {*} The result.
+ */
 export function initPageLoader() {
     document.addEventListener('livewire:navigate', () => {
         beginNavigation();

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Series lifecycle test. */
+
 use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
@@ -15,6 +17,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Series tournament.
+ *
+ * @param  array<mixed>  $rules  The rules.
+ * @return Tournament The result.
+ */
 function seriesTournament(array $rules = []): Tournament
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
@@ -25,6 +33,12 @@ function seriesTournament(array $rules = []): Tournament
     return $tournament->fresh();
 }
 
+/**
+ * Series bracket.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @return Bracket The result.
+ */
 function seriesBracket(Tournament $tournament): Bracket
 {
     return Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))

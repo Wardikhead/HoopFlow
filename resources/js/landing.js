@@ -1,3 +1,5 @@
+// Front-end script for Landing.
+
 import initHeader from './landing/header';
 import initReveal from './landing/reveal';
 import initTabs from './landing/tabs';

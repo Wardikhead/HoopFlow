@@ -1,3 +1,4 @@
+{{-- Blade view for Landing. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>

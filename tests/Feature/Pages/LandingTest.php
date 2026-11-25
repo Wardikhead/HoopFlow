@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Landing test. */
+
 use App\Models\User;
 
 it('renders the public landing page with its hero', function () {

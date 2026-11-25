@@ -1,3 +1,5 @@
+// Front-end script for Password strength.
+
 const CHECKS = [
     { key: 'length', label: 'At least 8 characters', met: (password) => password.length >= 8 },
     { key: 'lowercase', label: 'A lowercase letter', met: (password) => /[a-z]/.test(password) },
@@ -8,6 +10,12 @@ const CHECKS = [
 
 const LABELS = ['', 'Very weak', 'Weak', 'Fair', 'Strong'];
 
+/**
+ * Evaluate password.
+ *
+ * @param {*} password  The password.
+ * @returns {*} The result.
+ */
 export function evaluatePassword(password = '') {
     const value = String(password);
     const checks = {};
@@ -41,6 +49,10 @@ export function evaluatePassword(password = '') {
     return { checks, met, score, label, hint, missing };
 }
 
+/**
+ * Register password meter.
+ * @returns {*} The result.
+ */
 export function registerPasswordMeter() {
     document.addEventListener('alpine:init', () => {
         window.Alpine.data('hfPasswordMeter', () => ({

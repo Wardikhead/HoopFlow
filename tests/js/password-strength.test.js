@@ -1,3 +1,5 @@
+// Front-end tests for Password strength.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { evaluatePassword } from '../../resources/js/ui/password-strength.js';

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Matches test. */
+
 use App\Livewire\Organizer\MatchesIndex;
 use App\Models\Court;
 use App\Models\MatchModel;
@@ -17,16 +19,33 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Summer cup.
+ *
+ * @return Tournament The result.
+ */
 function summerCup(): Tournament
 {
     return Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();
 }
 
+/**
+ * Organizer.
+ *
+ * @return User The result.
+ */
 function organizer(): User
 {
     return User::where('email', 'organizer@hoopflow.ph')->firstOrFail();
 }
 
+/**
+ * Match for.
+ *
+ * @param  int  $round  The round.
+ * @param  int  $number  The number.
+ * @return MatchModel The result.
+ */
 function matchFor(int $round, int $number): MatchModel
 {
     return MatchModel::where('round_number', $round)->where('match_number', $number)->firstOrFail();

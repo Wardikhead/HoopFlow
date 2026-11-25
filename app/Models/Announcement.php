@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Announcement. */
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
@@ -37,6 +39,11 @@ class Announcement extends Model
         'specific' => 'Specific users',
     ];
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [
@@ -46,11 +53,23 @@ class Announcement extends Model
         ];
     }
 
+    /**
+     * Category label.
+     *
+     * @param  ?string  $category  The category.
+     * @return string The result.
+     */
     public static function categoryLabel(?string $category): string
     {
         return self::CATEGORIES[$category ?? 'general'] ?? ucfirst((string) $category);
     }
 
+    /**
+     * Audience label.
+     *
+     * @param  ?string  $audience  The audience.
+     * @return string The result.
+     */
     public static function audienceLabel(?string $audience): string
     {
         return self::AUDIENCES[$audience ?? 'all'] ?? ucfirst((string) $audience);

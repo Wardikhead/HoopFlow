@@ -1,5 +1,7 @@
 <?php
 
+/** Validation rule for Eligible birthdate. */
+
 namespace App\Rules;
 
 use App\Models\Division;
@@ -12,11 +14,25 @@ use Illuminate\Contracts\Validation\ValidationRule;
 
 class EligibleBirthdate implements ValidationRule
 {
+    /**
+     * Initialize the instance.
+     *
+     * @param  ?Division  $division  The division.
+     * @param  ?Tournament  $tournament  The tournament.
+     */
     public function __construct(
         private readonly ?Division $division = null,
         private readonly ?Tournament $tournament = null,
     ) {}
 
+    /**
+     * Validate.
+     *
+     * @param  string  $attribute  The attribute.
+     * @param  mixed  $value  The value.
+     * @param  Closure  $fail  The fail.
+     * @return void Nothing.
+     */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || $value === '') {

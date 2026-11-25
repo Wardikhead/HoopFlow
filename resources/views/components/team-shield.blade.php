@@ -1,3 +1,4 @@
+{{-- Blade view for Team shield. --}}
 @props(['team' => null, 'size' => ''])
 
 @php

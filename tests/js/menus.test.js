@@ -1,3 +1,5 @@
+// Front-end tests for Menus.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { menuCloseDelay } from '../../resources/js/ui/menus.js';

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Spa navigation test. */
+
 use App\Livewire\Public\StandingsShow;
 use App\Models\Tournament;
 use App\Models\User;
@@ -13,6 +15,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Spa x path.
+ *
+ * @param  string  $html  The html.
+ * @return DOMXPath The result.
+ */
 function spaXPath(string $html): DOMXPath
 {
     $dom = new DOMDocument;

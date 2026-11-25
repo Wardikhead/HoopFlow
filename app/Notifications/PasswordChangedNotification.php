@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Password changed notification. */
+
 namespace App\Notifications;
 
 use App\Models\User;
@@ -16,6 +18,12 @@ class PasswordChangedNotification extends Notification
         return ['mail'];
     }
 
+    /**
+     * To mail.
+     *
+     * @param  User  $notifiable  The notifiable.
+     * @return MailMessage The result.
+     */
     public function toMail(User $notifiable): MailMessage
     {
         return (new MailMessage)

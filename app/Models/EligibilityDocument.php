@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Eligibility document. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,6 +16,11 @@ class EligibilityDocument extends Model
     /** @use HasFactory<Factory> */
     use HasFactory;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

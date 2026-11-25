@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Audit logger. */
+
 namespace App\Services;
 
 use App\Models\AuditLog;

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Forms test. */
+
 use App\Livewire\Coach\MyTeam;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\AnnouncementCreate;
@@ -19,6 +21,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Form x path.
+ *
+ * @param  string  $html  The html.
+ * @return DOMXPath The result.
+ */
 function formXPath(string $html): DOMXPath
 {
     $dom = new DOMDocument;
@@ -61,6 +69,12 @@ function formSummaryTargets(string $html): array
     return array_values(array_unique($targets));
 }
 
+/**
+ * Form expect summary targets resolve.
+ *
+ * @param  string  $html  The html.
+ * @return void Nothing.
+ */
 function formExpectSummaryTargetsResolve(string $html): void
 {
     $targets = formSummaryTargets($html);

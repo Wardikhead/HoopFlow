@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Dashboard service. */
+
 namespace App\Services;
 
 use App\Models\Announcement;
@@ -13,6 +15,11 @@ use Illuminate\Support\Collection;
 
 class DashboardService
 {
+    /**
+     * Create a dashboard service with standings support.
+     *
+     * @param  StandingsService  $standings  The standings.
+     */
     public function __construct(protected StandingsService $standings) {}
 
     /**
@@ -208,6 +215,12 @@ class DashboardService
         ];
     }
 
+    /**
+     * Return the next unplayed match in the active tournament.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return ?MatchModel The result.
+     */
     public function nextMatch(Tournament $tournament): ?MatchModel
     {
         return $this->sortBySlot(
@@ -218,6 +231,13 @@ class DashboardService
         )->first();
     }
 
+    /**
+     * Return the next unplayed match for a team.
+     *
+     * @param  Team  $team  The team.
+     * @param  ?int  $tournamentId  The tournament id.
+     * @return ?MatchModel The result.
+     */
     public function nextTeamMatch(Team $team, ?int $tournamentId = null): ?MatchModel
     {
         $query = $this->matchQuery()

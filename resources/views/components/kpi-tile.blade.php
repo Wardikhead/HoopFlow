@@ -1,3 +1,4 @@
+{{-- Blade view for Kpi tile. --}}
 @props([
     'label',
     'value',

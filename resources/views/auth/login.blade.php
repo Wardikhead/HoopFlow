@@ -1,3 +1,4 @@
+{{-- Blade view for Login. --}}
 @extends('layouts.public')
 
 @section('title', 'Sign in')

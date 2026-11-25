@@ -1,3 +1,4 @@
+{{-- Blade view for Logout dialog. --}}
 @php
     $user = auth()->user();
     $initials = collect(preg_split('/\s+/', $user?->name ?? ''))

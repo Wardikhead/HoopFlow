@@ -1,10 +1,17 @@
 <?php
 
+/** Database migration 2026 11 06 000071 partition audit logs monthly. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
@@ -32,6 +39,11 @@ SQL);
         DB::statement('CREATE INDEX IF NOT EXISTS audit_logs_entity_idx ON audit_logs (entity_type, entity_id)');
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // no-op: partitioning is additive

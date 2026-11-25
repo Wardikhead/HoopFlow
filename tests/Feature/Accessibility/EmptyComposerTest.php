@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Empty composer test. */
+
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Models\Role;
 use App\Models\User;

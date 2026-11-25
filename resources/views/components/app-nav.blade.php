@@ -1,3 +1,4 @@
+{{-- Blade view for App nav. --}}
 @props([
     'groups' => [],
     'items' => [],

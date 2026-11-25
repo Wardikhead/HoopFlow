@@ -1,3 +1,4 @@
+{{-- Blade view for Home. --}}
 @extends('layouts.landing')
 
 @section('title', 'HoopFlow — Run the league, not the spreadsheet')

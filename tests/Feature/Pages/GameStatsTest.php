@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Game stats test. */
+
 use App\Livewire\Organizer\GameStatsShow;
 use App\Models\AuditLog;
 use App\Models\Bracket;
@@ -20,16 +22,35 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Gs user.
+ *
+ * @param  string  $email  The email.
+ * @return User The result.
+ */
 function gsUser(string $email): User
 {
     return User::where('email', $email)->firstOrFail();
 }
 
+/**
+ * Gs match.
+ *
+ * @param  int  $round  The round.
+ * @param  int  $number  The number.
+ * @return MatchModel The result.
+ */
 function gsMatch(int $round, int $number): MatchModel
 {
     return MatchModel::where('round_number', $round)->where('match_number', $number)->firstOrFail();
 }
 
+/**
+ * Gs player name.
+ *
+ * @param  PlayerStat  $stat  The stat.
+ * @return string The result.
+ */
 function gsPlayerName(PlayerStat $stat): string
 {
     return trim(($stat->player?->first_name ?? '').' '.($stat->player?->last_name ?? ''));
@@ -584,6 +605,11 @@ it('renders the period navigator and the full stat-line columns', function () {
         ->assertSee('2/2');
 });
 
+/**
+ * Gs make editable final.
+ *
+ * @return MatchModel The result.
+ */
 function gsMakeEditableFinal(): MatchModel
 {
     $match = gsMatch(8, 1);
@@ -596,6 +622,12 @@ function gsMakeEditableFinal(): MatchModel
     return $match;
 }
 
+/**
+ * Gs draft editable.
+ *
+ * @param  MatchModel  $match  The match.
+ * @return void Nothing.
+ */
 function gsDraftEditable(MatchModel $match): void
 {
     $loaded = app(GameStatsService::class)->load($match);
@@ -742,6 +774,11 @@ it('does not add the aggregate-only note when quarter rows exist', function () {
         ->assertDontSee('Per-quarter stats were not recorded, so only the score can be corrected.');
 });
 
+/**
+ * Gs series fixture.
+ *
+ * @return array<mixed> The result.
+ */
 function gsSeriesFixture(): array
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();

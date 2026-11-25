@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Scheduling service. */
+
 namespace App\Services;
 
 use App\Models\AuditLog;
@@ -555,11 +557,25 @@ class SchedulingService
         });
     }
 
+    /**
+     * Return the number of days between the base date and a match date.
+     *
+     * @param  Carbon  $base  The base.
+     * @param  Carbon  $date  The date.
+     * @return int The result.
+     */
     protected function dayOffset(Carbon $base, Carbon $date): int
     {
         return (int) $base->copy()->startOfDay()->diffInDays($date->copy()->startOfDay(), false);
     }
 
+    /**
+     * Return the ordinal sequence for a bracket round.
+     *
+     * @param  string  $stage  The stage.
+     * @param  int  $round  The round.
+     * @return int The result.
+     */
     protected function roundSequence(string $stage, int $round): int
     {
         return match ($stage) {
@@ -572,6 +588,12 @@ class SchedulingService
         };
     }
 
+    /**
+     * Return the preferred start hour for a round of this size.
+     *
+     * @param  int  $matchCount  The match count.
+     * @return int The result.
+     */
     protected function roundStartHour(int $matchCount): int
     {
         return match (true) {
@@ -1100,6 +1122,14 @@ class SchedulingService
             ->all();
     }
 
+    /**
+     * Move a match to a new court or time slot.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  ?int  $courtId  The court id.
+     * @param  ?string  $scheduledAt  The scheduled at.
+     * @return MatchSlot The result.
+     */
     public function reschedule(MatchModel $match, ?int $courtId, ?string $scheduledAt): MatchSlot
     {
         $tournament = $match->tournament;
@@ -1213,6 +1243,12 @@ class SchedulingService
         return $slot;
     }
 
+    /**
+     * Return the scheduled slot that anchors a series.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @return ?MatchSlot The result.
+     */
     protected function seriesReferenceSlot(MatchModel $anchor): ?MatchSlot
     {
         return MatchModel::query()
@@ -1227,6 +1263,17 @@ class SchedulingService
             ->first();
     }
 
+    /**
+     * Check whether a court is already booked at the proposed time.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  int  $courtId  The court id.
+     * @param  Carbon  $start  The start.
+     * @param  int  $slotMinutes  The slot minutes.
+     * @param  int  $restMinutes  The rest minutes.
+     * @param  ?int  $ignoreMatchId  The ignore match id.
+     * @return bool The result.
+     */
     protected function courtHasConflict(
         Tournament $tournament,
         int $courtId,
@@ -1254,6 +1301,16 @@ class SchedulingService
             });
     }
 
+    /**
+     * Check whether a team has enough rest between matches.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  MatchModel  $match  The match.
+     * @param  Carbon  $start  The start.
+     * @param  int  $slotMinutes  The slot minutes.
+     * @param  int  $restMinutes  The rest minutes.
+     * @return ?string The result.
+     */
     protected function teamRestConflict(
         Tournament $tournament,
         MatchModel $match,
@@ -1341,6 +1398,12 @@ class SchedulingService
             ->get();
     }
 
+    /**
+     * Return the tournament's first scheduled day.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return string The result.
+     */
     public function startDate(Tournament $tournament): string
     {
         return $tournament->start_date?->format('Y-m-d') ?? now()->format('Y-m-d');
@@ -1548,6 +1611,12 @@ class SchedulingService
             : 1;
     }
 
+    /**
+     * Return the configured duration of one match slot.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return int The result.
+     */
     public function slotMinutes(Tournament $tournament): int
     {
         $rules = $tournament->rules_json;
@@ -1556,6 +1625,12 @@ class SchedulingService
         return is_numeric($value) && (int) $value >= 10 ? (int) $value : 30;
     }
 
+    /**
+     * Return the configured minimum rest between matches.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return int The result.
+     */
     public function restMinutes(Tournament $tournament): int
     {
         $rules = $tournament->rules_json;

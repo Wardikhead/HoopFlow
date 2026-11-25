@@ -1,3 +1,4 @@
+{{-- Blade view for Page loader. --}}
 @props(['caption' => 'Setting the court'])
 
 {{-- Full-page skeleton shown while a navigation is in flight. The overlay is

@@ -1,3 +1,4 @@
+{{-- Blade view for Standings show. --}}
 <div>
     @section('title', 'Standings')
 

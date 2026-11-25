@@ -1,3 +1,4 @@
+{{-- Blade view for Standings panel. --}}
 <div class="hf-lp-standings">
     <div class="hf-lp-standings__caption">
         <strong>Regular season</strong>

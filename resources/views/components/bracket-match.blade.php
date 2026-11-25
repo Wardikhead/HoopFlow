@@ -1,3 +1,4 @@
+{{-- Blade view for Bracket match. --}}
 @props(['match', 'roundLabel', 'mobile' => false, 'rescheduled' => false, 'featured' => false])
 
 @php

@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Bracket show. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\AuditLog;
@@ -89,6 +91,12 @@ class BracketShow extends Component
     /** @var array<int, array{seed: int, team_id: int|null}> */
     public array $slotAssignments = [];
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $id  The id.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $id = null): void
     {
         if ($id !== null && is_numeric($id)) {
@@ -119,12 +127,22 @@ class BracketShow extends Component
         }
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
         return Tournament::find($this->tournamentId);
     }
 
+    /**
+     * Format.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function format(): string
     {
@@ -317,12 +335,22 @@ class BracketShow extends Component
         ];
     }
 
+    /**
+     * Selected match.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function selectedMatch(): ?MatchModel
     {
         return $this->findTournamentMatch($this->selectedMatchId);
     }
 
+    /**
+     * Selected round label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function selectedRoundLabel(): string
     {
@@ -354,6 +382,11 @@ class BracketShow extends Component
             ->get();
     }
 
+    /**
+     * Selected series anchor.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function selectedSeriesAnchor(): ?MatchModel
     {
@@ -366,6 +399,11 @@ class BracketShow extends Component
         return $match->series_id !== null ? $match->seriesAnchor : $match;
     }
 
+    /**
+     * Selected active game.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function selectedActiveGame(): ?MatchModel
     {
@@ -384,6 +422,11 @@ class BracketShow extends Component
         return $anchor?->activeGame() ?? $match;
     }
 
+    /**
+     * Selected series summary.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function selectedSeriesSummary(): string
     {
@@ -417,12 +460,22 @@ class BracketShow extends Component
         return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
     }
 
+    /**
+     * Chooser match.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function chooserMatch(): ?MatchModel
     {
         return $this->findTournamentMatch($this->chooserMatchId);
     }
 
+    /**
+     * Chooser anchor.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function chooserAnchor(): ?MatchModel
     {
@@ -456,6 +509,11 @@ class BracketShow extends Component
             ->get();
     }
 
+    /**
+     * Chooser summary.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function chooserSummary(): string
     {
@@ -468,6 +526,12 @@ class BracketShow extends Component
         return ($anchor->homeTeam?->shortLabel() ?? 'Home').' vs '.($anchor->awayTeam?->shortLabel() ?? 'Away').' · '.$this->selectedSeriesSummary;
     }
 
+    /**
+     * Is active series game.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return bool The result.
+     */
     public function isActiveSeriesGame(MatchModel $game): bool
     {
         $active = $this->selectedActiveGame;
@@ -489,11 +553,23 @@ class BracketShow extends Component
         return $game->status;
     }
 
+    /**
+     * Game can be corrected.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return bool The result.
+     */
     public function gameCanBeCorrected(MatchModel $game): bool
     {
         return in_array($this->seriesGameStatus($game), ['final', 'forfeit'], true);
     }
 
+    /**
+     * Series game status label.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesGameStatusLabel(MatchModel $game): string
     {
         $status = $this->seriesGameStatus($game);
@@ -513,6 +589,12 @@ class BracketShow extends Component
         return $game->statusLabel();
     }
 
+    /**
+     * Series game schedule.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesGameSchedule(MatchModel $game): string
     {
         $slot = $game->matchSlots->first();
@@ -527,6 +609,12 @@ class BracketShow extends Component
         return $courtName.' · '.$slot->start_at->format('M j · g:i A');
     }
 
+    /**
+     * Series game status tone.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesGameStatusTone(MatchModel $game): string
     {
         $status = $this->seriesGameStatus($game);
@@ -544,6 +632,11 @@ class BracketShow extends Component
         };
     }
 
+    /**
+     * Can generate playoffs.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canGeneratePlayoffs(): bool
     {
@@ -617,6 +710,11 @@ class BracketShow extends Component
         ];
     }
 
+    /**
+     * Selected can score.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function selectedCanScore(): bool
     {
@@ -629,6 +727,11 @@ class BracketShow extends Component
             && ! $this->isBye($match);
     }
 
+    /**
+     * Selected can correct.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function selectedCanCorrect(): bool
     {
@@ -637,6 +740,11 @@ class BracketShow extends Component
         return $match instanceof MatchModel && $this->gameCanBeCorrected($match);
     }
 
+    /**
+     * Request generate.
+     *
+     * @return void Nothing.
+     */
     public function requestGenerate(): void
     {
         $tournament = $this->tournament;
@@ -662,6 +770,11 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Request regenerate.
+     *
+     * @return void Nothing.
+     */
     public function requestRegenerate(): void
     {
         $tournament = $this->tournament;
@@ -687,6 +800,11 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Request generate playoffs.
+     *
+     * @return void Nothing.
+     */
     public function requestGeneratePlayoffs(): void
     {
         $tournament = $this->tournament;
@@ -712,6 +830,11 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Open edit slots.
+     *
+     * @return void Nothing.
+     */
     public function openEditSlots(): void
     {
         $tournament = $this->tournament;
@@ -743,6 +866,12 @@ class BracketShow extends Component
         $this->showConfirm = false;
     }
 
+    /**
+     * Save slots.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     public function saveSlots(BracketService $bracketService): void
     {
         $tournament = $this->tournament;
@@ -807,6 +936,12 @@ class BracketShow extends Component
         $this->toast('Slots updated.', 'Bracket updated');
     }
 
+    /**
+     * Open match detail.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openMatchDetail(int|string|null $matchId): void
     {
         $match = $this->findTournamentMatch($matchId);
@@ -824,12 +959,23 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close match detail.
+     *
+     * @return void Nothing.
+     */
     public function closeMatchDetail(): void
     {
         $this->showMatchDetail = false;
         $this->showGameChooser = false;
     }
 
+    /**
+     * Open game chooser.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openGameChooser(int|string|null $matchId): void
     {
         $match = $this->findTournamentMatch($matchId);
@@ -855,12 +1001,23 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close game chooser.
+     *
+     * @return void Nothing.
+     */
     public function closeGameChooser(): void
     {
         $this->showGameChooser = false;
         $this->chooserMatchId = null;
     }
 
+    /**
+     * Open score console.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openScoreConsole(int|string|null $matchId): void
     {
         $match = $this->findTournamentMatch($matchId);
@@ -896,6 +1053,11 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close score console.
+     *
+     * @return void Nothing.
+     */
     public function closeScoreConsole(): void
     {
         $this->showScoreConsole = false;
@@ -903,6 +1065,13 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Add score.
+     *
+     * @param  int  $side  The side.
+     * @param  int  $points  The points.
+     * @return void Nothing.
+     */
     public function addScore(int $side, int $points): void
     {
         if (! $this->showScoreConsole || $this->forfeitSide !== 0) {
@@ -925,6 +1094,11 @@ class BracketShow extends Component
         }
     }
 
+    /**
+     * Undo score.
+     *
+     * @return void Nothing.
+     */
     public function undoScore(): void
     {
         if ($this->forfeitSide !== 0) {
@@ -941,6 +1115,11 @@ class BracketShow extends Component
         $this->score2 = $previous['score2'];
     }
 
+    /**
+     * Request finalize score.
+     *
+     * @return void Nothing.
+     */
     public function requestFinalizeScore(): void
     {
         $match = $this->selectedMatch;
@@ -995,6 +1174,12 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Open correction.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openCorrection(int|string|null $matchId): void
     {
         $match = $this->findTournamentMatch($matchId);
@@ -1022,12 +1207,22 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close correction.
+     *
+     * @return void Nothing.
+     */
     public function closeCorrection(): void
     {
         $this->showCorrection = false;
         $this->resetValidation();
     }
 
+    /**
+     * Request correction.
+     *
+     * @return void Nothing.
+     */
     public function requestCorrection(): void
     {
         $match = $this->selectedMatch;
@@ -1072,6 +1267,12 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Confirm.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     public function confirm(BracketService $bracketService): void
     {
         $action = $this->confirmAction;
@@ -1106,11 +1307,21 @@ class BracketShow extends Component
         }
     }
 
+    /**
+     * Cancel confirm.
+     *
+     * @return void Nothing.
+     */
     public function cancelConfirm(): void
     {
         $this->resetConfirm();
     }
 
+    /**
+     * Close edit slots.
+     *
+     * @return void Nothing.
+     */
     public function closeEditSlots(): void
     {
         $this->showEditSlots = false;
@@ -1118,6 +1329,13 @@ class BracketShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Perform generate.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @param  bool  $regenerate  The regenerate.
+     * @return void Nothing.
+     */
     protected function performGenerate(BracketService $bracketService, bool $regenerate): void
     {
         $tournament = $this->tournament;
@@ -1148,6 +1366,12 @@ class BracketShow extends Component
         $this->slotAssignments = [];
     }
 
+    /**
+     * Perform generate playoffs.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performGeneratePlayoffs(BracketService $bracketService): void
     {
         $tournament = $this->tournament;
@@ -1168,6 +1392,12 @@ class BracketShow extends Component
         $this->showGameChooser = false;
     }
 
+    /**
+     * Perform finalize.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performFinalize(BracketService $bracketService): void
     {
         $match = $this->selectedMatch;
@@ -1195,6 +1425,12 @@ class BracketShow extends Component
         $this->toast($message, 'Final score recorded');
     }
 
+    /**
+     * Perform forfeit.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performForfeit(BracketService $bracketService): void
     {
         $match = $this->selectedMatch;
@@ -1218,6 +1454,12 @@ class BracketShow extends Component
         );
     }
 
+    /**
+     * Perform correction.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performCorrection(BracketService $bracketService): void
     {
         $match = $this->selectedMatch;
@@ -1257,6 +1499,16 @@ class BracketShow extends Component
         $this->toast('Correction saved and the bracket path was recalculated.', 'Score corrected');
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @return void Nothing.
+     */
     protected function openConfirm(
         string $title,
         string $message,
@@ -1272,6 +1524,11 @@ class BracketShow extends Component
         $this->showConfirm = true;
     }
 
+    /**
+     * Reset confirm.
+     *
+     * @return void Nothing.
+     */
     protected function resetConfirm(): void
     {
         $this->showConfirm = false;
@@ -1299,11 +1556,25 @@ class BracketShow extends Component
         ];
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
+    /**
+     * Is bye.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return bool The result.
+     */
     protected function isBye(MatchModel $match): bool
     {
         $hasHome = $match->home_team_id !== null;
@@ -1315,6 +1586,12 @@ class BracketShow extends Component
             && $match->away_score === null;
     }
 
+    /**
+     * Find tournament match.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return ?MatchModel The result.
+     */
     protected function findTournamentMatch(int|string|null $matchId): ?MatchModel
     {
         if ($matchId === null || ! is_numeric($matchId)) {
@@ -1346,6 +1623,11 @@ class BracketShow extends Component
         return in_array($teamId, $approvedIds, true) ? $teamId : null;
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.bracket-show');

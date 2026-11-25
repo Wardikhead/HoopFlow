@@ -1,3 +1,4 @@
+{{-- Blade view for Crest. --}}
 @props(['team' => null, 'label' => null, 'size' => 'sm'])
 
 @php

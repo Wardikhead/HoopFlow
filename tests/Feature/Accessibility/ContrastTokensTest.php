@@ -15,6 +15,13 @@ function a11yBlock(string $scss, string $selector): string
     return $matches[1];
 }
 
+/**
+ * A11y token.
+ *
+ * @param  string  $block  The block.
+ * @param  string  $name  The name.
+ * @return string The result.
+ */
 function a11yToken(string $block, string $name): string
 {
     expect(preg_match('/--'.preg_quote($name, '/').':\s*([^;]+);/', $block, $matches))

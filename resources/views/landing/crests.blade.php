@@ -1,3 +1,4 @@
+{{-- Blade view for Crests. --}}
 @php
     $byTeam = collect($standings)->keyBy('team_id');
 @endphp

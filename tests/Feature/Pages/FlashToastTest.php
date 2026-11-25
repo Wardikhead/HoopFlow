@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Flash toast test. */
+
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

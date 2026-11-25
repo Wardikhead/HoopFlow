@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Submissions index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Livewire\SecureComponent;
@@ -49,6 +51,11 @@ class SubmissionsIndex extends SecureComponent
 
     public string $rejectReason = '';
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $status = request()->query('status', 'submitted');
@@ -64,6 +71,12 @@ class SubmissionsIndex extends SecureComponent
         $this->tournament = is_string($tournament) && $tournament !== '' ? $tournament : 'all';
     }
 
+    /**
+     * Open review.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @return void Nothing.
+     */
     public function openReview(int $registrationId): void
     {
         $this->reviewingId = $registrationId;
@@ -71,11 +84,22 @@ class SubmissionsIndex extends SecureComponent
         $this->rejectingId = null;
     }
 
+    /**
+     * Close review.
+     *
+     * @return void Nothing.
+     */
     public function closeReview(): void
     {
         $this->reviewingId = null;
     }
 
+    /**
+     * Approve.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @return void Nothing.
+     */
     public function approve(int $registrationId): void
     {
         if ($this->seedsLockedForRegistration($registrationId)) {
@@ -96,6 +120,11 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Confirm approve.
+     *
+     * @return void Nothing.
+     */
     public function confirmApprove(): void
     {
         if ($this->approvingId === null) {
@@ -126,6 +155,11 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Cancel approve.
+     *
+     * @return void Nothing.
+     */
     public function cancelApprove(): void
     {
         $this->approvingId = null;
@@ -133,6 +167,12 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Reject.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @return void Nothing.
+     */
     public function reject(int $registrationId): void
     {
         $this->rejectingId = $registrationId;
@@ -142,6 +182,11 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Confirm reject.
+     *
+     * @return void Nothing.
+     */
     public function confirmReject(): void
     {
         if ($this->rejectingId === null) {
@@ -161,6 +206,11 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Cancel reject.
+     *
+     * @return void Nothing.
+     */
     public function cancelReject(): void
     {
         $this->rejectingId = null;
@@ -168,6 +218,11 @@ class SubmissionsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->search = '';
@@ -175,6 +230,13 @@ class SubmissionsIndex extends SecureComponent
         $this->tournament = 'all';
     }
 
+    /**
+     * Update consent.
+     *
+     * @param  int  $playerId  The player id.
+     * @param  string  $status  The status.
+     * @return void Nothing.
+     */
     public function updateConsent(int $playerId, string $status): void
     {
         if (! in_array($status, ['pending', 'verified', 'missing'], true)) {
@@ -213,6 +275,13 @@ class SubmissionsIndex extends SecureComponent
         $this->dispatch('hf-toast', title: 'Consent updated', message: 'The player consent status is now '.$status.'.', tone: 'success');
     }
 
+    /**
+     * Update document.
+     *
+     * @param  int  $playerId  The player id.
+     * @param  string  $status  The status.
+     * @return void Nothing.
+     */
     public function updateDocument(int $playerId, string $status): void
     {
         if (! in_array($status, ['pending', 'approved', 'missing'], true)) {
@@ -312,6 +381,11 @@ class SubmissionsIndex extends SecureComponent
         ));
     }
 
+    /**
+     * Reviewing registration.
+     *
+     * @return ?Registration The result.
+     */
     protected function reviewingRegistration(): ?Registration
     {
         if ($this->reviewingId === null) {
@@ -326,6 +400,12 @@ class SubmissionsIndex extends SecureComponent
             ->find($this->reviewingId);
     }
 
+    /**
+     * Do approve.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @return void Nothing.
+     */
     protected function doApprove(int $registrationId): void
     {
         if ($this->seedsLockedForRegistration($registrationId)) {
@@ -362,6 +442,13 @@ class SubmissionsIndex extends SecureComponent
         $this->dispatch('hf-toast', title: 'Team approved', message: 'The team is eligible for seeding and its roster locks for the coach.', tone: 'success');
     }
 
+    /**
+     * Do reject.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @param  string  $reason  The reason.
+     * @return void Nothing.
+     */
     protected function doReject(int $registrationId, string $reason): void
     {
         $registration = Registration::query()->find($registrationId);
@@ -455,6 +542,12 @@ class SubmissionsIndex extends SecureComponent
         ];
     }
 
+    /**
+     * Find registration.
+     *
+     * @param  int|string|null  $id  The id.
+     * @return ?Registration The result.
+     */
     public function findRegistration(int|string|null $id): ?Registration
     {
         if ($id === null || ! is_numeric($id)) {
@@ -472,6 +565,12 @@ class SubmissionsIndex extends SecureComponent
             ->find((int) $id);
     }
 
+    /**
+     * Seeds locked for registration.
+     *
+     * @param  int  $registrationId  The registration id.
+     * @return bool The result.
+     */
     protected function seedsLockedForRegistration(int $registrationId): bool
     {
         $registration = Registration::query()->with('tournament')->find($registrationId);
@@ -479,6 +578,11 @@ class SubmissionsIndex extends SecureComponent
         return $registration?->tournament?->seedsLocked() ?? false;
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.submissions-index');

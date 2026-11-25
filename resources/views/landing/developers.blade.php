@@ -1,3 +1,4 @@
+{{-- Blade view for Developers. --}}
 <section id="developers" class="hf-lp-builders" data-testid="landing-developers" aria-labelledby="landing-developers-title">
     <div class="hf-lp-shell">
         <header class="hf-lp-builders__head hf-lp-reveal">

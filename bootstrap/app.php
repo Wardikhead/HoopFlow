@@ -1,5 +1,7 @@
 <?php
 
+/** Application bootstrap for App. */
+
 use App\Http\Middleware\EnforceSessionTimeout;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RoleMiddleware;

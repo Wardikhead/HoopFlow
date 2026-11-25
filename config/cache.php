@@ -1,5 +1,7 @@
 <?php
 
+/** Configuration for Cache. */
+
 use Illuminate\Support\Str;
 
 return [

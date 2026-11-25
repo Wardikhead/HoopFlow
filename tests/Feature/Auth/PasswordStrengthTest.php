@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Password strength test. */
+
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 

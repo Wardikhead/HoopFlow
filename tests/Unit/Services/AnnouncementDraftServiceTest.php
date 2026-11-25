@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Announcement draft service test. */
+
 use App\Exceptions\AnnouncementDraftException;
 use App\Models\Tournament;
 use App\Services\AnnouncementDraftService;
@@ -28,6 +30,13 @@ function hfGeminiTextResponse(string $text): array
     ];
 }
 
+/**
+ * Hf gemini json payload.
+ *
+ * @param  string  $title  The title.
+ * @param  string  $body  The body.
+ * @return string The result.
+ */
 function hfGeminiJsonPayload(string $title, string $body): string
 {
     return json_encode(['title' => $title, 'body' => $body], JSON_THROW_ON_ERROR);

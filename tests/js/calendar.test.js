@@ -1,3 +1,5 @@
+// Front-end tests for Calendar.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { initCalendar } from '../../resources/js/ui/calendar.js';
@@ -23,6 +25,13 @@ for (const cell of cells) {
     cell.closest = (selector) => (selector === '[data-calendar-day]' ? cell : calendar);
 }
 
+/**
+ * Press.
+ *
+ * @param {*} key The key.
+ * @param {*} index  The index.
+ * @returns {*} The result.
+ */
 function press(key, index = 0) {
     let prevented = false;
 

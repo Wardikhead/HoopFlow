@@ -1,5 +1,7 @@
 <?php
 
+/** Configuration for Database. */
+
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 

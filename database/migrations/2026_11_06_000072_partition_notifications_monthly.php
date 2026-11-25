@@ -1,10 +1,17 @@
 <?php
 
+/** Database migration 2026 11 06 000072 partition notifications monthly. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
@@ -31,6 +38,11 @@ SQL);
         DB::statement('CREATE INDEX IF NOT EXISTS notifications_user_status_idx ON notifications (user_id, status)');
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // no-op: partitioning is additive

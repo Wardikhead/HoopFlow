@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Schedule show. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Court;
@@ -126,6 +128,12 @@ class ScheduleShow extends Component
 
     public string $confirmAction = '';
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $id  The id.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $id = null): void
     {
         if ($id !== null && is_numeric($id)) {
@@ -177,6 +185,11 @@ class ScheduleShow extends Component
         $this->currentMonth = substr($selected, 0, 7);
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
@@ -194,6 +207,11 @@ class ScheduleShow extends Component
             : new Collection;
     }
 
+    /**
+     * Venue name.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function venueName(): string
     {
@@ -318,6 +336,11 @@ class ScheduleShow extends Component
             ->all();
     }
 
+    /**
+     * Selected day label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function selectedDayLabel(): string
     {
@@ -328,6 +351,11 @@ class ScheduleShow extends Component
             : 'No day selected';
     }
 
+    /**
+     * Month label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function monthLabel(): string
     {
@@ -414,24 +442,44 @@ class ScheduleShow extends Component
         ];
     }
 
+    /**
+     * Scheduled count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function scheduledCount(): int
     {
         return $this->scheduledSlots->count();
     }
 
+    /**
+     * Total matches.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function totalMatches(): int
     {
         return $this->matches->count();
     }
 
+    /**
+     * Match day count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function matchDayCount(): int
     {
         return count($this->matchDays);
     }
 
+    /**
+     * Results count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function resultsCount(): int
     {
@@ -440,6 +488,11 @@ class ScheduleShow extends Component
             ->count();
     }
 
+    /**
+     * Unscheduled count.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function unscheduledCount(): int
     {
@@ -448,18 +501,33 @@ class ScheduleShow extends Component
             ->count();
     }
 
+    /**
+     * Has bracket.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasBracket(): bool
     {
         return $this->matches->isNotEmpty();
     }
 
+    /**
+     * Has scheduled games.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasScheduledGames(): bool
     {
         return $this->scheduledSlots->isNotEmpty();
     }
 
+    /**
+     * Has published games.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasPublishedGames(): bool
     {
@@ -500,12 +568,22 @@ class ScheduleShow extends Component
         return $teams;
     }
 
+    /**
+     * Tournament calendar url.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function tournamentCalendarUrl(): string
     {
         return route('calendar.tournament', $this->tournamentId);
     }
 
+    /**
+     * Team calendar url.
+     *
+     * @return ?string The result.
+     */
     #[Computed]
     public function teamCalendarUrl(): ?string
     {
@@ -519,12 +597,22 @@ class ScheduleShow extends Component
         ]);
     }
 
+    /**
+     * Is organizer.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function isOrganizer(): bool
     {
         return auth()->user()?->hasRole('organizer') ?? false;
     }
 
+    /**
+     * Can generate.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canGenerate(): bool
     {
@@ -534,6 +622,11 @@ class ScheduleShow extends Component
             && ! $this->hasScheduledGames;
     }
 
+    /**
+     * Can rebuild.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canRebuild(): bool
     {
@@ -543,6 +636,11 @@ class ScheduleShow extends Component
             && $this->hasScheduledGames;
     }
 
+    /**
+     * Can schedule remaining.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canScheduleRemaining(): bool
     {
@@ -552,12 +650,22 @@ class ScheduleShow extends Component
             && $this->unscheduledCount > 0;
     }
 
+    /**
+     * Locked.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function locked(): bool
     {
         return $this->hasBracket && $this->resultsCount > 0;
     }
 
+    /**
+     * Slot minutes.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function slotMinutes(): int
     {
@@ -566,6 +674,11 @@ class ScheduleShow extends Component
             : 30;
     }
 
+    /**
+     * Rest minutes.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function restMinutes(): int
     {
@@ -724,6 +837,12 @@ class ScheduleShow extends Component
         }, $assignments);
     }
 
+    /**
+     * Updated.
+     *
+     * @param  string  $property  The property.
+     * @return void Nothing.
+     */
     public function updated(string $property): void
     {
         if (in_array($property, ['previewStartDate', 'previewEndDate', 'previewWeekdays', 'previewSlotMinutes', 'previewRestMinutes'], true)) {
@@ -731,6 +850,12 @@ class ScheduleShow extends Component
         }
     }
 
+    /**
+     * Navigate month.
+     *
+     * @param  int  $delta  The delta.
+     * @return void Nothing.
+     */
     public function navigateMonth(int $delta): void
     {
         $date = Carbon::createFromFormat('Y-m', $this->currentMonth) ?? now()->startOfMonth();
@@ -738,6 +863,12 @@ class ScheduleShow extends Component
         $this->selectedDay = $this->currentMonth.'-01';
     }
 
+    /**
+     * Select day.
+     *
+     * @param  string  $day  The day.
+     * @return void Nothing.
+     */
     public function selectDay(string $day): void
     {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) !== 1) {
@@ -748,6 +879,12 @@ class ScheduleShow extends Component
         $this->currentMonth = substr($day, 0, 7);
     }
 
+    /**
+     * Shift week.
+     *
+     * @param  int  $delta  The delta.
+     * @return void Nothing.
+     */
     public function shiftWeek(int $delta): void
     {
         $date = Carbon::parse($this->selectedDay ?? now())->addDays($delta * 7);
@@ -755,6 +892,11 @@ class ScheduleShow extends Component
         $this->currentMonth = $date->format('Y-m');
     }
 
+    /**
+     * First matchday.
+     *
+     * @return void Nothing.
+     */
     public function firstMatchday(): void
     {
         $day = $this->matchDays[0]
@@ -766,6 +908,12 @@ class ScheduleShow extends Component
         $this->currentMonth = substr($day, 0, 7);
     }
 
+    /**
+     * Toggle court.
+     *
+     * @param  int|string  $courtId  The court id.
+     * @return void Nothing.
+     */
     public function toggleCourt(int|string $courtId): void
     {
         $id = (int) $courtId;
@@ -782,6 +930,11 @@ class ScheduleShow extends Component
         $this->selectedCourtIds[] = $id;
     }
 
+    /**
+     * All courts.
+     *
+     * @return void Nothing.
+     */
     public function allCourts(): void
     {
         $this->selectedCourtIds = $this->courts
@@ -790,21 +943,42 @@ class ScheduleShow extends Component
             ->all();
     }
 
+    /**
+     * Open preview.
+     *
+     * @return void Nothing.
+     */
     public function openPreview(): void
     {
         $this->startPreview('generate');
     }
 
+    /**
+     * Open rebuild.
+     *
+     * @return void Nothing.
+     */
     public function openRebuild(): void
     {
         $this->startPreview('rebuild');
     }
 
+    /**
+     * Open remaining.
+     *
+     * @return void Nothing.
+     */
     public function openRemaining(): void
     {
         $this->startPreview('remaining');
     }
 
+    /**
+     * Start preview.
+     *
+     * @param  string  $mode  The mode.
+     * @return void Nothing.
+     */
     protected function startPreview(string $mode): void
     {
         $tournament = $this->tournament;
@@ -867,6 +1041,11 @@ class ScheduleShow extends Component
         $this->buildPreview();
     }
 
+    /**
+     * Build preview.
+     *
+     * @return void Nothing.
+     */
     public function buildPreview(): void
     {
         $tournament = $this->tournament;
@@ -908,6 +1087,12 @@ class ScheduleShow extends Component
         }
     }
 
+    /**
+     * Toggle preview weekday.
+     *
+     * @param  int  $day  The day.
+     * @return void Nothing.
+     */
     public function togglePreviewWeekday(int $day): void
     {
         if ($day < 1 || $day > 7) {
@@ -922,6 +1107,14 @@ class ScheduleShow extends Component
         $this->previewDirty = true;
     }
 
+    /**
+     * Update preview assignment.
+     *
+     * @param  int|string  $matchId  The match id.
+     * @param  int|string|null  $courtId  The court id.
+     * @param  ?string  $scheduledAt  The scheduled at.
+     * @return void Nothing.
+     */
     public function updatePreviewAssignment(int|string $matchId, int|string|null $courtId, ?string $scheduledAt): void
     {
         $found = false;
@@ -956,6 +1149,11 @@ class ScheduleShow extends Component
         $this->previewWarnings = $validation['warnings'];
     }
 
+    /**
+     * Reset preview.
+     *
+     * @return void Nothing.
+     */
     public function resetPreview(): void
     {
         if ($this->lastBuiltPlan === []) {
@@ -977,12 +1175,22 @@ class ScheduleShow extends Component
         $this->previewDirty = false;
     }
 
+    /**
+     * Close preview.
+     *
+     * @return void Nothing.
+     */
     public function closePreview(): void
     {
         $this->showPreview = false;
         $this->previewPlan = [];
     }
 
+    /**
+     * Open subscribe.
+     *
+     * @return void Nothing.
+     */
     public function openSubscribe(): void
     {
         $this->showSubscribe = true;
@@ -991,11 +1199,21 @@ class ScheduleShow extends Component
         $this->showConfirm = false;
     }
 
+    /**
+     * Close subscribe.
+     *
+     * @return void Nothing.
+     */
     public function closeSubscribe(): void
     {
         $this->showSubscribe = false;
     }
 
+    /**
+     * Publish schedule.
+     *
+     * @return void Nothing.
+     */
     public function publishSchedule(): void
     {
         $tournament = $this->tournament;
@@ -1047,6 +1265,11 @@ class ScheduleShow extends Component
         $this->performPublish();
     }
 
+    /**
+     * Perform publish.
+     *
+     * @return void Nothing.
+     */
     protected function performPublish(): void
     {
         $tournament = $this->tournament;
@@ -1099,6 +1322,11 @@ class ScheduleShow extends Component
         }
     }
 
+    /**
+     * Open reschedule.
+     *
+     * @return void Nothing.
+     */
     public function openReschedule(): void
     {
         $tournament = $this->tournament;
@@ -1126,12 +1354,22 @@ class ScheduleShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close reschedule.
+     *
+     * @return void Nothing.
+     */
     public function closeReschedule(): void
     {
         $this->showReschedule = false;
         $this->resetValidation();
     }
 
+    /**
+     * Save reschedule.
+     *
+     * @return void Nothing.
+     */
     public function saveReschedule(): void
     {
         $tournament = $this->tournament;
@@ -1168,6 +1406,11 @@ class ScheduleShow extends Component
         }
     }
 
+    /**
+     * Confirm.
+     *
+     * @return void Nothing.
+     */
     public function confirm(): void
     {
         $action = $this->confirmAction;
@@ -1178,11 +1421,26 @@ class ScheduleShow extends Component
         }
     }
 
+    /**
+     * Cancel confirm.
+     *
+     * @return void Nothing.
+     */
     public function cancelConfirm(): void
     {
         $this->resetConfirm();
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @return void Nothing.
+     */
     protected function openConfirm(
         string $title,
         string $message,
@@ -1198,6 +1456,11 @@ class ScheduleShow extends Component
         $this->showConfirm = true;
     }
 
+    /**
+     * Reset confirm.
+     *
+     * @return void Nothing.
+     */
     protected function resetConfirm(): void
     {
         $this->showConfirm = false;
@@ -1208,6 +1471,11 @@ class ScheduleShow extends Component
         $this->confirmAction = '';
     }
 
+    /**
+     * Sync reschedule fields.
+     *
+     * @return void Nothing.
+     */
     protected function syncRescheduleFields(): void
     {
         if ($this->rescheduleMatchId === null) {
@@ -1223,11 +1491,24 @@ class ScheduleShow extends Component
         $this->rescheduleScheduledAt = $slot?->start_at?->format('Y-m-d\TH:i') ?? '';
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.schedule-show');

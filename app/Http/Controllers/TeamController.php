@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Team controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\MatchModel;
@@ -12,8 +14,20 @@ use Illuminate\Http\Response;
 
 class TeamController extends Controller
 {
+    /**
+     * Initialize the instance.
+     *
+     * @param  DashboardService  $dashboard  The dashboard.
+     */
     public function __construct(protected DashboardService $dashboard) {}
 
+    /**
+     * Show.
+     *
+     * @param  Request  $request  The request.
+     * @param  Team  $team  The team.
+     * @return View|Response The result.
+     */
     public function show(Request $request, Team $team): View|Response
     {
         $team->load([

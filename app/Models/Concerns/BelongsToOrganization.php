@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Belongs to organization. */
+
 namespace App\Models\Concerns;
 
 use App\Models\Organization;

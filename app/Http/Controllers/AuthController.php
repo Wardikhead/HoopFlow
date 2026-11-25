@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Auth controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
@@ -16,16 +18,32 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * Show login.
+     *
+     * @return View The result.
+     */
     public function showLogin(): View
     {
         return view('auth.login');
     }
 
+    /**
+     * Show register.
+     *
+     * @return View The result.
+     */
     public function showRegister(): View
     {
         return view('auth.register');
     }
 
+    /**
+     * Login.
+     *
+     * @param  Request  $request  The request.
+     * @return RedirectResponse The result.
+     */
     public function login(Request $request): RedirectResponse
     {
         $request->merge([
@@ -66,6 +84,12 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
     }
 
+    /**
+     * Register.
+     *
+     * @param  Request  $request  The request.
+     * @return RedirectResponse The result.
+     */
     public function register(Request $request): RedirectResponse
     {
         $request->merge([
@@ -127,6 +151,12 @@ class AuthController extends Controller
         return redirect()->route('dashboard');
     }
 
+    /**
+     * Logout.
+     *
+     * @param  Request  $request  The request.
+     * @return RedirectResponse The result.
+     */
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
@@ -137,6 +167,12 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
+    /**
+     * Throttle key.
+     *
+     * @param  Request  $request  The request.
+     * @return string The result.
+     */
     private function throttleKey(Request $request): string
     {
         return Str::transliterate(
@@ -144,6 +180,12 @@ class AuthController extends Controller
         );
     }
 
+    /**
+     * Record session security.
+     *
+     * @param  Request  $request  The request.
+     * @return void Nothing.
+     */
     private function recordSessionSecurity(Request $request): void
     {
         $request->session()->put([
@@ -162,6 +204,12 @@ class AuthController extends Controller
         return [$parts[0], $parts[1] ?? ''];
     }
 
+    /**
+     * Resolve organization.
+     *
+     * @param  ?string  $name  The name.
+     * @return ?Organization The result.
+     */
     private function resolveOrganization(?string $name): ?Organization
     {
         if ($name === null || $name === '') {

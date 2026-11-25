@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Rate limiting test. */
+
 use App\Models\User;
 use Livewire\Livewire;
 

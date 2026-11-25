@@ -1,5 +1,11 @@
+// Front-end script for Effects.
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
+/**
+ * Init magnetic.
+ * @returns {*} The result.
+ */
 function initMagnetic() {
     const buttons = [...document.querySelectorAll('[data-magnetic]')];
 
@@ -28,6 +34,10 @@ function initMagnetic() {
     });
 }
 
+/**
+ * Init hero parallax.
+ * @returns {*} The result.
+ */
 function initHeroParallax() {
     const hero = document.querySelector('.hf-lp-hero');
     const layers = [...document.querySelectorAll('[data-parallax]')];
@@ -81,6 +91,10 @@ function initHeroParallax() {
     });
 }
 
+/**
+ * Init wire velocity.
+ * @returns {*} The result.
+ */
 function initWireVelocity() {
     const track = document.querySelector('.hf-lp-wire__track');
 
@@ -115,6 +129,10 @@ function initWireVelocity() {
     );
 }
 
+/**
+ * Init section progress.
+ * @returns {*} The result.
+ */
 function initSectionProgress() {
     const sections = [...document.querySelectorAll('main > section')];
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -157,6 +175,10 @@ function initSectionProgress() {
     requestAnimationFrame(paint);
 }
 
+/**
+ * Init scramble.
+ * @returns {*} The result.
+ */
 function initScramble() {
     const targets = [...document.querySelectorAll('[data-scramble]')];
 

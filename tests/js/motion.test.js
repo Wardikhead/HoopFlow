@@ -1,3 +1,5 @@
+// Front-end tests for Motion.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { motionEnabled } from '../../resources/js/ui/motion.js';

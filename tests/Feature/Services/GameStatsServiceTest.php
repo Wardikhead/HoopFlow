@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Game stats service test. */
+
 use App\Models\AuditLog;
 use App\Models\MatchModel;
 use App\Models\PlayerStat;
@@ -14,11 +16,26 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Gss match.
+ *
+ * @param  int  $round  The round.
+ * @param  int  $number  The number.
+ * @return MatchModel The result.
+ */
 function gssMatch(int $round, int $number): MatchModel
 {
     return MatchModel::where('round_number', $round)->where('match_number', $number)->firstOrFail();
 }
 
+/**
+ * Gss player id.
+ *
+ * @param  MatchModel  $match  The match.
+ * @param  string  $side  The side.
+ * @param  int  $index  The index.
+ * @return int The result.
+ */
 function gssPlayerId(MatchModel $match, string $side, int $index = 0): int
 {
     $team = $side === 'team1' ? $match->homeTeam : $match->awayTeam;
@@ -26,6 +43,13 @@ function gssPlayerId(MatchModel $match, string $side, int $index = 0): int
     return (int) $team->players()->orderBy('jersey_number')->pluck('id')->get($index);
 }
 
+/**
+ * Gss payload.
+ *
+ * @param  MatchModel  $match  The match.
+ * @param  array<mixed>  $overrides  The overrides.
+ * @return array<mixed> The result.
+ */
 function gssPayload(MatchModel $match, array $overrides = []): array
 {
     $p1 = gssPlayerId($match, 'team1');
@@ -199,6 +223,11 @@ it('rejects mutations on a final match', function () {
     app(GameStatsService::class)->saveDraft($match, gssPayload($match));
 })->throws(InvalidArgumentException::class, 'This result is already final. Use correction to change it.');
 
+/**
+ * Gss editable final.
+ *
+ * @return MatchModel The result.
+ */
 function gssEditableFinal(): MatchModel
 {
     $match = gssMatch(8, 3);

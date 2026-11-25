@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Player stat quarter. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;

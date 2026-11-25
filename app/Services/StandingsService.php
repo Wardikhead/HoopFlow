@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Standings service. */
+
 namespace App\Services;
 
 use App\Models\Division;
@@ -175,6 +177,12 @@ class StandingsService
             ->values();
     }
 
+    /**
+     * Return the standings format used by a tournament or division.
+     *
+     * @param  Tournament|Division  $target  The target.
+     * @return string The result.
+     */
     protected function formatOf(Tournament|Division $target): string
     {
         $tournament = $target instanceof Tournament ? $target : $target->tournament;
@@ -202,6 +210,12 @@ class StandingsService
         return $query->get();
     }
 
+    /**
+     * Return the number of teams that advance to playoffs.
+     *
+     * @param  Tournament|Division  $target  The target.
+     * @return int The result.
+     */
     public function playoffCut(Tournament|Division $target): int
     {
         $tournament = $target instanceof Tournament ? $target : $target->tournament;

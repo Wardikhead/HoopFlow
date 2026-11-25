@@ -1,3 +1,4 @@
+{{-- Blade view for Faq. --}}
 @php
     $questions = [
         [

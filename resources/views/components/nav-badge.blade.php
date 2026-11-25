@@ -1,3 +1,4 @@
+{{-- Blade view for Nav badge. --}}
 @props(['count' => 0, 'dot' => false])
 
 @if ($dot)

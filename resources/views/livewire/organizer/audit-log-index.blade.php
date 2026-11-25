@@ -1,3 +1,4 @@
+{{-- Blade view for Audit log index. --}}
 <div>
     @section('title', 'Audit log')
     @section('meta-description', 'Audit log - every approval, payment, result, and schedule change recorded across your HoopFlow league.')

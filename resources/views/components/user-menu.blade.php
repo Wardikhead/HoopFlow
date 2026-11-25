@@ -1,3 +1,4 @@
+{{-- Blade view for User menu. --}}
 @php
     $user = auth()->user();
     $role = $user?->hasRole('organizer') ? 'organizer' : ($user?->hasRole('coach') ? 'coach' : 'fan');

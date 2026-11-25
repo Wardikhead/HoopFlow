@@ -1,3 +1,4 @@
+{{-- Blade view for Breadcrumbs. --}}
 @props(['items' => []])
 
 @if (count($items))

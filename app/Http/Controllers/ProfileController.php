@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Profile controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -15,6 +17,13 @@ use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
+    /**
+     * Show.
+     *
+     * @param  Request  $request  The request.
+     * @param  SessionRegistry  $sessions  The sessions.
+     * @return View The result.
+     */
     public function show(Request $request, SessionRegistry $sessions): View
     {
         return view('pages.profile', [
@@ -22,11 +31,24 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Show password form.
+     *
+     * @param  Request  $request  The request.
+     * @return View The result.
+     */
     public function showPasswordForm(Request $request): View
     {
         return view('pages.profile-password');
     }
 
+    /**
+     * Destroy other sessions.
+     *
+     * @param  Request  $request  The request.
+     * @param  SessionRegistry  $sessions  The sessions.
+     * @return RedirectResponse The result.
+     */
     public function destroyOtherSessions(Request $request, SessionRegistry $sessions): RedirectResponse
     {
         $count = $sessions->revokeOthers($request->user(), $request);
@@ -40,6 +62,14 @@ class ProfileController extends Controller
             });
     }
 
+    /**
+     * Update password.
+     *
+     * @param  Request  $request  The request.
+     * @param  SessionRegistry  $sessions  The sessions.
+     * @param  AuditLogger  $audit  The audit.
+     * @return RedirectResponse The result.
+     */
     public function updatePassword(
         Request $request,
         SessionRegistry $sessions,

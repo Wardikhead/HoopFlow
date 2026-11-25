@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Player stat. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,6 +35,11 @@ class PlayerStat extends Model
 
     protected $keyType = 'int';
 
+    /**
+     * Booted.
+     *
+     * @return void Nothing.
+     */
     protected static function booted(): void
     {
         static::creating(function ($model) {

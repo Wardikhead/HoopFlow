@@ -1,3 +1,4 @@
+{{-- Blade view for Closing. --}}
 <section class="hf-lp-closing" data-testid="landing-cta" aria-labelledby="landing-closing-title">
     <div class="hf-lp-closing__court" aria-hidden="true">
         <span></span>

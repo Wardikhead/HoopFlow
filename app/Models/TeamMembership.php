@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Team membership. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;

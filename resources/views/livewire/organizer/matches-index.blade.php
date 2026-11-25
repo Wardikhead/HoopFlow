@@ -1,3 +1,4 @@
+{{-- Blade view for Matches index. --}}
 <div>
     @php
         $tournament = $this->currentTournament;

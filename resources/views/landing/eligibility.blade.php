@@ -1,3 +1,4 @@
+{{-- Blade view for Eligibility. --}}
 @php
     $cleared = collect($eligibility['players'])->where('status', 'verified')->count();
     $total = count($eligibility['players']);

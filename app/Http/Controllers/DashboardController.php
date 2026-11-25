@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Dashboard controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\Registration;
@@ -12,11 +14,23 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    /**
+     * Initialize the instance.
+     *
+     * @param  DashboardService  $dashboard  The dashboard.
+     * @param  StandingsService  $standings  The standings.
+     */
     public function __construct(
         protected DashboardService $dashboard,
         protected StandingsService $standings,
     ) {}
 
+    /**
+     * Index.
+     *
+     * @param  Request  $request  The request.
+     * @return View The result.
+     */
     public function index(Request $request): View
     {
         $user = $request->user();

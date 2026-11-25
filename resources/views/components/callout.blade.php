@@ -1,3 +1,4 @@
+{{-- Blade view for Callout. --}}
 @props(['tone' => 'info', 'icon' => null, 'title' => null])
 
 @php

@@ -1,3 +1,4 @@
+{{-- Blade view for 500. --}}
 <x-error-page
     code="500"
     title="Something went wrong"

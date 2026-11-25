@@ -1,10 +1,17 @@
 <?php
 
+/** Database migration 2026 11 06 000073 partition matches hash. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
@@ -29,6 +36,11 @@ SQL);
         DB::statement('CREATE INDEX IF NOT EXISTS matches_status_idx ON matches (status)');
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // no-op: partitioning is additive

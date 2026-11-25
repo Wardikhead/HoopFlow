@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Game stats service. */
+
 namespace App\Services;
 
 use App\Models\MatchModel;
@@ -34,6 +36,12 @@ class GameStatsService
         'pf' => 'fouls',
     ];
 
+    /**
+     * Create a stats service with its dependencies.
+     *
+     * @param  AuditLogger  $auditLogger  The audit logger.
+     * @param  BracketService  $bracketService  The bracket service.
+     */
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly BracketService $bracketService,
@@ -217,6 +225,12 @@ class GameStatsService
             ->get();
     }
 
+    /**
+     * Ensure a match's stats are still editable.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     protected function guardEditable(MatchModel $match): void
     {
         if (in_array($match->status, ['final', 'forfeit'], true)) {
@@ -441,6 +455,13 @@ class GameStatsService
         return array_slice($values, 0, $count);
     }
 
+    /**
+     * Convert a request value to a positive integer.
+     *
+     * @param  mixed  $value  The value.
+     * @param  string  $message  The message.
+     * @return int The result.
+     */
     protected function intValue(mixed $value, string $message): int
     {
         if (! is_numeric($value) || (float) $value !== (float) (int) $value) {

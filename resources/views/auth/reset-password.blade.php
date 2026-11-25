@@ -1,3 +1,4 @@
+{{-- Blade view for Reset password. --}}
 @extends('layouts.public')
 
 @php($resetExpiry = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60))

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Password reset test. */
+
 use App\Http\Controllers\PasswordResetController;
 use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
@@ -116,11 +118,24 @@ it('still completes the reset when the confirmation email fails', function () {
 
     app()->instance(Dispatcher::class, new class implements Dispatcher
     {
+        /**
+         * Send.
+         *
+         * @param  mixed  $notifiables  The notifiables.
+         * @param  mixed  $notification  The notification.
+         */
         public function send($notifiables, $notification)
         {
             throw new RuntimeException('SMTP unavailable');
         }
 
+        /**
+         * Send now.
+         *
+         * @param  mixed  $notifiables  The notifiables.
+         * @param  mixed  $notification  The notification.
+         * @param  ?array  $channels  The channels.
+         */
         public function sendNow($notifiables, $notification, ?array $channels = null)
         {
             throw new RuntimeException('SMTP unavailable');

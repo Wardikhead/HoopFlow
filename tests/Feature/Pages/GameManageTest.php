@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Game manage test. */
+
 use App\Livewire\Organizer\GameManage;
 use App\Models\AuditLog;
 use App\Models\Bracket;
@@ -19,16 +21,36 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Gm user.
+ *
+ * @param  string  $email  The email.
+ * @return User The result.
+ */
 function gmUser(string $email): User
 {
     return User::where('email', $email)->firstOrFail();
 }
 
+/**
+ * Gm match.
+ *
+ * @param  int  $round  The round.
+ * @param  int  $number  The number.
+ * @return MatchModel The result.
+ */
 function gmMatch(int $round, int $number): MatchModel
 {
     return MatchModel::where('round_number', $round)->where('match_number', $number)->firstOrFail();
 }
 
+/**
+ * Gm player id.
+ *
+ * @param  MatchModel  $match  The match.
+ * @param  string  $side  The side.
+ * @return int The result.
+ */
 function gmPlayerId(MatchModel $match, string $side): int
 {
     $team = $side === 'team1' ? $match->homeTeam : $match->awayTeam;
@@ -229,6 +251,11 @@ it('keys stat rows by the active quarter so bindings cannot leak across quarters
         ->assertSeeHtml('wire:key="ingame-stat-row-team1-'.$playerId.'-1"');
 });
 
+/**
+ * Gm final with quarters.
+ *
+ * @return MatchModel The result.
+ */
 function gmFinalWithQuarters(): MatchModel
 {
     $match = gmMatch(8, 1);
@@ -400,6 +427,11 @@ it('ignores draft and publish actions in correction mode', function () {
     expect(AuditLog::where('action', 'stats.save')->where('entity_id', $match->id)->exists())->toBeFalse();
 });
 
+/**
+ * Gm series tournament.
+ *
+ * @return Tournament The result.
+ */
 function gmSeriesTournament(): Tournament
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
@@ -410,6 +442,12 @@ function gmSeriesTournament(): Tournament
     return $tournament->fresh();
 }
 
+/**
+ * Gm series final.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @return MatchModel The result.
+ */
 function gmSeriesFinal(Tournament $tournament): MatchModel
 {
     $bracket = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))

@@ -1,5 +1,7 @@
 <?php
 
+/** Authorization policy for Player policy. */
+
 namespace App\Policies;
 
 use App\Models\Player;
@@ -8,6 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class PlayerPolicy extends BasePolicy
 {
+    /**
+     * Update.
+     *
+     * @param  User  $user  The user.
+     * @param  Model  $model  The model.
+     * @return bool The result.
+     */
     public function update(User $user, Model $model): bool
     {
         if ($user->hasRole('organizer')) {

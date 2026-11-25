@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Eligibility service. */
+
 namespace App\Services;
 
 use App\Models\Division;
@@ -47,6 +49,13 @@ class EligibilityService
         ];
     }
 
+    /**
+     * Compute a player's age on the tournament start date.
+     *
+     * @param  DateTimeInterface|string|null  $birthdate  The birthdate.
+     * @param  ?Tournament  $tournament  The tournament.
+     * @return ?int The result.
+     */
     public function ageAtTournamentStart(DateTimeInterface|string|null $birthdate, ?Tournament $tournament): ?int
     {
         if ($birthdate === null || $birthdate === '') {
@@ -64,6 +73,14 @@ class EligibilityService
         return (int) $date->diff($reference)->y;
     }
 
+    /**
+     * Describe why a player's age fails eligibility, if it does.
+     *
+     * @param  DateTimeInterface|string|null  $birthdate  The birthdate.
+     * @param  ?Division  $division  The division.
+     * @param  ?Tournament  $tournament  The tournament.
+     * @return ?string The result.
+     */
     public function ageIssue(
         DateTimeInterface|string|null $birthdate,
         ?Division $division,
@@ -88,6 +105,12 @@ class EligibilityService
         return null;
     }
 
+    /**
+     * Create default eligibility records for a player.
+     *
+     * @param  Player  $player  The player.
+     * @return void Nothing.
+     */
     public function initializePlayer(Player $player): void
     {
         $player->update([
@@ -114,6 +137,14 @@ class EligibilityService
         $this->recalculate($player);
     }
 
+    /**
+     * Record a consent decision and audit the change.
+     *
+     * @param  Player  $player  The player.
+     * @param  string  $status  The status.
+     * @param  ?User  $actor  The actor.
+     * @return void Nothing.
+     */
     public function recordConsent(Player $player, string $status, ?User $actor = null): void
     {
         $this->assertStatus($status, ['pending', 'verified', 'missing']);
@@ -128,6 +159,14 @@ class EligibilityService
         $this->recalculate($player, $actor);
     }
 
+    /**
+     * Approve or reject a player's eligibility document.
+     *
+     * @param  Player  $player  The player.
+     * @param  string  $status  The status.
+     * @param  ?User  $actor  The actor.
+     * @return void Nothing.
+     */
     public function reviewDocument(Player $player, string $status, ?User $actor = null): void
     {
         $this->assertStatus($status, ['pending', 'approved', 'missing']);
@@ -149,11 +188,24 @@ class EligibilityService
         $this->recalculate($player, $actor);
     }
 
+    /**
+     * Clear a document review so it can be reviewed again.
+     *
+     * @param  Player  $player  The player.
+     * @return void Nothing.
+     */
     public function resetDocumentReview(Player $player): void
     {
         $this->reviewDocument($player, 'pending');
     }
 
+    /**
+     * Recompute a player's eligibility status and audit the change.
+     *
+     * @param  Player  $player  The player.
+     * @param  ?User  $actor  The actor.
+     * @return void Nothing.
+     */
     public function recalculate(Player $player, ?User $actor = null): void
     {
         $document = $this->documentFor($player);
@@ -182,6 +234,12 @@ class EligibilityService
         $player->save();
     }
 
+    /**
+     * Recalculate eligibility for every player on a team.
+     *
+     * @param  Team  $team  The team.
+     * @return void Nothing.
+     */
     public function refresh(Team $team): void
     {
         $team->load('players.eligibilityDocuments');
@@ -234,6 +292,12 @@ class EligibilityService
         ];
     }
 
+    /**
+     * Return the eligibility document for a player, if present.
+     *
+     * @param  Player  $player  The player.
+     * @return ?EligibilityDocument The result.
+     */
     private function documentFor(Player $player): ?EligibilityDocument
     {
         return $player->eligibilityDocuments()
@@ -241,6 +305,12 @@ class EligibilityService
             ->first();
     }
 
+    /**
+     * Check whether a player has all required documents approved.
+     *
+     * @param  Player  $player  The player.
+     * @return bool The result.
+     */
     private function documentsCompleteFor(Player $player): bool
     {
         $document = $player->eligibilityDocuments

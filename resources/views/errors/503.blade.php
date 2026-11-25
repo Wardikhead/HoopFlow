@@ -1,3 +1,4 @@
+{{-- Blade view for 503. --}}
 <x-error-page
     code="503"
     title="HoopFlow is briefly offline"

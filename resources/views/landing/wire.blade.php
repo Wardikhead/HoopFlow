@@ -1,3 +1,4 @@
+{{-- Blade view for Wire. --}}
 <section class="hf-lp-wire" data-testid="landing-wire" aria-label="Sample matchday announcements">
     <span class="hf-lp-wire__label"><i class="bi bi-broadcast" aria-hidden="true"></i> Matchday wire</span>
 

@@ -1,3 +1,4 @@
+{{-- Blade view for Teams index. --}}
 <div>
     @section('title', 'Teams')
     @section('meta-description', 'Browse tournament teams - rosters, eligibility, and registration status in one HoopFlow directory.')

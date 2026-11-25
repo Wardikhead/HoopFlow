@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Standings service test. */
+
 use App\Models\Division;
 use App\Models\MatchModel;
 use App\Models\Registration;
@@ -78,6 +80,12 @@ it('assigns rank, seed, and playoff qualification for the seeded tournament', fu
         ->and($rows->every(fn (array $row): bool => array_key_exists('seed', $row)))->toBeTrue();
 });
 
+/**
+ * Standings tournament.
+ *
+ * @param  array<mixed>  $rules  The rules.
+ * @return array<mixed> The result.
+ */
 function standingsTournament(array $rules = []): array
 {
     $tournament = Tournament::factory()->create([

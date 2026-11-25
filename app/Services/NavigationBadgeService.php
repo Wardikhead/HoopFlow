@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Navigation badge service. */
+
 namespace App\Services;
 
 use App\Models\Announcement;
@@ -34,6 +36,12 @@ class NavigationBadgeService
         return array_filter($counts, fn (int $count): bool => $count > 0);
     }
 
+    /**
+     * Return the effective navigation role for a user.
+     *
+     * @param  User  $user  The user.
+     * @return string The result.
+     */
     private function role(User $user): string
     {
         return $user->hasRole('organizer')
@@ -41,6 +49,13 @@ class NavigationBadgeService
             : ($user->hasRole('coach') ? 'coach' : 'fan');
     }
 
+    /**
+     * Count unread announcements for the user's role.
+     *
+     * @param  User  $user  The user.
+     * @param  string  $role  The role.
+     * @return int The result.
+     */
     private function announcementCount(User $user, string $role): int
     {
         $allowedAudiences = match ($role) {
@@ -62,6 +77,11 @@ class NavigationBadgeService
             ->count();
     }
 
+    /**
+     * Count tournaments that need organizer attention.
+     *
+     * @return int The result.
+     */
     private function tournamentCount(): int
     {
         return Tournament::query()
@@ -70,6 +90,11 @@ class NavigationBadgeService
             ->count();
     }
 
+    /**
+     * Count pending tournament submissions.
+     *
+     * @return int The result.
+     */
     private function submissionCount(): int
     {
         return Registration::query()
@@ -78,6 +103,11 @@ class NavigationBadgeService
             ->count();
     }
 
+    /**
+     * Count pending team payments.
+     *
+     * @return int The result.
+     */
     private function paymentCount(): int
     {
         return Registration::query()
@@ -87,6 +117,11 @@ class NavigationBadgeService
             ->count();
     }
 
+    /**
+     * Count schedule items that need attention.
+     *
+     * @return int The result.
+     */
     private function scheduleCount(): int
     {
         return MatchSlot::query()

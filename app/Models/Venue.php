@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Venue. */
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;

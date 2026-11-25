@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Court blackout factory. */
+
 namespace Database\Factories;
 
 use App\Models\Court;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CourtBlackoutFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

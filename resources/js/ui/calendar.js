@@ -1,5 +1,11 @@
+// Front-end script for Calendar.
+
 let initialized = false;
 
+/**
+ * Init calendar.
+ * @returns {*} The result.
+ */
 export function initCalendar() {
     if (initialized) return;
     initialized = true;

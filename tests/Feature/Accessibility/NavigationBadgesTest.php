@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Navigation badges test. */
+
 use App\Models\Announcement;
 use App\Models\MatchModel;
 use App\Models\MatchSlot;
@@ -245,6 +247,12 @@ it('counts today\'s matches and ignores other days', function () {
         ->toBe($before + 1);
 });
 
+/**
+ * Nav badges x path.
+ *
+ * @param  string  $html  The html.
+ * @return DOMXPath The result.
+ */
 function navBadgesXPath(string $html): DOMXPath
 {
     $dom = new DOMDocument;

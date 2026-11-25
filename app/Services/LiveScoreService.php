@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Live score service. */
+
 namespace App\Services;
 
 use App\Exceptions\ScoreConflictException;
@@ -17,6 +19,11 @@ class LiveScoreService
     /** Scores are only accepted while a match is scheduled or already running. */
     private const EDITABLE_STATUSES = ['scheduled', 'in_progress'];
 
+    /**
+     * Create a live-score service with audit logging.
+     *
+     * @param  AuditLogger  $auditLogger  The audit logger.
+     */
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**

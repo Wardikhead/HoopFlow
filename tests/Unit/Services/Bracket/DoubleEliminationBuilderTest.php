@@ -1,8 +1,19 @@
 <?php
 
+/** Tests for Double elimination builder test. */
+
 use App\Services\Bracket\DoubleEliminationBuilder;
 use App\Services\Bracket\MatchupPlan;
 
+/**
+ * De matchup.
+ *
+ * @param  array<mixed>  $matchups  The matchups.
+ * @param  string  $stage  The stage.
+ * @param  int  $round  The round.
+ * @param  int  $match  The match.
+ * @return MatchupPlan The result.
+ */
 function deMatchup(array $matchups, string $stage, int $round, int $match): MatchupPlan
 {
     $key = $stage.':'.$round.':'.$match;

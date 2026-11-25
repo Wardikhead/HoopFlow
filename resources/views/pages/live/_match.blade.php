@@ -1,3 +1,4 @@
+{{-- Blade view for Match. --}}
 @php
     $homeScore = $match['home_score'];
     $awayScore = $match['away_score'];

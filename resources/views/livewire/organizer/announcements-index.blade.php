@@ -1,3 +1,4 @@
+{{-- Blade view for Announcements index. --}}
 <div>
     @php
         $announcements = $this->announcements;

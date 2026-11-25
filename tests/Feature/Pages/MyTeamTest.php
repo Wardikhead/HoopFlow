@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for My team test. */
+
 use App\Livewire\Coach\MyTeam;
 use App\Models\Division;
 use App\Models\EligibilityDocument;

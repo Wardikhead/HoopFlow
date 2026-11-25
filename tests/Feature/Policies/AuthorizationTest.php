@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Authorization test. */
+
 use App\Models\Announcement;
 use App\Models\MatchModel;
 use App\Models\Payment;
@@ -17,6 +19,11 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Auth users.
+ *
+ * @return array<mixed> The result.
+ */
 function authUsers(): array
 {
     return [

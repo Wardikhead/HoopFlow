@@ -1,3 +1,5 @@
+// Front-end script for Logout.
+
 import { showPageLoader } from './loading';
 
 const EXIT_MS = 180;
@@ -8,10 +10,18 @@ let activeForm = null;
 let closing = false;
 let busy = false;
 
+/**
+ * Dialog.
+ * @returns {*} The result.
+ */
 function dialog() {
     return document.querySelector('[data-hf-logout-dialog]');
 }
 
+/**
+ * Reset.
+ * @returns {*} The result.
+ */
 function reset() {
     closing = false;
     busy = false;
@@ -32,6 +42,12 @@ function reset() {
     if (copy) copy.textContent = copy.dataset.defaultCopy ?? '';
 }
 
+/**
+ * Open.
+ *
+ * @param {*} form The form.
+ * @returns {*} The result.
+ */
 function open(form) {
     const node = dialog();
     if (!(node instanceof HTMLDialogElement)) return;
@@ -51,6 +67,10 @@ function open(form) {
     node.showModal();
 }
 
+/**
+ * Close.
+ * @returns {*} The result.
+ */
 function close() {
     const node = dialog();
     if (!(node instanceof HTMLDialogElement) || closing || busy) return;
@@ -74,6 +94,10 @@ function close() {
     window.setTimeout(finish, EXIT_MS);
 }
 
+/**
+ * Submit.
+ * @returns {*} The result.
+ */
 function submit() {
     const node = dialog();
     if (!activeForm || busy || !(node instanceof HTMLDialogElement)) return;
@@ -101,6 +125,10 @@ function submit() {
     }, delay);
 }
 
+/**
+ * Init logout dialog.
+ * @returns {*} The result.
+ */
 export function initLogoutDialog() {
     if (bound) return;
     bound = true;

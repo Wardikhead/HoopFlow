@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Match slot. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,6 +17,11 @@ class MatchSlot extends Model
 
     protected $keyType = 'int';
 
+    /**
+     * Booted.
+     *
+     * @return void Nothing.
+     */
     protected static function booted(): void
     {
         static::creating(function ($model) {
@@ -27,6 +34,11 @@ class MatchSlot extends Model
     /** @use HasFactory<Factory> */
     use HasFactory;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

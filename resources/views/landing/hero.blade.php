@@ -1,3 +1,4 @@
+{{-- Blade view for Hero. --}}
 @php
     $liveHome = $live['home'] ? $teams->get($live['home']) : null;
     $liveAway = $live['away'] ? $teams->get($live['away']) : null;

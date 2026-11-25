@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Team register. */
+
 namespace App\Livewire\Coach;
 
 use App\Livewire\SecureComponent;
@@ -94,6 +96,11 @@ class TeamRegister extends SecureComponent
 
     public string $paymentRef = '';
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $requested = request()->query('tournament');
@@ -136,6 +143,11 @@ class TeamRegister extends SecureComponent
         ];
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
@@ -144,6 +156,11 @@ class TeamRegister extends SecureComponent
             : null;
     }
 
+    /**
+     * Existing team.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function existingTeam(): ?Team
     {
@@ -160,30 +177,55 @@ class TeamRegister extends SecureComponent
             ->first();
     }
 
+    /**
+     * Division.
+     *
+     * @return ?Division The result.
+     */
     #[Computed]
     public function division(): ?Division
     {
         return $this->tournament?->divisions()->first();
     }
 
+    /**
+     * Division age min.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function divisionAgeMin(): int
     {
         return $this->division->age_min ?? 8;
     }
 
+    /**
+     * Division age max.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function divisionAgeMax(): int
     {
         return $this->division->age_max ?? 99;
     }
 
+    /**
+     * Entry fee.
+     *
+     * @return float The result.
+     */
     #[Computed]
     public function entryFee(): float
     {
         return $this->tournament?->entryFee() ?? 0.0;
     }
 
+    /**
+     * Fill demo.
+     *
+     * @return void Nothing.
+     */
     public function fillDemo(): void
     {
         $this->name = 'San Antonio Vipers U17';
@@ -213,6 +255,12 @@ class TeamRegister extends SecureComponent
         );
     }
 
+    /**
+     * Demo birthdate.
+     *
+     * @param  int  $age  The age.
+     * @return string The result.
+     */
     protected function demoBirthdate(int $age): string
     {
         $reference = $this->tournament->start_date ?? now();
@@ -220,6 +268,12 @@ class TeamRegister extends SecureComponent
         return $reference->copy()->subYears($age)->format('Y-m-d');
     }
 
+    /**
+     * Age at tournament start.
+     *
+     * @param  ?string  $birthdate  The birthdate.
+     * @return int|string The result.
+     */
     public function ageAtTournamentStart(?string $birthdate): int|string
     {
         if ($birthdate === null || $birthdate === '') {
@@ -231,6 +285,11 @@ class TeamRegister extends SecureComponent
         return (int) Carbon::parse($birthdate)->diffInYears($reference);
     }
 
+    /**
+     * Add player.
+     *
+     * @return void Nothing.
+     */
     public function addPlayer(): void
     {
         if (count($this->players) >= 12) {
@@ -242,6 +301,12 @@ class TeamRegister extends SecureComponent
         $this->players[] = $this->blankPlayer();
     }
 
+    /**
+     * Remove player.
+     *
+     * @param  int  $index  The index.
+     * @return void Nothing.
+     */
     public function removePlayer(int $index): void
     {
         if (count($this->players) <= 8) {
@@ -254,6 +319,11 @@ class TeamRegister extends SecureComponent
         $this->players = array_values($this->players);
     }
 
+    /**
+     * Next step.
+     *
+     * @return void Nothing.
+     */
     public function nextStep(): void
     {
         $this->resetValidation();
@@ -283,12 +353,22 @@ class TeamRegister extends SecureComponent
         }
     }
 
+    /**
+     * Previous step.
+     *
+     * @return void Nothing.
+     */
     public function previousStep(): void
     {
         $this->resetValidation();
         $this->step = max(0, $this->step - 1);
     }
 
+    /**
+     * Save.
+     *
+     * @return void Nothing.
+     */
     public function save(): void
     {
         $this->resetValidation();
@@ -513,6 +593,11 @@ class TeamRegister extends SecureComponent
         ];
     }
 
+    /**
+     * Validate jersey numbers.
+     *
+     * @return bool The result.
+     */
     protected function validateJerseyNumbers(): bool
     {
         $numbers = [];
@@ -532,6 +617,11 @@ class TeamRegister extends SecureComponent
         return $valid;
     }
 
+    /**
+     * Default coach name.
+     *
+     * @return string The result.
+     */
     protected function defaultCoachName(): string
     {
         $user = auth()->user();
@@ -543,6 +633,11 @@ class TeamRegister extends SecureComponent
         return trim((string) preg_replace('/^Coach\s+/i', '', $user->name));
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.coach.team-register');

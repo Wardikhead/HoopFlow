@@ -1,10 +1,17 @@
 <?php
 
+/** Database migration 2026 11 08 000003 ensure historical audit log partitions. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
@@ -25,6 +32,11 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // no-op: partitioning is additive

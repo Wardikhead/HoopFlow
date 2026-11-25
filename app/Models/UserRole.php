@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for User role. */
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;

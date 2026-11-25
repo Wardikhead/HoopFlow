@@ -1,3 +1,4 @@
+{{-- Blade view for Unavailable. --}}
 @extends('layouts.public')
 
 @section('title', 'Team not available')

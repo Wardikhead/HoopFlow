@@ -1,5 +1,7 @@
 <?php
 
+/** Route definitions for Calendar. */
+
 use App\Http\Controllers\ScheduleCalendarController;
 use Illuminate\Support\Facades\Route;
 

@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Standings show. */
+
 namespace App\Livewire\Public;
 
 use App\Models\MatchModel;
@@ -60,6 +62,12 @@ class StandingsShow extends Component
 
     public string $filter = 'all';
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $id  The id.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $id = null): void
     {
         $requested = $id ?? request()->query('id') ?? request()->query('tournament');
@@ -81,6 +89,12 @@ class StandingsShow extends Component
         $this->search = (string) (request()->query('q') ?? '');
     }
 
+    /**
+     * Change tournament.
+     *
+     * @param  int|string  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     public function changeTournament(int|string $tournamentId): void
     {
         if (! is_numeric($tournamentId) || (int) $tournamentId <= 0) {
@@ -90,6 +104,11 @@ class StandingsShow extends Component
         $this->redirect(route('standings', ['id' => (int) $tournamentId]), navigate: true);
     }
 
+    /**
+     * Tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function tournament(): ?Tournament
     {
@@ -182,6 +201,11 @@ class StandingsShow extends Component
             ->values();
     }
 
+    /**
+     * Cut.
+     *
+     * @return int The result.
+     */
     #[Computed]
     public function cut(): int
     {
@@ -222,6 +246,11 @@ class StandingsShow extends Component
         ];
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.public.standings-show');

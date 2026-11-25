@@ -1,3 +1,4 @@
+{{-- Blade view for Profile password. --}}
 @extends('layouts.public')
 
 @section('title', 'Change password')

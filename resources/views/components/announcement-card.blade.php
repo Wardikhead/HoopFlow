@@ -1,3 +1,4 @@
+{{-- Blade view for Announcement card. --}}
 @props(['announcement', 'compact' => false])
 
 @php

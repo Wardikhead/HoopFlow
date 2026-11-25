@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Court factory. */
+
 namespace Database\Factories;
 
 use App\Models\Court;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CourtFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Announcement create. */
+
 namespace App\Livewire\Organizer;
 
 use App\Exceptions\AnnouncementDraftException;
@@ -53,6 +55,11 @@ class AnnouncementCreate extends SecureComponent
 
     public ?string $aiDraftError = null;
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $requested = request()->query('id') ?? request()->query('tournament');
@@ -111,12 +118,22 @@ class AnnouncementCreate extends SecureComponent
         ];
     }
 
+    /**
+     * Ai draft available.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function aiDraftAvailable(): bool
     {
         return $this->hasGeminiKey();
     }
 
+    /**
+     * Draft with ai.
+     *
+     * @return void Nothing.
+     */
     public function draftWithAi(): void
     {
         if (! $this->hasGeminiKey()) {
@@ -176,6 +193,12 @@ class AnnouncementCreate extends SecureComponent
         }
     }
 
+    /**
+     * Draft error message.
+     *
+     * @param  AnnouncementDraftException  $exception  The exception.
+     * @return string The result.
+     */
     private function draftErrorMessage(AnnouncementDraftException $exception): string
     {
         return $exception->reason === 'busy'
@@ -183,6 +206,11 @@ class AnnouncementCreate extends SecureComponent
             : "Couldn't draft right now. Your notes are safe — try again or write it manually.";
     }
 
+    /**
+     * Has gemini key.
+     *
+     * @return bool The result.
+     */
     private function hasGeminiKey(): bool
     {
         $key = config('services.gemini.key');
@@ -190,6 +218,11 @@ class AnnouncementCreate extends SecureComponent
         return is_string($key) && trim($key) !== '';
     }
 
+    /**
+     * Save.
+     *
+     * @return void Nothing.
+     */
     public function save(): void
     {
         $validated = $this->validate();
@@ -246,6 +279,11 @@ class AnnouncementCreate extends SecureComponent
             ->get();
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.announcement-create');

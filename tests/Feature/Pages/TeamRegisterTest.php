@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Team register test. */
+
 use App\Livewire\Coach\TeamRegister;
 use App\Models\Team;
 use App\Models\Tournament;

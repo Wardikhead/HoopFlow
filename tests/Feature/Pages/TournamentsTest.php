@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Tournaments test. */
+
 use App\Livewire\Organizer\TournamentCreate;
 use App\Livewire\Organizer\TournamentShow;
 use App\Livewire\Organizer\TournamentsIndex;

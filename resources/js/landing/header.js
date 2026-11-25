@@ -1,3 +1,5 @@
+// Front-end script for Header.
+
 export default function initHeader() {
     const header = document.querySelector('[data-landing-header]');
     const progress = document.querySelector('[data-landing-progress]');

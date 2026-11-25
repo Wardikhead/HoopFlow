@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Round robin builder. */
+
 namespace App\Services\Bracket;
 
 final class RoundRobinBuilder

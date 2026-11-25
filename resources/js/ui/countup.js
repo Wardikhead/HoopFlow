@@ -1,3 +1,9 @@
+/**
+ * Animate value.
+ *
+ * @param {*} element The element.
+ * @returns {*} The result.
+ */
 function animateValue(element) {
     if (element.dataset.counted === 'true') return;
     element.dataset.counted = 'true';
@@ -26,6 +32,10 @@ function animateValue(element) {
     requestAnimationFrame(tick);
 }
 
+/**
+ * Init count up.
+ * @returns {*} The result.
+ */
 export function initCountUp() {
     document.querySelectorAll('[data-countup]').forEach(animateValue);
 }

@@ -1,3 +1,5 @@
+// Front-end script for Reveal.
+
 export default function initReveal() {
     const elements = [...document.querySelectorAll('.hf-lp-reveal, .hf-lp-wipe')];
     const bracket = document.querySelector('[data-bracket]');

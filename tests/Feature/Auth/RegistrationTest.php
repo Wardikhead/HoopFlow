@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Registration test. */
+
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;

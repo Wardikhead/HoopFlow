@@ -1,3 +1,4 @@
+{{-- Blade view for Matchday strip. --}}
 @props([
     'eyebrow',
     'title',
