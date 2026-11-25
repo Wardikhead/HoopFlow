@@ -137,6 +137,26 @@
   .hf-card--link .hf-card__arrow {
     transition: transform var(--hf-dur-standard) var(--hf-ease-out);
   }
+
+  .hf-bottom-nav {
+    animation: hf-nav-dock-in 480ms var(--hf-ease-out) both;
+  }
+
+  .hf-nav-tab.is-active .bi {
+    animation: hf-nav-icon-pop 380ms var(--hf-ease-out) both;
+  }
+
+  .hf-sheet__group a {
+    animation: hf-nav-item-in 300ms var(--hf-ease-out) both;
+  }
+
+  .hf-sheet__group a:nth-child(2) { animation-delay: 28ms; }
+  .hf-sheet__group a:nth-child(3) { animation-delay: 56ms; }
+  .hf-sheet__group a:nth-child(4) { animation-delay: 84ms; }
+  .hf-sheet__group a:nth-child(5) { animation-delay: 112ms; }
+  .hf-sheet__group a:nth-child(6) { animation-delay: 140ms; }
+  .hf-sheet__group a:nth-child(7) { animation-delay: 168ms; }
+  .hf-sheet__group a:nth-child(8) { animation-delay: 196ms; }
 }
 
 @keyframes hf-page-in {
@@ -224,7 +244,10 @@
   .hf-user-menu.is-closing .hf-user-menu__panel,
   .hf-user-menu__body > *,
   .hf-combo__menu,
-  .hf-toast {
+  .hf-toast,
+  .hf-bottom-nav,
+  .hf-nav-tab.is-active .bi,
+  .hf-sheet__group a {
     animation: none !important;
   }
 
@@ -244,7 +267,10 @@
 [data-motion='reduced'] .hf-user-menu.is-closing .hf-user-menu__panel,
 [data-motion='reduced'] .hf-user-menu__body > *,
 [data-motion='reduced'] .hf-combo__menu,
-[data-motion='reduced'] .hf-toast {
+[data-motion='reduced'] .hf-toast,
+[data-motion='reduced'] .hf-bottom-nav,
+[data-motion='reduced'] .hf-nav-tab.is-active .bi,
+[data-motion='reduced'] .hf-sheet__group a {
   animation: none !important;
 }
 
@@ -271,11 +297,11 @@
 }
 
 ::view-transition-old(hf-page) {
-  animation: hf-page-vt-out var(--hf-dur-exit) ease-in both;
+  animation: hf-page-vt-out 160ms ease-in both;
 }
 
 ::view-transition-new(hf-page) {
-  animation: hf-page-vt-in var(--hf-dur-page) var(--hf-ease-out) both;
+  animation: hf-page-vt-in 320ms var(--hf-ease-out) both;
 }
 
 /* Shell chrome is fixed/sticky, so the root snapshot misplaces it during the
@@ -308,12 +334,28 @@
   display: none;
 }
 
+@keyframes hf-nav-dock-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hf-nav-icon-pop {
+  0% { transform: scale(0.8) translateY(2px); }
+  55% { transform: scale(1.14) translateY(-3px); }
+  100% { transform: translateY(-2px) scale(1.06); }
+}
+
+@keyframes hf-nav-item-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
 @keyframes hf-page-vt-out {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(-4px); }
+  from { opacity: 1; transform: none; filter: blur(0); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.994); filter: blur(2px); }
 }
 
 @keyframes hf-page-vt-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translateY(10px) scale(0.996); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
 }

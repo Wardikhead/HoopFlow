@@ -89,6 +89,8 @@ const NAV_KEY = 'hf-nav';
 const TOOLTIP_GAP = 10;
 const VIEWPORT_GAP = 8;
 
+let bottomNavBound = false;
+
 let navBound = false;
 let tooltip = null;
 let tooltipTarget = null;
@@ -190,6 +192,89 @@ function renderNav(state) {
     hideTooltip();
 }
 
+let railGlowTarget = null;
+
+/**
+ * Ensure rail glow.
+ *
+ * @param {*} rail The rail.
+ * @returns {*} The glow element.
+ */
+function ensureRailGlow(rail) {
+    if (!rail) return null;
+
+    let glow = rail.querySelector('.hf-rail-glow');
+
+    if (!glow) {
+        glow = document.createElement('span');
+        glow.className = 'hf-rail-glow';
+        glow.setAttribute('aria-hidden', 'true');
+        rail.prepend(glow);
+    }
+
+    return glow;
+}
+
+/**
+ * Move rail glow.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
+function moveRailGlow(link) {
+    const rail = link?.closest('.hf-rail');
+    if (!rail) return;
+
+    const created = !rail.querySelector('.hf-rail-glow');
+    const glow = ensureRailGlow(rail);
+    if (!glow) return;
+
+    const railRect = rail.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+
+    if (!linkRect.width) {
+        glow.classList.remove('is-visible');
+
+        return;
+    }
+
+    // The first placement lands in one paint; only later moves glide.
+    if (created) glow.classList.add('is-instant');
+
+    glow.style.setProperty('--hf-glow-x', `${linkRect.left - railRect.left - rail.clientLeft}px`);
+    glow.style.setProperty('--hf-glow-y', `${linkRect.top - railRect.top - rail.clientTop + rail.scrollTop}px`);
+    glow.style.setProperty('--hf-glow-w', `${linkRect.width}px`);
+    glow.style.setProperty('--hf-glow-h', `${linkRect.height}px`);
+
+    rail.classList.add('has-glow');
+    glow.classList.add('is-visible');
+
+    if (created) {
+        window.requestAnimationFrame(() => glow.classList.remove('is-instant'));
+    }
+}
+
+/**
+ * Sync rail glow.
+ * @returns {*} The result.
+ */
+export function syncRailGlow() {
+    const rail = document.querySelector('.hf-rail');
+    if (!rail) return;
+
+    const target = railGlowTarget?.isConnected
+        ? railGlowTarget
+        : rail.querySelector('.hf-rail-link.is-active');
+
+    if (!target) {
+        rail.querySelector('.hf-rail-glow')?.classList.remove('is-visible');
+
+        return;
+    }
+
+    moveRailGlow(target);
+}
+
 /**
  * Resolve nav state.
  *
@@ -215,6 +300,8 @@ export function syncNavRail() {
         current: document.documentElement.dataset.nav ?? null,
         mediaMatches: window.matchMedia('(min-width: 1200px)').matches,
     }));
+
+    syncRailGlow();
 }
 
 /**
@@ -251,24 +338,120 @@ export function initNavRail() {
 
     document.addEventListener('pointerover', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
-        if (link && link !== tooltipTarget) showTooltip(link);
+        if (!link) return;
+        if (link !== tooltipTarget) showTooltip(link);
+
+        if (link === railGlowTarget) return;
+
+        railGlowTarget = link;
+        moveRailGlow(link);
     });
 
     document.addEventListener('pointerout', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
         if (!link) return;
         if (!link.contains(event.relatedTarget)) hideTooltip();
+
+        // Moving between rows should glide straight across, never via the active row.
+        const next = event.relatedTarget instanceof Element
+            ? event.relatedTarget.closest('.hf-rail-link')
+            : null;
+        if (next) return;
+
+        railGlowTarget = null;
+        syncRailGlow();
     });
 
     document.addEventListener('focusin', (event) => {
         const link = event.target instanceof Element ? event.target.closest('.hf-rail-link') : null;
-        if (link) showTooltip(link);
+        if (!link) return;
+
+        showTooltip(link);
+        railGlowTarget = link;
+        moveRailGlow(link);
     });
 
     document.addEventListener('focusout', (event) => {
-        if (event.target instanceof Element && event.target.closest('.hf-rail-link')) hideTooltip();
+        if (!(event.target instanceof Element) || !event.target.closest('.hf-rail-link')) return;
+
+        hideTooltip();
+
+        const next = event.relatedTarget instanceof Element
+            ? event.relatedTarget.closest('.hf-rail-link')
+            : null;
+        if (next) return;
+
+        railGlowTarget = null;
+        syncRailGlow();
     });
 
     window.addEventListener('scroll', hideTooltip, true);
     window.addEventListener('resize', hideTooltip);
+    window.addEventListener('resize', syncRailGlow);
+
+    // The rail scrolls on its own when the viewport is short.
+    document.addEventListener('scroll', (event) => {
+        if (event.target instanceof Element && event.target.classList.contains('hf-rail')) {
+            syncRailGlow();
+        }
+    }, true);
+
+    // Collapsing and expanding animates the width, so re-measure at the end.
+    document.addEventListener('transitionend', (event) => {
+        if (event.target instanceof Element
+            && event.target.classList.contains('hf-rail')
+            && event.propertyName === 'width') {
+            syncRailGlow();
+        }
+    });
+}
+
+// The mobile dock paints a single pill behind the active tab. Measuring the tab
+// instead of hard-coding a fraction of the bar keeps the pill aligned while the
+// safe-area inset, font scale, or viewport width changes.
+/**
+ * Sync bottom nav indicator.
+ * @returns {*} The result.
+ */
+export function syncBottomNavIndicator() {
+    const nav = document.querySelector('[data-bottom-nav]');
+    const indicator = nav?.querySelector('.hf-bottom-nav__indicator');
+    const active = nav?.querySelector('.hf-nav-tab.is-active');
+
+    if (!nav || !indicator || !active) {
+        indicator?.classList.remove('is-visible');
+
+        return;
+    }
+
+    const navRect = nav.getBoundingClientRect();
+    const tabRect = active.getBoundingClientRect();
+
+    if (!tabRect.width) {
+        indicator.classList.remove('is-visible');
+
+        return;
+    }
+
+    indicator.style.setProperty('--hf-nav-x', `${tabRect.left - navRect.left - nav.clientLeft}px`);
+    indicator.style.setProperty('--hf-nav-w', `${tabRect.width}px`);
+    indicator.classList.add('is-visible');
+}
+
+/**
+ * Init bottom nav.
+ * @returns {*} The result.
+ */
+export function initBottomNav() {
+    if (bottomNavBound) return;
+    bottomNavBound = true;
+
+    const sync = () => window.requestAnimationFrame(syncBottomNavIndicator);
+
+    sync();
+    window.addEventListener('resize', sync, { passive: true });
+    window.addEventListener('orientationchange', sync);
+
+    // Widths settle once the display font is ready.
+    document.fonts?.ready.then(sync).catch(() => {});
 }

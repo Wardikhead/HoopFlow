@@ -17,7 +17,7 @@ import { initScoreConsole } from './score-console';
 import { bindScorekeeperPage, initScorekeeper } from './scorekeeper';
 import { initRichSelects } from './select.js';
 import { initSpaNavigation } from './spa-nav';
-import { initMoreSheet, initNavRail, initShell, syncNavRail } from './shell';
+import { initBottomNav, initMoreSheet, initNavRail, initShell, syncBottomNavIndicator, syncNavRail } from './shell';
 import { registerToasts } from './toasts';
 import { initValidation, refreshValidation } from './validation';
 
@@ -32,6 +32,7 @@ let globalsReady = false;
 function syncDocumentState() {
     applyPreferences();
     syncNavRail();
+    syncBottomNavIndicator();
 }
 
 /**
@@ -43,6 +44,7 @@ function initGlobals() {
     globalsReady = true;
 
     initBracketZoom();
+    initBottomNav();
     initCalendar();
     initCardMenus();
     initFeedback();
