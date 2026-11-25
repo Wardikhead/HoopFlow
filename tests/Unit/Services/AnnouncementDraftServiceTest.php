@@ -191,3 +191,80 @@ it('throws failed when the generated text is below the minimum lengths', functio
     expect(fn () => (new AnnouncementDraftService)->draft('enough notes here'))
         ->toThrow(AnnouncementDraftException::class, 'The draft could not be created.');
 });
+
+it('uses a category-tuned prompt and derives the title from the body', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(
+            hfGeminiTextResponse(hfGeminiJsonPayload(
+                'Gate opens early',
+                'Bring your IDs and arrive 45 minutes before the first game.',
+            )),
+        ),
+    ]);
+
+    (new AnnouncementDraftService)->draft('gate opens early, bring IDs', null, 'schedule');
+
+    Http::assertSent(function (Request $request): bool {
+        $prompt = (string) $request['systemInstruction']['parts'][0]['text'];
+
+        return str_contains($prompt, 'Energetic and clear')
+            && str_contains($prompt, 'Draft the body from the facts supplied first, then write a title that summarizes that body');
+    });
+});
+
+it('permits emojis when the category chance passes', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(
+            hfGeminiTextResponse(hfGeminiJsonPayload('Gate opens early', 'Bring your IDs.')),
+        ),
+    ]);
+
+    mt_srand(5); // first mt_rand(1, 100) is 12, within the schedule chance of 25
+
+    try {
+        (new AnnouncementDraftService)->draft('gate opens early, bring IDs', null, 'schedule');
+    } finally {
+        mt_srand();
+    }
+
+    Http::assertSent(fn (Request $request): bool => str_contains(
+        (string) $request['systemInstruction']['parts'][0]['text'],
+        'You may use at most one emoji in the title and one in the body',
+    ));
+});
+
+it('forbids emojis when the category chance fails', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(
+            hfGeminiTextResponse(hfGeminiJsonPayload('Gate opens early', 'Bring your IDs.')),
+        ),
+    ]);
+
+    mt_srand(1); // first mt_rand(1, 100) is 46, above the schedule chance of 25
+
+    try {
+        (new AnnouncementDraftService)->draft('gate opens early, bring IDs', null, 'schedule');
+    } finally {
+        mt_srand();
+    }
+
+    Http::assertSent(fn (Request $request): bool => str_contains(
+        (string) $request['systemInstruction']['parts'][0]['text'],
+        'Do not use emojis.',
+    ));
+});
+
+it('falls back to a general tone for an unknown category', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(
+            hfGeminiTextResponse(hfGeminiJsonPayload('Gate opens early', 'Bring your IDs.')),
+        ),
+    ]);
+
+    (new AnnouncementDraftService)->draft('gate opens early, bring IDs', null, 'unknown-category');
+
+    Http::assertSent(fn (Request $request): bool => str_contains(
+        (string) $request['systemInstruction']['parts'][0]['text'],
+        'Upbeat and neighbourly',
+    ));
+});

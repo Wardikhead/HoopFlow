@@ -173,6 +173,7 @@ class AnnouncementCreate extends SecureComponent
                     $draft = app(AnnouncementDraftService::class)->draft(
                         (string) $validated['aiNotes'],
                         $tournament,
+                        $this->category,
                     );
                 } catch (AnnouncementDraftException $exception) {
                     $this->aiDraftError = $this->draftErrorMessage($exception);
