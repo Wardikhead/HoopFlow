@@ -95,8 +95,10 @@ class DemoSeeder extends Seeder
         $this->seedUsers();
         fwrite(STDERR, "DEMO: users seeded\n");
 
-        DB::statement('SET statement_timeout = 0');
-        DB::statement('SET idle_in_transaction_session_timeout = 0');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('SET statement_timeout = 0');
+            DB::statement('SET idle_in_transaction_session_timeout = 0');
+        }
         fwrite(STDERR, "DEMO: timeouts set\n");
 
         DB::transaction(function (): void {
