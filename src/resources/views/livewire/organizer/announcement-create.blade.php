@@ -1,3 +1,4 @@
+{{-- Blade view for Announcement create. --}}
 <div>
     @section('title', 'New announcement')
     @section('meta-description', 'Compose a league announcement - category, audience, pinning, and a live preview before publishing.')

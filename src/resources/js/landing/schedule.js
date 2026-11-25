@@ -1,3 +1,5 @@
+// Front-end script for Schedule.
+
 export default function initSchedule() {
     const root = document.querySelector('[data-schedule]');
 

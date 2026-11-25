@@ -1,11 +1,18 @@
 <?php
 
+/** Database migration 2026 11 06 000070 add performance indexes. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         Schema::table('match_slots', function ($table) {
@@ -24,6 +31,11 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // drop indexes if present

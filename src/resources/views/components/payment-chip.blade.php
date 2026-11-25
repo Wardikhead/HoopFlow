@@ -1,3 +1,4 @@
+{{-- Blade view for Payment chip. --}}
 @props(['payment' => null, 'label' => null])
 
 @php

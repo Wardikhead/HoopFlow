@@ -1,3 +1,4 @@
+{{-- Blade view for Match card. --}}
 @props(['match', 'href', 'compact' => false, 'testid' => null, 'rescheduled' => false])
 
 @php

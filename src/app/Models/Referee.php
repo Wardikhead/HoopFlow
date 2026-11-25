@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Referee. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;

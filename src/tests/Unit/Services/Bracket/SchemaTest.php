@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Schema test. */
+
 use App\Models\MatchModel;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;

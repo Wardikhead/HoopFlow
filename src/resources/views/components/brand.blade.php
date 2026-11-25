@@ -1,3 +1,4 @@
+{{-- Blade view for Brand. --}}
 @props(['size' => 'md', 'onDark' => false, 'tagline' => null])
 
 @php

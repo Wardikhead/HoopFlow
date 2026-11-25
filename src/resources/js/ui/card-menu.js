@@ -33,6 +33,10 @@ export function cardMenuLayout({
     return { up: opensPastViewport, shift };
 }
 
+/**
+ * Init card menus.
+ * @returns {*} The result.
+ */
 export function initCardMenus() {
     document.addEventListener('alpine:init', () => {
         window.Alpine.data('hfCardMenu', () => ({

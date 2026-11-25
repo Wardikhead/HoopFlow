@@ -1,3 +1,4 @@
+{{-- Blade view for Flow. --}}
 <section id="flow" class="hf-lp-flow-section" data-testid="landing-flow" aria-labelledby="landing-flow-title">
     <div class="hf-lp-shell">
         <header class="hf-lp-section-head">

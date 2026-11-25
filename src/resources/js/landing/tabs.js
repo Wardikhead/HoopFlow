@@ -1,3 +1,5 @@
+// Front-end script for Tabs.
+
 export default function initTabs() {
     const tabs = [...document.querySelectorAll('[data-demo-tab]')];
     const panels = [...document.querySelectorAll('[data-demo-panel]')];

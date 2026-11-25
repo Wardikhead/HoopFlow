@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Announcement draft test. */
+
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Models\Announcement;
 use App\Models\User;
@@ -11,6 +13,11 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
+/**
+ * Hf draft organizer.
+ *
+ * @return User The result.
+ */
 function hfDraftOrganizer(): User
 {
     return User::where('email', 'organizer@hoopflow.ph')->firstOrFail();

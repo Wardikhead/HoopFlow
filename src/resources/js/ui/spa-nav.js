@@ -1,3 +1,9 @@
+/**
+ * Has click handler.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function hasClickHandler(link) {
     return [...link.attributes].some((attribute) => {
         const name = attribute.name;
@@ -11,6 +17,12 @@ function hasClickHandler(link) {
     });
 }
 
+/**
+ * Has dynamic href.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function hasDynamicHref(link) {
     return [...link.attributes].some((attribute) => {
         const name = attribute.name;
@@ -19,10 +31,22 @@ function hasDynamicHref(link) {
     });
 }
 
+/**
+ * Has wire navigate.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function hasWireNavigate(link) {
     return [...link.attributes].some((attribute) => attribute.name.startsWith('wire:navigate'));
 }
 
+/**
+ * Descriptor for.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function descriptorFor(link) {
     return {
         href: link.getAttribute('href') ?? '',
@@ -37,6 +61,13 @@ function descriptorFor(link) {
     };
 }
 
+/**
+ * Should intercept link.
+ *
+ * @param {*} link The link.
+ * @param {*} currentUrl The current url.
+ * @returns {*} The result.
+ */
 export function shouldInterceptLink(link, currentUrl) {
     if (!link || !link.shell) return false;
     if (link.hasWireNavigate) return false;
@@ -68,6 +99,10 @@ export function shouldInterceptLink(link, currentUrl) {
     return true;
 }
 
+/**
+ * Init spa navigation.
+ * @returns {*} The result.
+ */
 export function initSpaNavigation() {
     document.addEventListener('click', (event) => {
         if (event.defaultPrevented) return;

@@ -1,3 +1,4 @@
+{{-- Blade view for Game manage. --}}
 <div>
     @if (! $this->match)
         @if ($requestedMatchMissing)

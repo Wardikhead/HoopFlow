@@ -1,8 +1,16 @@
+// Front-end script for Scorekeeper.
+
 const MODE_KEY = 'hf-scorekeeper';
 
 let bound = false;
 let dirty = false;
 
+/**
+ * Set mode.
+ *
+ * @param {*} enabled The enabled.
+ * @returns {*} The result.
+ */
 function setMode(enabled) {
     document.documentElement.dataset.scorekeeper = enabled ? 'on' : 'off';
     sessionStorage.setItem(MODE_KEY, enabled ? 'on' : 'off');
@@ -11,6 +19,10 @@ function setMode(enabled) {
     });
 }
 
+/**
+ * Init scorekeeper.
+ * @returns {*} The result.
+ */
 export function initScorekeeper() {
     if (bound) return;
     bound = true;
@@ -30,6 +42,10 @@ export function initScorekeeper() {
     });
 }
 
+/**
+ * Bind scorekeeper page.
+ * @returns {*} The result.
+ */
 export function bindScorekeeperPage() {
     dirty = false;
 

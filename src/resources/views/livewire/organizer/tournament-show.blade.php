@@ -1,3 +1,4 @@
+{{-- Blade view for Tournament show. --}}
 <div>
     @php
         $tournament = $this->tournament;

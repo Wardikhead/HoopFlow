@@ -1,3 +1,5 @@
+// Front-end tests for Nav rail.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveNavState } from '../../resources/js/ui/shell.js';

@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Match slot factory. */
+
 namespace Database\Factories;
 
 use App\Models\Court;
@@ -14,6 +16,11 @@ use Illuminate\Support\Facades\DB;
  */
 class MatchSlotFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

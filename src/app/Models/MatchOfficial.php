@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Match official. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;

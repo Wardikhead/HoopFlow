@@ -1,5 +1,7 @@
 <?php
 
+/** Database migration 2026 11 09 000001 restore seeded audit timestamps. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +33,11 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         // no-op: the seeded timeline correction is not reversible

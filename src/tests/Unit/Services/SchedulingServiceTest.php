@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Scheduling service test. */
+
 use App\Models\AuditLog;
 use App\Models\Court;
 use App\Models\MatchModel;
@@ -19,6 +21,13 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Scheduling two team tournament.
+ *
+ * @param  string  $start  The start.
+ * @param  string  $end  The end.
+ * @return Tournament The result.
+ */
 function schedulingTwoTeamTournament(string $start = '2026-07-10', string $end = '2026-07-18'): Tournament
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
@@ -42,6 +51,11 @@ function schedulingTwoTeamTournament(string $start = '2026-07-10', string $end =
     return $tournament->fresh();
 }
 
+/**
+ * Scheduling series games.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ */
 function schedulingSeriesGames(Tournament $tournament)
 {
     $anchor = MatchModel::where('tournament_id', $tournament->id)
@@ -53,6 +67,13 @@ function schedulingSeriesGames(Tournament $tournament)
     })->orderBy('game_number')->get();
 }
 
+/**
+ * Scheduling court for plan.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @param  int  $excludeId  The exclude id.
+ * @return Court The result.
+ */
 function schedulingCourtForPlan(Tournament $tournament, int $excludeId): Court
 {
     return app(SchedulingService::class)

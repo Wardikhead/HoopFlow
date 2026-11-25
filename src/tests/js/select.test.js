@@ -1,3 +1,5 @@
+// Front-end tests for Select.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { menuPlacement, nextEnabledIndex, readRows, typeaheadIndex } from '../../resources/js/ui/select.js';

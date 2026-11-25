@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Prototype seeder test. */
+
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\MatchModel;

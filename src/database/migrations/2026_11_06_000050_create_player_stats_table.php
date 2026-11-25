@@ -1,11 +1,18 @@
 <?php
 
+/** Database migration 2026 11 06 000050 create player stats table. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         Schema::create('player_stats', function (Blueprint $table) {
@@ -27,6 +34,11 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         Schema::dropIfExists('player_stats');

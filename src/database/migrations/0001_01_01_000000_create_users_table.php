@@ -1,5 +1,7 @@
 <?php
 
+/** Database migration 0001 01 01 000000 create users table. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

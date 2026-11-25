@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Consent schema test. */
+
 use App\Models\EligibilityDocument;
 use App\Models\Player;
 use Illuminate\Database\QueryException;

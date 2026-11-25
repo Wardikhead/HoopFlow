@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Session management test. */
+
 use App\Models\User;
 use App\Services\SessionRegistry;
 use Database\Seeders\PrototypeSeeder;

@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Security headers. */
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -8,6 +10,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
 {
+    /**
+     * Handle.
+     *
+     * @param  Request  $request  The request.
+     * @param  Closure  $next  The next.
+     * @return Response The result.
+     */
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
@@ -29,6 +38,11 @@ class SecurityHeaders
         return $response;
     }
 
+    /**
+     * Content security policy.
+     *
+     * @return string The result.
+     */
     private function contentSecurityPolicy(): string
     {
         $devOrigins = app()->isProduction()

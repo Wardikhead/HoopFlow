@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Session registry. */
+
 namespace App\Services;
 
 use App\Models\User;
@@ -31,6 +33,13 @@ class SessionRegistry
             ]);
     }
 
+    /**
+     * Revoke all sessions except the current one and return the count.
+     *
+     * @param  User  $user  The user.
+     * @param  Request  $request  The request.
+     * @return int The result.
+     */
     public function revokeOthers(User $user, Request $request): int
     {
         $currentId = (string) $request->session()->getId();
@@ -45,6 +54,12 @@ class SessionRegistry
             ->delete();
     }
 
+    /**
+     * Revoke every session for a user and return the count.
+     *
+     * @param  User  $user  The user.
+     * @return int The result.
+     */
     public function revokeAll(User $user): int
     {
         return DB::table($this->table())
@@ -52,11 +67,22 @@ class SessionRegistry
             ->delete();
     }
 
+    /**
+     * Return the session storage table name.
+     *
+     * @return string The result.
+     */
     private function table(): string
     {
         return (string) config('session.table', 'sessions');
     }
 
+    /**
+     * Derive a readable device label from a user agent.
+     *
+     * @param  ?string  $userAgent  The user agent.
+     * @return string The result.
+     */
     private function deviceLabel(?string $userAgent): string
     {
         $userAgent = (string) $userAgent;
@@ -82,6 +108,12 @@ class SessionRegistry
         return $browser.' on '.$platform;
     }
 
+    /**
+     * Format a session's last activity time for display.
+     *
+     * @param  int  $timestamp  The timestamp.
+     * @return string The result.
+     */
     private function lastActiveLabel(int $timestamp): string
     {
         if ($timestamp <= 0) {

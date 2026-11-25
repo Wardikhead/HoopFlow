@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Player factory. */
+
 namespace Database\Factories;
 
 use App\Models\Player;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PlayerFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

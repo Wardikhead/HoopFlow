@@ -1,3 +1,4 @@
+{{-- Blade view for Status chip. --}}
 @props(['status', 'label' => null])
 
 @php

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Seed order test. */
+
 use App\Services\Bracket\SeedOrder;
 
 it('returns the standard bracket seed order', function () {

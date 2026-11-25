@@ -1,5 +1,7 @@
 <?php
 
+/** Configuration for Livewire. */
+
 return [
     'navigate' => [
         'show_progress_bar' => false,

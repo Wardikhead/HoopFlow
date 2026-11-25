@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Grand final reset test. */
+
 use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\Tournament;
@@ -13,6 +15,11 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * De tournament.
+ *
+ * @return Tournament The result.
+ */
 function deTournament(): Tournament
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
@@ -28,6 +35,12 @@ function deTournament(): Tournament
     return $tournament->fresh();
 }
 
+/**
+ * De bracket.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @return Bracket The result.
+ */
 function deBracket(Tournament $tournament): Bracket
 {
     return Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))
@@ -35,6 +48,12 @@ function deBracket(Tournament $tournament): Bracket
         ->firstOrFail();
 }
 
+/**
+ * Force grand final teams.
+ *
+ * @param  Bracket  $bracket  The bracket.
+ * @return array<mixed> The result.
+ */
 function forceGrandFinalTeams(Bracket $bracket): array
 {
     $winnersFinal = MatchModel::where('bracket_id', $bracket->id)

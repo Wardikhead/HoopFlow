@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Seed order. */
+
 namespace App\Services\Bracket;
 
 final class SeedOrder

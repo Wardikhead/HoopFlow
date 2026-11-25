@@ -1,3 +1,4 @@
+{{-- Blade view for Lab. --}}
 <section id="features" class="hf-lp-lab" data-testid="landing-lab" data-landing-lab aria-labelledby="landing-lab-title">
     <div class="hf-lp-lab__glow" aria-hidden="true"></div>
 

@@ -1,3 +1,4 @@
+{{-- Blade view for Roles. --}}
 <section id="roles" class="hf-lp-roles-section" data-testid="landing-roles" aria-labelledby="landing-roles-title">
     <div class="hf-lp-shell">
         <header class="hf-lp-section-head">

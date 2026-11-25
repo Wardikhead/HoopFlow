@@ -1,3 +1,4 @@
+{{-- Blade view for Show. --}}
 @extends('layouts.public')
 
 @section('title', $team->name)

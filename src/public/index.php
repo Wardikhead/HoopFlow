@@ -1,5 +1,7 @@
 <?php
 
+/** Index. */
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

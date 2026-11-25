@@ -1,5 +1,7 @@
 <?php
 
+/** Database seeder Prototype seeder. */
+
 namespace Database\Seeders;
 
 use App\Models\Announcement;
@@ -63,6 +65,11 @@ class PrototypeSeeder extends Seeder
 
     protected int $playerStatIdSeq = 0;
 
+    /**
+     * Next match id.
+     *
+     * @return int The result.
+     */
     protected function nextMatchId(): int
     {
         if ($this->matchIdSeq === 0) {
@@ -72,6 +79,11 @@ class PrototypeSeeder extends Seeder
         return ++$this->matchIdSeq;
     }
 
+    /**
+     * Next audit id.
+     *
+     * @return int The result.
+     */
     protected function nextAuditId(): int
     {
         if ($this->auditIdSeq === 0) {
@@ -81,6 +93,11 @@ class PrototypeSeeder extends Seeder
         return ++$this->auditIdSeq;
     }
 
+    /**
+     * Next match slot id.
+     *
+     * @return int The result.
+     */
     protected function nextMatchSlotId(): int
     {
         if ($this->matchSlotIdSeq === 0) {
@@ -90,6 +107,11 @@ class PrototypeSeeder extends Seeder
         return ++$this->matchSlotIdSeq;
     }
 
+    /**
+     * Next player stat id.
+     *
+     * @return int The result.
+     */
     protected function nextPlayerStatId(): int
     {
         if ($this->playerStatIdSeq === 0) {
@@ -99,6 +121,11 @@ class PrototypeSeeder extends Seeder
         return ++$this->playerStatIdSeq;
     }
 
+    /**
+     * Run.
+     *
+     * @return void Nothing.
+     */
     public function run(): void
     {
         DB::transaction(function () {
@@ -111,6 +138,11 @@ class PrototypeSeeder extends Seeder
         });
     }
 
+    /**
+     * Seed users and roles.
+     *
+     * @return void Nothing.
+     */
     protected function seedUsersAndRoles(): void
     {
         $this->org = Organization::firstOrCreate(['slug' => 'default'], [
@@ -159,6 +191,11 @@ class PrototypeSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed tournaments.
+     *
+     * @return void Nothing.
+     */
     protected function seedTournaments(): void
     {
         $defs = [
@@ -254,6 +291,11 @@ class PrototypeSeeder extends Seeder
         return $out;
     }
 
+    /**
+     * Seed teams and players.
+     *
+     * @return void Nothing.
+     */
     protected function seedTeamsAndPlayers(): void
     {
         $activeTeams = [
@@ -552,6 +594,12 @@ class PrototypeSeeder extends Seeder
         $vipers->update(['coach_user_id' => $this->coach->id]);
     }
 
+    /**
+     * Team by name.
+     *
+     * @param  string  $name  The name.
+     * @return Team The result.
+     */
     protected function teamByName(string $name): Team
     {
         foreach ($this->teamMap as $t) {
@@ -563,6 +611,11 @@ class PrototypeSeeder extends Seeder
         return Team::where('name', $name)->firstOrFail();
     }
 
+    /**
+     * Seed brackets and matches.
+     *
+     * @return void Nothing.
+     */
     protected function seedBracketsAndMatches(): void
     {
         $t1 = $this->tournMap['tournament-1'];
@@ -780,6 +833,11 @@ class PrototypeSeeder extends Seeder
         $this->seedBoxScores();
     }
 
+    /**
+     * Seed box scores.
+     *
+     * @return void Nothing.
+     */
     protected function seedBoxScores(): void
     {
         $qf1 = $this->matchMap['qf-1'];
@@ -795,6 +853,15 @@ class PrototypeSeeder extends Seeder
         $this->seedBoxScoreForMatch($qf2, $hawks, 69, $this->tournMap['tournament-1']->id);
     }
 
+    /**
+     * Seed box score for match.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  Team  $team  The team.
+     * @param  int  $total  The total.
+     * @param  int  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     protected function seedBoxScoreForMatch(MatchModel $match, Team $team, int $total, int $tournamentId): void
     {
         $players = $team->players()->get();
@@ -828,6 +895,11 @@ class PrototypeSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed announcements.
+     *
+     * @return void Nothing.
+     */
     protected function seedAnnouncements(): void
     {
         $t1 = $this->tournMap['tournament-1'];
@@ -858,6 +930,11 @@ class PrototypeSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed audit.
+     *
+     * @return void Nothing.
+     */
     protected function seedAudit(): void
     {
         $orgId = $this->org->id;

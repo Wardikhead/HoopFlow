@@ -1,10 +1,17 @@
 <?php
 
+/** Database migration 2026 11 06 000020 create mv standings. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
@@ -39,6 +46,11 @@ SQL);
         DB::statement('CREATE UNIQUE INDEX mv_standings_division_team ON mv_standings (division_id, team_id)');
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         if (DB::getDriverName() === 'pgsql') {

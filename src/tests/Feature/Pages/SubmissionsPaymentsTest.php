@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Submissions payments test. */
+
 use App\Livewire\Organizer\PaymentsIndex;
 use App\Livewire\Organizer\SubmissionsIndex;
 use App\Models\Payment;

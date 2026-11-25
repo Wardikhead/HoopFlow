@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Tournament create. */
+
 namespace App\Livewire\Organizer;
 
 use App\Livewire\SecureComponent;
@@ -158,6 +160,12 @@ class TournamentCreate extends SecureComponent
         ];
     }
 
+    /**
+     * Updated format.
+     *
+     * @param  string  $value  The value.
+     * @return void Nothing.
+     */
     public function updatedFormat(string $value): void
     {
         if ($value !== 'round-robin') {
@@ -177,11 +185,22 @@ class TournamentCreate extends SecureComponent
         }
     }
 
+    /**
+     * Add court.
+     *
+     * @return void Nothing.
+     */
     public function addCourt(): void
     {
         $this->courts[] = '';
     }
 
+    /**
+     * Remove court.
+     *
+     * @param  int  $index  The index.
+     * @return void Nothing.
+     */
     public function removeCourt(int $index): void
     {
         if (count($this->courts) <= 1) {
@@ -194,6 +213,11 @@ class TournamentCreate extends SecureComponent
         $this->courts = array_values($this->courts);
     }
 
+    /**
+     * Next step.
+     *
+     * @return void Nothing.
+     */
     public function nextStep(): void
     {
         $this->resetValidation();
@@ -211,12 +235,22 @@ class TournamentCreate extends SecureComponent
         }
     }
 
+    /**
+     * Previous step.
+     *
+     * @return void Nothing.
+     */
     public function previousStep(): void
     {
         $this->resetValidation();
         $this->step = max(0, $this->step - 1);
     }
 
+    /**
+     * Save.
+     *
+     * @return void Nothing.
+     */
     public function save(): void
     {
         $this->resetValidation();
@@ -342,6 +376,11 @@ class TournamentCreate extends SecureComponent
         $this->redirectRoute('tournamentShow', ['tournament' => $tournament->id], navigate: true);
     }
 
+    /**
+     * Validate format step.
+     *
+     * @return void Nothing.
+     */
     protected function validateFormatStep(): void
     {
         $this->validate($this->formatRules(), $this->validationMessages());
@@ -371,6 +410,11 @@ class TournamentCreate extends SecureComponent
         }
     }
 
+    /**
+     * Age max for division.
+     *
+     * @return ?int The result.
+     */
     protected function ageMaxForDivision(): ?int
     {
         return match ($this->division_name) {
@@ -382,6 +426,12 @@ class TournamentCreate extends SecureComponent
         };
     }
 
+    /**
+     * Unique slug.
+     *
+     * @param  string  $base  The base.
+     * @return string The result.
+     */
     protected function uniqueSlug(string $base): string
     {
         $slug = $base;
@@ -395,6 +445,11 @@ class TournamentCreate extends SecureComponent
         return $slug;
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.tournament-create');

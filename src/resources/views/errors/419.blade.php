@@ -1,3 +1,4 @@
+{{-- Blade view for 419. --}}
 <x-error-page
     code="419"
     title="Your session expired"

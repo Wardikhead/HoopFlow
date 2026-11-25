@@ -1,3 +1,5 @@
+// Front-end script for Compare.
+
 export default function initCompare() {
     const section = document.querySelector('[data-compare]');
 

@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Schedule calendar service. */
+
 namespace App\Services\Calendar;
 
 use App\Models\MatchModel;
@@ -11,18 +13,43 @@ use Carbon\CarbonInterface;
 
 class ScheduleCalendarService
 {
+    /**
+     * Create a calendar service backed by the ICS writer.
+     *
+     * @param  IcsCalendarWriter  $writer  The writer.
+     */
     public function __construct(private readonly IcsCalendarWriter $writer) {}
 
+    /**
+     * Build an ICS feed for every scheduled tournament match.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return string The result.
+     */
     public function tournament(Tournament $tournament): string
     {
         return $this->feed($tournament, null);
     }
 
+    /**
+     * Build an ICS feed for one team's scheduled matches.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  Team  $team  The team.
+     * @return string The result.
+     */
     public function team(Tournament $tournament, Team $team): string
     {
         return $this->feed($tournament, $team);
     }
 
+    /**
+     * Render an ICS calendar for the filtered schedule.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  ?Team  $team  The team.
+     * @return string The result.
+     */
     private function feed(Tournament $tournament, ?Team $team): string
     {
         $query = MatchSlot::query()

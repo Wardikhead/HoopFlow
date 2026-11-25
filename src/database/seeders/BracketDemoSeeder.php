@@ -1,5 +1,7 @@
 <?php
 
+/** Database seeder Bracket demo seeder. */
+
 namespace Database\Seeders;
 
 use App\Models\Court;
@@ -47,6 +49,11 @@ class BracketDemoSeeder extends Seeder
 
     protected ?User $organizer = null;
 
+    /**
+     * Run.
+     *
+     * @return void Nothing.
+     */
     public function run(): void
     {
         $this->call([OrganizationSeeder::class, RoleSeeder::class, DefaultOrganizerSeeder::class]);
@@ -65,6 +72,11 @@ class BracketDemoSeeder extends Seeder
         });
     }
 
+    /**
+     * Ensure organizer.
+     *
+     * @return User The result.
+     */
     protected function ensureOrganizer(): User
     {
         $user = User::updateOrCreate(
@@ -89,6 +101,11 @@ class BracketDemoSeeder extends Seeder
         return $user;
     }
 
+    /**
+     * Purge demo data.
+     *
+     * @return void Nothing.
+     */
     protected function purgeDemoData(): void
     {
         foreach ([
@@ -145,6 +162,13 @@ class BracketDemoSeeder extends Seeder
         return $teams;
     }
 
+    /**
+     * Seed roster.
+     *
+     * @param  Team  $team  The team.
+     * @param  int  $teamIndex  The team index.
+     * @return void Nothing.
+     */
     protected function seedRoster(Team $team, int $teamIndex): void
     {
         $first = ['Jayson', 'Kobe', 'Carl', 'Kai', 'June Mar', 'Gabe', 'CJ', 'Dwight', 'Calvin', 'RR', 'Marc', 'Prince', 'Andre', 'Jolo', 'Troy', 'Luis'];

@@ -1,3 +1,4 @@
+{{-- Blade view for Register. --}}
 @extends('layouts.public')
 
 @section('title', 'Create account')

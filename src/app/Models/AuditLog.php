@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Audit log. */
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
@@ -25,6 +27,11 @@ class AuditLog extends Model
 
     public const UPDATED_AT = null;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

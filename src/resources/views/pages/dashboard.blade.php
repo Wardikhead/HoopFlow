@@ -1,3 +1,4 @@
+{{-- Blade view for Dashboard. --}}
 @extends('layouts.public')
 
 @section('title', 'Dashboard')

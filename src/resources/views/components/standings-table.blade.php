@@ -1,3 +1,4 @@
+{{-- Blade view for Standings table. --}}
 @props(['rows' => collect(), 'limit' => null, 'qualificationLine' => null, 'tournamentId' => null])
 
 @php

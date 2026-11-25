@@ -1,3 +1,7 @@
+/**
+ * Init livewire bridge.
+ * @returns {*} The result.
+ */
 export function initLivewireBridge() {
     keepModalsOpen();
     restoreDialogFocus();
@@ -6,7 +10,15 @@ export function initLivewireBridge() {
 // Native <dialog> elements keep their open state outside the DOM attributes that
 // Livewire morphs. Re-open any server-rendered modal after a morph so score
 // buttons, forfeit changes, and other roundtrips do not close the dialog.
+/**
+ * Keep modals open.
+ * @returns {*} The result.
+ */
 function keepModalsOpen() {
+    /**
+     * Register.
+     * @returns {*} The result.
+     */
     function register() {
         window.Livewire.hook('morphed', ({ el }) => {
             el.querySelectorAll?.('dialog.hf-dialog').forEach((dialog) => {
@@ -29,6 +41,10 @@ function keepModalsOpen() {
 // opened each dialog, then restore it on removal. When that control disappears
 // with a replaced dialog, fall back to the last still-connected trigger so a
 // chooser that supersedes a detail dialog returns to the original card.
+/**
+ * Restore dialog focus.
+ * @returns {*} The result.
+ */
 function restoreDialogFocus() {
     const triggers = new WeakMap();
     const activations = [];

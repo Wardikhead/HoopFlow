@@ -1,3 +1,5 @@
+// Front-end script for Bracket.
+
 const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 1.5;
 const ZOOM_STEP = 0.1;
@@ -15,26 +17,52 @@ const observedTrees = new Set();
 const reducedMotion = () =>
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
+/**
+ * Canvases.
+ * @returns {*} The result.
+ */
 function canvases() {
     return [...document.querySelectorAll('[data-bracket-canvas]')];
 }
 
+/**
+ * Visible canvases.
+ * @returns {*} The result.
+ */
 function visibleCanvases() {
     return canvases().filter(
         (canvas) => canvas.offsetParent !== null && canvas.clientWidth > 0,
     );
 }
 
+/**
+ * Tree of.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function treeOf(canvas) {
     return canvas.querySelector('[data-bracket-tree]');
 }
 
+/**
+ * Current scale.
+ *
+ * @param {*} tree The tree.
+ * @returns {*} The result.
+ */
 function currentScale(tree) {
     const value = Number.parseFloat(tree.style.zoom);
 
     return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
+/**
+ * Apply scale.
+ *
+ * @param {*} nextScale The next scale.
+ * @returns {*} The result.
+ */
 function applyScale(nextScale) {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextScale));
     scale = Math.round(clamped * 100) / 100;
@@ -54,6 +82,10 @@ function applyScale(nextScale) {
 
 // Fit every board, not just the first one: double elimination renders three
 // trees and they share one zoom level.
+/**
+ * Fit scale.
+ * @returns {*} The result.
+ */
 function fitScale() {
     const visible = visibleCanvases();
     if (visible.length === 0) return 1;
@@ -76,10 +108,23 @@ function fitScale() {
     return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, fit));
 }
 
+/**
+ * Draw all.
+ * @returns {*} The result.
+ */
 function drawAll() {
     canvases().forEach(drawCanvas);
 }
 
+/**
+ * Local rect.
+ *
+ * @param {*} element The element.
+ * @param {*} tree The tree.
+ * @param {*} treeRect The tree rect.
+ * @param {*} activeScale The active scale.
+ * @returns {*} The result.
+ */
 function localRect(element, tree, treeRect, activeScale) {
     const rect = element.getBoundingClientRect();
 
@@ -95,6 +140,14 @@ function localRect(element, tree, treeRect, activeScale) {
 // semis, two into the final. When a round fans out instead of narrowing, the
 // same ratio maps each next card back to one source card so the board does not
 // explode into an all-to-all mesh.
+/**
+ * Feeder range.
+ *
+ * @param {*} currentCount The current count.
+ * @param {*} nextCount The next count.
+ * @param {*} nextIndex The next index.
+ * @returns {*} The result.
+ */
 function feederRange(currentCount, nextCount, nextIndex) {
     const start = Math.floor((nextIndex * currentCount) / nextCount);
     const end = Math.max(
@@ -105,6 +158,12 @@ function feederRange(currentCount, nextCount, nextIndex) {
     return [start, Math.min(currentCount, end)];
 }
 
+/**
+ * Draw canvas.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function drawCanvas(canvas) {
     const tree = treeOf(canvas);
     if (!tree) return;
@@ -188,6 +247,12 @@ function drawCanvas(canvas) {
     reapplyTrace(canvas);
 }
 
+/**
+ * Build graph.
+ *
+ * @param {*} tree The tree.
+ * @returns {*} The result.
+ */
 function buildGraph(tree) {
     const forward = new Map();
     const backward = new Map();
@@ -206,6 +271,13 @@ function buildGraph(tree) {
     return { forward, backward };
 }
 
+/**
+ * Collect chain.
+ *
+ * @param {*} graph The graph.
+ * @param {*} start The start.
+ * @returns {*} The result.
+ */
 function collectChain(graph, start) {
     const seen = new Set([start]);
     const queue = [start];
@@ -224,6 +296,13 @@ function collectChain(graph, start) {
     return seen;
 }
 
+/**
+ * Trace.
+ *
+ * @param {*} canvas The canvas.
+ * @param {*} card The card.
+ * @returns {*} The result.
+ */
 function trace(canvas, card) {
     const tree = treeOf(canvas);
     const matchId = card?.dataset.matchId;
@@ -254,6 +333,12 @@ function trace(canvas, card) {
     });
 }
 
+/**
+ * Clear trace.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function clearTrace(canvas) {
     traceState.delete(canvas);
 
@@ -265,6 +350,12 @@ function clearTrace(canvas) {
     tree.querySelectorAll('.hf-bracket-path.is-hot').forEach((element) => element.classList.remove('is-hot'));
 }
 
+/**
+ * Reapply trace.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function reapplyTrace(canvas) {
     const traced = traceState.get(canvas);
     if (!traced) return;
@@ -279,6 +370,12 @@ function reapplyTrace(canvas) {
     trace(canvas, card);
 }
 
+/**
+ * Update fade.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function updateFade(canvas) {
     const viewport = canvas.closest('[data-bracket-viewport]');
     if (!viewport) return;
@@ -290,10 +387,20 @@ function updateFade(canvas) {
     viewport.classList.toggle('is-at-end', scrollable && atEnd);
 }
 
+/**
+ * Update fades.
+ * @returns {*} The result.
+ */
 function updateFades() {
     canvases().forEach(updateFade);
 }
 
+/**
+ * Bind canvas.
+ *
+ * @param {*} canvas The canvas.
+ * @returns {*} The result.
+ */
 function bindCanvas(canvas) {
     if (boundCanvases.has(canvas)) return;
     boundCanvases.add(canvas);
@@ -329,6 +436,10 @@ function bindCanvas(canvas) {
     });
 }
 
+/**
+ * Observe trees.
+ * @returns {*} The result.
+ */
 function observeTrees() {
     if (!observer) return;
 
@@ -347,6 +458,10 @@ function observeTrees() {
     });
 }
 
+/**
+ * Refresh.
+ * @returns {*} The result.
+ */
 function refresh() {
     canvases().forEach(bindCanvas);
     observeTrees();
@@ -354,6 +469,10 @@ function refresh() {
     updateFades();
 }
 
+/**
+ * Schedule refresh.
+ * @returns {*} The result.
+ */
 function scheduleRefresh() {
     if (refreshFrame !== null) return;
 
@@ -363,6 +482,10 @@ function scheduleRefresh() {
     });
 }
 
+/**
+ * Auto fit.
+ * @returns {*} The result.
+ */
 function autoFit() {
     if (autoFitDone) return;
     autoFitDone = true;
@@ -374,6 +497,10 @@ function autoFit() {
     if (overflowing) applyScale(fitScale());
 }
 
+/**
+ * Hook livewire.
+ * @returns {*} The result.
+ */
 function hookLivewire() {
     const register = () => {
         window.Livewire?.hook?.('morphed', () => scheduleRefresh());
@@ -386,6 +513,10 @@ function hookLivewire() {
     }
 }
 
+/**
+ * Jump to final.
+ * @returns {*} The result.
+ */
 function jumpToFinal() {
     const visible = visibleCanvases();
     const canvas = visible[visible.length - 1];
@@ -404,6 +535,10 @@ function jumpToFinal() {
     trace(canvas, finalCard);
 }
 
+/**
+ * Init bracket zoom.
+ * @returns {*} The result.
+ */
 export function initBracketZoom() {
     if (initialized) return;
     initialized = true;

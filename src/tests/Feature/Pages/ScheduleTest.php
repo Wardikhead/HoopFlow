@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Schedule test. */
+
 use App\Livewire\Organizer\ScheduleShow;
 use App\Models\AuditLog;
 use App\Models\Court;
@@ -331,6 +333,11 @@ it('shows a newly activated series game on the schedule', function () {
         ->assertSeeHtml('data-testid="schedule-match-'.$game2->id.'"');
 });
 
+/**
+ * Schedule ready tournament.
+ *
+ * @return Tournament The result.
+ */
 function scheduleReadyTournament(): Tournament
 {
     $tournament = Tournament::where('slug', 'hoopflow-summer-cup')->firstOrFail();

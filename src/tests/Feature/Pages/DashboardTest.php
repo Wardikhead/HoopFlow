@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Dashboard test. */
+
 use App\Models\Registration;
 use App\Models\Team;
 use App\Models\Tournament;

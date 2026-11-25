@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Registration factory. */
+
 namespace Database\Factories;
 
 use App\Models\Division;
@@ -13,6 +15,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class RegistrationFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

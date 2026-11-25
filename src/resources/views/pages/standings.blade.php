@@ -1,3 +1,4 @@
+{{-- Blade view for Standings. --}}
 @extends('layouts.public')
 
 @section('title', 'Standings')

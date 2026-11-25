@@ -1,5 +1,7 @@
 <?php
 
+/** Database seeder Default organizer seeder. */
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -9,6 +11,11 @@ use Illuminate\Support\Facades\Hash;
 
 class DefaultOrganizerSeeder extends Seeder
 {
+    /**
+     * Run.
+     *
+     * @return void Nothing.
+     */
     public function run(): void
     {
         $user = User::updateOrCreate(

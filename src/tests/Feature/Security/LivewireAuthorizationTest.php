@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Livewire authorization test. */
+
 use App\Livewire\Coach\MyTeam;
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\AnnouncementCreate;
@@ -18,6 +20,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Hf expect forbidden.
+ *
+ * @param  callable  $callback  The callback.
+ * @return void Nothing.
+ */
 function hfExpectForbidden(callable $callback): void
 {
     try {

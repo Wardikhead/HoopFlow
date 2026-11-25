@@ -1,3 +1,4 @@
+{{-- Blade view for Bracket panel. --}}
 <div class="hf-lp-bracket" data-bracket>
     @foreach ($bracket['rounds'] as $round)
         <div class="hf-lp-bracket__round hf-lp-bracket__round--{{ $round['key'] }}">

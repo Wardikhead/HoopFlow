@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Player. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,6 +17,11 @@ class Player extends Model
     /** @use HasFactory<Factory> */
     use HasFactory;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

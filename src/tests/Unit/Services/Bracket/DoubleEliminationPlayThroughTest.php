@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Double elimination play through test. */
+
 use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\Registration;
@@ -54,6 +56,13 @@ function playOutBracket(BracketService $service, Bracket $bracket, bool $grandFi
     }
 }
 
+/**
+ * Make tournament with teams.
+ *
+ * @param  int  $teamCount  The team count.
+ * @param  array<mixed>  $rules  The rules.
+ * @return Tournament The result.
+ */
 function makeTournamentWithTeams(int $teamCount, array $rules = []): Tournament
 {
     $base = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();

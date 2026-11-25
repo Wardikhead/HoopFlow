@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Bracket plan. */
+
 namespace App\Services\Bracket;
 
 final class BracketPlan

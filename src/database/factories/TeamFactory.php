@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Team factory. */
+
 namespace Database\Factories;
 
 use App\Models\Team;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class TeamFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         return [

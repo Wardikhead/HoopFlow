@@ -1,7 +1,16 @@
+// Front-end tests for Dialog motion.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { shouldHoldDialog } from '../../resources/js/ui/dialog-motion.js';
 
+/**
+ * Dialog.
+ *
+ * @param {*} { open  The { open.
+ * @param {*} closing  The closing.
+ * @returns {*} The result.
+ */
 function dialog({ open = true, closing = false } = {}) {
     const names = new Set(['hf-dialog']);
     if (closing) names.add('is-closing');

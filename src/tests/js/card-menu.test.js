@@ -1,3 +1,5 @@
+// Front-end tests for Card menu.test.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cardMenuLayout } from '../../resources/js/ui/card-menu.js';

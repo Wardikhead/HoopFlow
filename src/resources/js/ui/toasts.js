@@ -1,6 +1,12 @@
+// Front-end script for Toasts.
+
 const MAX_TOASTS = 3;
 const DEFAULT_DURATION = 4200;
 
+/**
+ * Register toasts.
+ * @returns {*} The result.
+ */
 export function registerToasts() {
     document.addEventListener('alpine:init', () => {
         window.Alpine.data('hfToasts', () => ({

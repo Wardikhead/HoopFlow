@@ -1,3 +1,4 @@
+{{-- Blade view for My team. --}}
 <div>
     @section('title', 'My team')
     @section('meta-description', 'Coach workspace - roster, eligibility documents, and registration status for your HoopFlow team.')

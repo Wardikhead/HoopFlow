@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Rescheduled matches. */
+
 namespace App\Support;
 
 use App\Models\AuditLog;

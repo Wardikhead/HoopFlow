@@ -1,5 +1,7 @@
 <?php
 
+/** Database migration 2026 11 11 000002 add bracket stage and series. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -7,6 +9,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         Schema::table('brackets', function (Blueprint $table): void {
@@ -50,6 +57,11 @@ return new class extends Migration
             ->update(['stage' => 'losers']);
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         Schema::table('matches', function (Blueprint $table): void {

@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Matches index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Court;
@@ -36,6 +38,12 @@ class MatchesIndex extends Component
 
     public string $status = 'all';
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $id  The id.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $id = null): void
     {
         $requested = $id ?? request()->query('id') ?? request()->query('tournament');
@@ -64,6 +72,11 @@ class MatchesIndex extends Component
             : 'all';
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->search = '';
@@ -72,6 +85,11 @@ class MatchesIndex extends Component
         $this->status = 'all';
     }
 
+    /**
+     * Current tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function currentTournament(): ?Tournament
     {
@@ -183,6 +201,11 @@ class MatchesIndex extends Component
             ->values();
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.matches-index');

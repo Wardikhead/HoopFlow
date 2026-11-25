@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Bracket. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,6 +20,12 @@ class Bracket extends Model
     /** @var array<string, int> */
     private array $roundCountCache = [];
 
+    /**
+     * Round count.
+     *
+     * @param  string  $stage  The stage.
+     * @return int The result.
+     */
     public function roundCount(string $stage): int
     {
         if (! array_key_exists($stage, $this->roundCountCache)) {
@@ -31,6 +39,11 @@ class Bracket extends Model
         return $this->roundCountCache[$stage];
     }
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

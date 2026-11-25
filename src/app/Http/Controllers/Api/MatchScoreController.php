@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Match score controller. */
+
 namespace App\Http\Controllers\Api;
 
 use App\Exceptions\ScoreConflictException;
@@ -12,6 +14,14 @@ use InvalidArgumentException;
 
 final class MatchScoreController extends Controller
 {
+    /**
+     * Invoke the instance as a callable.
+     *
+     * @param  UpdateMatchScoreRequest  $request  The request.
+     * @param  MatchModel  $match  The match.
+     * @param  LiveScoreService  $liveScores  The live scores.
+     * @return JsonResponse The result.
+     */
     public function __invoke(
         UpdateMatchScoreRequest $request,
         MatchModel $match,

@@ -1,3 +1,5 @@
+// Front-end script for Splash.
+
 export default function initSplash() {
     const splash = document.querySelector('[data-lp-splash]');
 

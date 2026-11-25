@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Audit trail test. */
+
 use App\Livewire\Coach\TeamRegister;
 use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\PaymentsIndex;

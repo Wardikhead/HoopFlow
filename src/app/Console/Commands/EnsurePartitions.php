@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Ensure partitions. */
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -11,6 +13,11 @@ class EnsurePartitions extends Command
 
     protected $description = 'Create future monthly partitions for audit_logs and notifications';
 
+    /**
+     * Handle.
+     *
+     * @return int The result.
+     */
     public function handle(): int
     {
         if (DB::getDriverName() !== 'pgsql') {

@@ -1,3 +1,5 @@
+// Front-end script for Select.
+
 import { motionEnabled } from './motion.js';
 
 // The native <select> stays in the DOM as the source of truth: it keeps
@@ -8,6 +10,12 @@ export const MENU_CLOSE_MS = 100;
 // Filter bars opt in by structure; everything else opts in with the attribute.
 const SELECTOR = 'select[data-hf-select], .hf-filter-bar select.hf-select';
 
+/**
+ * Read rows.
+ *
+ * @param {*} select The select.
+ * @returns {*} The result.
+ */
 export function readRows(select) {
     return Array.from(select.options).map((option, index) => ({
         index,
@@ -17,6 +25,14 @@ export function readRows(select) {
     }));
 }
 
+/**
+ * Next enabled index.
+ *
+ * @param {*} rows The rows.
+ * @param {*} current The current.
+ * @param {*} delta The delta.
+ * @returns {*} The result.
+ */
 export function nextEnabledIndex(rows, current, delta) {
     if (!rows.length) return -1;
 
@@ -35,6 +51,14 @@ export function nextEnabledIndex(rows, current, delta) {
     return current;
 }
 
+/**
+ * Typeahead index.
+ *
+ * @param {*} rows The rows.
+ * @param {*} query The query.
+ * @param {*} current The current.
+ * @returns {*} The result.
+ */
 export function typeaheadIndex(rows, query, current) {
     if (!query) return -1;
 
@@ -52,6 +76,15 @@ export function typeaheadIndex(rows, query, current) {
 
 // Fixed positioning keeps the panel out of scroll containers and dialog clip
 // paths; flip above the trigger when the viewport runs out below.
+/**
+ * Menu placement.
+ *
+ * @param {*} rect The rect.
+ * @param {*} menuHeight The menu height.
+ * @param {*} viewportHeight The viewport height.
+ * @param {*} margin  The margin.
+ * @returns {*} The result.
+ */
 export function menuPlacement(rect, menuHeight, viewportHeight, margin = 8) {
     const below = viewportHeight - rect.bottom - margin;
     const above = rect.top - margin;
@@ -66,6 +99,12 @@ export function menuPlacement(rect, menuHeight, viewportHeight, margin = 8) {
 // A fixed panel is positioned against its containing block, which is an
 // animated dialog (transform) or the viewport. Resolve that box so the panel
 // uses the dialog's own coordinates instead of clipping at its edge.
+/**
+ * Containing box.
+ *
+ * @param {*} element The element.
+ * @returns {*} The result.
+ */
 function containingBox(element) {
     const parent = element.offsetParent;
 
@@ -85,6 +124,12 @@ function containingBox(element) {
 
 // The mobile tab bar floats over the page; cap the panel at its top edge in
 // the same coordinates the menu is positioned in.
+/**
+ * Usable height.
+ *
+ * @param {*} box The box.
+ * @returns {*} The result.
+ */
 function usableHeight(box) {
     const nav = document.querySelector('.hf-bottom-nav');
 
@@ -99,6 +144,12 @@ function usableHeight(box) {
     return localNavTop > 0 && localNavTop < box.height ? localNavTop : box.height;
 }
 
+/**
+ * Labelled by.
+ *
+ * @param {*} select The select.
+ * @returns {*} The result.
+ */
 function labelledBy(select) {
     if (!select.id) return null;
 
@@ -111,6 +162,14 @@ function labelledBy(select) {
     return label.id;
 }
 
+/**
+ * Build menu.
+ *
+ * @param {*} menu The menu.
+ * @param {*} select The select.
+ * @param {*} choose The choose.
+ * @returns {*} The result.
+ */
 function buildMenu(menu, select, choose) {
     menu.replaceChildren();
 
@@ -138,6 +197,13 @@ function buildMenu(menu, select, choose) {
     });
 }
 
+/**
+ * Move focus.
+ *
+ * @param {*} menu The menu.
+ * @param {*} delta The delta.
+ * @returns {*} The result.
+ */
 function moveFocus(menu, delta) {
     const options = Array.from(menu.querySelectorAll('[role="option"]:not(:disabled)'));
     if (!options.length) return;
@@ -150,6 +216,12 @@ function moveFocus(menu, delta) {
     options[next].focus();
 }
 
+/**
+ * Upgrade.
+ *
+ * @param {*} select The select.
+ * @returns {*} The result.
+ */
 function upgrade(select) {
     if (select.closest('.hf-combo')) return;
 
@@ -396,6 +468,10 @@ function upgrade(select) {
 
 let hooked = false;
 
+/**
+ * Hook livewire.
+ * @returns {*} The result.
+ */
 function hookLivewire() {
     if (hooked) return;
 
@@ -430,6 +506,12 @@ function hookLivewire() {
 
 let watching = false;
 
+/**
+ * Init rich selects.
+ *
+ * @param {*} root  The root.
+ * @returns {*} The result.
+ */
 export function initRichSelects(root = document) {
     root.querySelectorAll(SELECTOR).forEach(upgrade);
     hookLivewire();

@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Schedule calendar controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\MatchModel;
@@ -10,6 +12,13 @@ use Illuminate\Http\Response;
 
 class ScheduleCalendarController extends Controller
 {
+    /**
+     * Tournament.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  ScheduleCalendarService  $calendar  The calendar.
+     * @return Response The result.
+     */
     public function tournament(Tournament $tournament, ScheduleCalendarService $calendar): Response
     {
         return $this->calendarResponse(
@@ -18,6 +27,14 @@ class ScheduleCalendarController extends Controller
         );
     }
 
+    /**
+     * Team.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  Team  $team  The team.
+     * @param  ScheduleCalendarService  $calendar  The calendar.
+     * @return Response The result.
+     */
     public function team(Tournament $tournament, Team $team, ScheduleCalendarService $calendar): Response
     {
         $participates = MatchModel::query()
@@ -35,6 +52,13 @@ class ScheduleCalendarController extends Controller
         );
     }
 
+    /**
+     * Calendar response.
+     *
+     * @param  string  $ics  The ics.
+     * @param  string  $filename  The filename.
+     * @return Response The result.
+     */
     private function calendarResponse(string $ics, string $filename): Response
     {
         return new Response($ics, 200, [

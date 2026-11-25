@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Audit log index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Livewire\SecureComponent;
@@ -82,6 +84,11 @@ class AuditLogIndex extends SecureComponent
 
     public string $search = '';
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $entity = request()->query('entity');
@@ -93,6 +100,11 @@ class AuditLogIndex extends SecureComponent
         $this->search = is_string($search) ? $search : '';
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->entityType = 'all';
@@ -279,16 +291,34 @@ class AuditLogIndex extends SecureComponent
         return $this->resolvedEntities[$log->entity_type.':'.$log->entity_id] ?? null;
     }
 
+    /**
+     * Entity type label.
+     *
+     * @param  string  $type  The type.
+     * @return string The result.
+     */
     public function entityTypeLabel(string $type): string
     {
         return self::ENTITY_LABELS[$type] ?? $this->humanize($type);
     }
 
+    /**
+     * Action label.
+     *
+     * @param  AuditLog  $log  The log.
+     * @return string The result.
+     */
     public function actionLabel(AuditLog $log): string
     {
         return self::ACTION_LABELS[$log->action] ?? $this->humanize(str_replace('.', ' ', $log->action));
     }
 
+    /**
+     * Actor role.
+     *
+     * @param  AuditLog  $log  The log.
+     * @return string The result.
+     */
     public function actorRole(AuditLog $log): string
     {
         $user = $log->actorUser;
@@ -308,6 +338,12 @@ class AuditLogIndex extends SecureComponent
         return 'user';
     }
 
+    /**
+     * Summary.
+     *
+     * @param  AuditLog  $log  The log.
+     * @return string The result.
+     */
     public function summary(AuditLog $log): string
     {
         $after = is_array($log->after_json) ? $log->after_json : [];
@@ -386,11 +422,22 @@ class AuditLogIndex extends SecureComponent
         return $chips;
     }
 
+    /**
+     * Humanize.
+     *
+     * @param  string  $key  The key.
+     * @return string The result.
+     */
     public function humanize(string $key): string
     {
         return Str::headline(str_replace(['.', '_'], ' ', $key));
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.audit-log-index');
@@ -412,6 +459,12 @@ class AuditLogIndex extends SecureComponent
         return array_keys($ids);
     }
 
+    /**
+     * Entity label.
+     *
+     * @param  AuditLog  $log  The log.
+     * @return string The result.
+     */
     protected function entityLabel(AuditLog $log): string
     {
         $info = $this->entityInfo($log);

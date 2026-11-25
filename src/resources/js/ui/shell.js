@@ -1,6 +1,12 @@
+// Front-end script for Shell.
+
 import { closeDialogWithMotion } from './dialog-motion.js';
 import { closeUserMenu, initUserMenus } from './menus.js';
 
+/**
+ * Init shell.
+ * @returns {*} The result.
+ */
 export function initShell() {
     initUserMenus();
 
@@ -23,6 +29,10 @@ export function initShell() {
 let moreSheetBound = false;
 let sheetTrigger = null;
 
+/**
+ * Init more sheet.
+ * @returns {*} The result.
+ */
 export function initMoreSheet() {
     if (moreSheetBound) return;
     moreSheetBound = true;
@@ -83,6 +93,10 @@ let navBound = false;
 let tooltip = null;
 let tooltipTarget = null;
 
+/**
+ * Ensure tooltip.
+ * @returns {*} The result.
+ */
 function ensureTooltip() {
     if (tooltip?.isConnected) return tooltip;
 
@@ -94,11 +108,21 @@ function ensureTooltip() {
     return tooltip;
 }
 
+/**
+ * Hide tooltip.
+ * @returns {*} The result.
+ */
 function hideTooltip() {
     tooltipTarget = null;
     tooltip?.classList.remove('is-visible');
 }
 
+/**
+ * Position tooltip.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function positionTooltip(link) {
     const node = ensureTooltip();
     const linkRect = link.getBoundingClientRect();
@@ -116,6 +140,12 @@ function positionTooltip(link) {
     node.style.top = `${top}px`;
 }
 
+/**
+ * Show tooltip.
+ *
+ * @param {*} link The link.
+ * @returns {*} The result.
+ */
 function showTooltip(link) {
     if (document.documentElement.dataset.nav !== 'collapsed' || window.innerWidth < 768) return;
 
@@ -128,6 +158,10 @@ function showTooltip(link) {
     positionTooltip(link);
 }
 
+/**
+ * Stored nav.
+ * @returns {*} The result.
+ */
 function storedNav() {
     try {
         const value = localStorage.getItem(NAV_KEY);
@@ -138,6 +172,12 @@ function storedNav() {
     }
 }
 
+/**
+ * Render nav.
+ *
+ * @param {*} state The state.
+ * @returns {*} The result.
+ */
 function renderNav(state) {
     document.documentElement.dataset.nav = state;
 
@@ -150,6 +190,14 @@ function renderNav(state) {
     hideTooltip();
 }
 
+/**
+ * Resolve nav state.
+ *
+ * @param {*} { stored  The { stored.
+ * @param {*} current  The current.
+ * @param {*} mediaMatches  The media matches.
+ * @returns {*} The result.
+ */
 export function resolveNavState({ stored = null, current = null, mediaMatches = false } = {}) {
     if (stored === 'expanded' || stored === 'collapsed') return stored;
     if (current === 'expanded' || current === 'collapsed') return current;
@@ -157,6 +205,10 @@ export function resolveNavState({ stored = null, current = null, mediaMatches = 
     return mediaMatches ? 'expanded' : 'collapsed';
 }
 
+/**
+ * Sync nav rail.
+ * @returns {*} The result.
+ */
 export function syncNavRail() {
     renderNav(resolveNavState({
         stored: storedNav(),
@@ -165,6 +217,10 @@ export function syncNavRail() {
     }));
 }
 
+/**
+ * Init nav rail.
+ * @returns {*} The result.
+ */
 export function initNavRail() {
     if (navBound) return;
     navBound = true;

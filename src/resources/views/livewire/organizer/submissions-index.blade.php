@@ -1,3 +1,4 @@
+{{-- Blade view for Submissions index. --}}
 <div>
     @section('title', 'Submissions')
     @section('meta-description', 'Review team registration submissions - eligibility documents, roster checks, and approval status in one HoopFlow queue.')

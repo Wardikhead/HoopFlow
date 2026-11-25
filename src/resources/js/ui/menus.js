@@ -1,11 +1,26 @@
+// Front-end script for Menus.
+
 import { motionEnabled } from './motion.js';
 
 export const MENU_EXIT_MS = 120;
 
+/**
+ * Menu close delay.
+ *
+ * @param {*} options  The options.
+ * @returns {*} The result.
+ */
 export function menuCloseDelay(options = {}) {
     return motionEnabled(options) ? MENU_EXIT_MS : 0;
 }
 
+/**
+ * Close user menu.
+ *
+ * @param {*} menu The menu.
+ * @param {*} options  The options.
+ * @returns {*} The result.
+ */
 export function closeUserMenu(menu, options = {}) {
     if (!(menu instanceof HTMLElement) || !menu.open) return;
 
@@ -26,12 +41,22 @@ export function closeUserMenu(menu, options = {}) {
     }, delay);
 }
 
+/**
+ * Close open user menus.
+ * @returns {*} The result.
+ */
 function closeOpenUserMenus() {
     document.querySelectorAll('details.hf-user-menu[open]').forEach((menu) => closeUserMenu(menu));
 }
 
 // The collapsed rail clips horizontal overflow, so the panel leaves the rail
 // and anchors to the viewport beside the account chip.
+/**
+ * Position floating menu.
+ *
+ * @param {*} menu The menu.
+ * @returns {*} The result.
+ */
 function positionFloatingMenu(menu) {
     const panel = menu.querySelector('.hf-user-menu__panel');
     const summary = menu.querySelector('summary');
@@ -47,6 +72,10 @@ function positionFloatingMenu(menu) {
 
 // Scroll closes only the floating collapsed-rail panel, not the always-open
 // account block inside the More sheet.
+/**
+ * Close floating user menus.
+ * @returns {*} The result.
+ */
 function closeFloatingUserMenus() {
     if (document.documentElement.dataset.nav !== 'collapsed' || window.innerWidth < 768) return;
 
@@ -55,6 +84,10 @@ function closeFloatingUserMenus() {
 
 let bound = false;
 
+/**
+ * Init user menus.
+ * @returns {*} The result.
+ */
 export function initUserMenus() {
     if (bound) return;
     bound = true;

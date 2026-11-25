@@ -1,11 +1,18 @@
 <?php
 
+/** Domain service for Ics calendar writer. */
+
 namespace App\Services\Calendar;
 
 use Carbon\CarbonInterface;
 
 class IcsCalendarWriter
 {
+    /**
+     * Create a writer using the given event timezone.
+     *
+     * @param  string  $timezone  The timezone.
+     */
     public function __construct(private readonly string $timezone = 'Asia/Manila') {}
 
     /**
@@ -121,6 +128,12 @@ class IcsCalendarWriter
         ];
     }
 
+    /**
+     * Escape a value for safe inclusion in an ICS text field.
+     *
+     * @param  string  $value  The value.
+     * @return string The result.
+     */
     private function escapeText(string $value): string
     {
         return str_replace(

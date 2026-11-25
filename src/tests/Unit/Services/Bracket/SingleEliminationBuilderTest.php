@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Single elimination builder test. */
+
 use App\Services\Bracket\SingleEliminationBuilder;
 
 it('builds an eight-team single-elimination plan with the standard pairings', function () {

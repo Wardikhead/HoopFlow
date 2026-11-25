@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Match model. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,6 +34,11 @@ class MatchModel extends Model
 
     protected $table = 'matches';
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [
@@ -49,16 +56,31 @@ class MatchModel extends Model
         ];
     }
 
+    /**
+     * Is series anchor.
+     *
+     * @return bool The result.
+     */
     public function isSeriesAnchor(): bool
     {
         return $this->series_id === null;
     }
 
+    /**
+     * Is series game.
+     *
+     * @return bool The result.
+     */
     public function isSeriesGame(): bool
     {
         return $this->series_id !== null;
     }
 
+    /**
+     * Is bye.
+     *
+     * @return bool The result.
+     */
     public function isBye(): bool
     {
         return $this->isByeGame();
@@ -96,6 +118,11 @@ class MatchModel extends Model
         return $this->belongsTo(Team::class, 'game_winner_team_id');
     }
 
+    /**
+     * Active game.
+     *
+     * @return ?MatchModel The result.
+     */
     public function activeGame(): ?MatchModel
     {
         if ($this->best_of <= 1) {
@@ -116,6 +143,11 @@ class MatchModel extends Model
             ->first();
     }
 
+    /**
+     * Status label.
+     *
+     * @return string The result.
+     */
     public function statusLabel(): string
     {
         return match ($this->status) {
@@ -129,6 +161,11 @@ class MatchModel extends Model
         };
     }
 
+    /**
+     * Series game label.
+     *
+     * @return string The result.
+     */
     public function seriesGameLabel(): string
     {
         if ($this->best_of <= 1) {
@@ -149,6 +186,11 @@ class MatchModel extends Model
             && $this->away_score === null;
     }
 
+    /**
+     * Round label.
+     *
+     * @return string The result.
+     */
     public function roundLabel(): string
     {
         if ($this->stage === 'round_robin') {

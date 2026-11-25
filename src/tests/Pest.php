@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Pest. */
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

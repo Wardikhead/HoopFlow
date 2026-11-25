@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Court. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;

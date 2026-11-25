@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Tournament lifecycle service. */
+
 namespace App\Services;
 
 use App\Models\Bracket;
@@ -9,8 +11,19 @@ use App\Models\Tournament;
 
 class TournamentLifecycleService
 {
+    /**
+     * Create a lifecycle service with audit logging.
+     *
+     * @param  AuditLogger  $auditLogger  The audit logger.
+     */
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
+    /**
+     * Activate a tournament for registration.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return bool The result.
+     */
     public function activate(Tournament $tournament): bool
     {
         $tournament->refresh();
@@ -34,6 +47,12 @@ class TournamentLifecycleService
         return true;
     }
 
+    /**
+     * Archive a tournament and hide it from active views.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return bool The result.
+     */
     public function archive(Tournament $tournament): bool
     {
         $tournament->refresh();
@@ -56,6 +75,12 @@ class TournamentLifecycleService
         return true;
     }
 
+    /**
+     * Restore an archived tournament to its previous state.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return bool The result.
+     */
     public function restore(Tournament $tournament): bool
     {
         $tournament->refresh();
@@ -79,6 +104,12 @@ class TournamentLifecycleService
         return true;
     }
 
+    /**
+     * Delete a tournament and its dependent records.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return bool The result.
+     */
     public function delete(Tournament $tournament): bool
     {
         $tournament->refresh();
@@ -95,6 +126,13 @@ class TournamentLifecycleService
         return (bool) $tournament->delete();
     }
 
+    /**
+     * Update tournament completion state from bracket results.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  ?Team  $champion  The champion.
+     * @return bool The result.
+     */
     public function syncCompletion(Tournament $tournament, ?Team $champion = null): bool
     {
         $tournament->refresh();
@@ -110,6 +148,12 @@ class TournamentLifecycleService
         return $this->complete($tournament, $champion);
     }
 
+    /**
+     * Check whether every round-robin group has finished.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @return bool The result.
+     */
     protected function roundRobinGroupStageFinished(Tournament $tournament): bool
     {
         if ($tournament->format() !== 'round-robin') {
@@ -144,6 +188,13 @@ class TournamentLifecycleService
             && $matches->every(fn (MatchModel $match): bool => in_array($match->status, ['final', 'forfeit'], true));
     }
 
+    /**
+     * Mark a tournament complete and record its champion.
+     *
+     * @param  Tournament  $tournament  The tournament.
+     * @param  ?Team  $champion  The champion.
+     * @return bool The result.
+     */
     protected function complete(Tournament $tournament, ?Team $champion): bool
     {
         $before = $tournament->status;

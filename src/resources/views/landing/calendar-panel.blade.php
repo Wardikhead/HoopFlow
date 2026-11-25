@@ -1,3 +1,4 @@
+{{-- Blade view for Calendar panel. --}}
 <div class="hf-lp-calendar" data-calendar>
     <div class="hf-lp-calendar__head">
         <strong class="hf-lp-calendar__month">{{ $calendar['month'] }}</strong>

@@ -1,3 +1,4 @@
+{{-- Blade view for Payments index. --}}
 <div>
     @section('title', 'Payments')
     @section('meta-description', 'Track registration payments, verify receipts, and mark balances settled across your HoopFlow tournament.')

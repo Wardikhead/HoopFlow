@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Payments index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Livewire\SecureComponent;
@@ -49,6 +51,11 @@ class PaymentsIndex extends SecureComponent
 
     public ?int $verifyAmount = null;
 
+    /**
+     * Mount.
+     *
+     * @return void Nothing.
+     */
     public function mount(): void
     {
         $status = request()->query('status', 'pending');
@@ -63,6 +70,12 @@ class PaymentsIndex extends SecureComponent
         $this->tournament = is_string($tournament) && $tournament !== '' ? $tournament : 'all';
     }
 
+    /**
+     * Open verify.
+     *
+     * @param  int  $paymentId  The payment id.
+     * @return void Nothing.
+     */
     public function openVerify(int $paymentId): void
     {
         $payment = Payment::query()->with(['registration.team', 'registration.tournament'])->find($paymentId);
@@ -78,6 +91,11 @@ class PaymentsIndex extends SecureComponent
         $this->verifyAmount = (int) $payment->amount;
     }
 
+    /**
+     * Close verify.
+     *
+     * @return void Nothing.
+     */
     public function closeVerify(): void
     {
         $this->verifyingId = null;
@@ -88,6 +106,11 @@ class PaymentsIndex extends SecureComponent
         $this->resetValidation();
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->search = '';
@@ -95,6 +118,11 @@ class PaymentsIndex extends SecureComponent
         $this->tournament = 'all';
     }
 
+    /**
+     * Save verify.
+     *
+     * @return void Nothing.
+     */
     public function saveVerify(): void
     {
         if ($this->verifyingId === null) {
@@ -208,6 +236,11 @@ class PaymentsIndex extends SecureComponent
         return Tournament::query()->orderBy('name')->get();
     }
 
+    /**
+     * Destination tournament.
+     *
+     * @return ?Tournament The result.
+     */
     #[Computed]
     public function destinationTournament(): ?Tournament
     {
@@ -256,6 +289,11 @@ class PaymentsIndex extends SecureComponent
         ];
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.payments-index');

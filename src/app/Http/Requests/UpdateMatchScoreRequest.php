@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Update match score request. */
+
 namespace App\Http\Requests;
 
 use App\Models\MatchModel;
@@ -8,6 +10,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateMatchScoreRequest extends FormRequest
 {
+    /**
+     * Authorize.
+     *
+     * @return bool The result.
+     */
     public function authorize(): bool
     {
         $match = $this->route('match');

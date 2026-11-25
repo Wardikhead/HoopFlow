@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Profile audit test. */
+
 use App\Livewire\Organizer\AuditLogIndex;
 use App\Models\AuditLog;
 use App\Models\MatchModel;

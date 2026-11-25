@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Announcement draft service. */
+
 namespace App\Services;
 
 use App\Exceptions\AnnouncementDraftException;
@@ -128,6 +130,13 @@ class AnnouncementDraftService
         return ['title' => $title, 'body' => $body];
     }
 
+    /**
+     * Normalize a value to trimmed plain text within the length limit.
+     *
+     * @param  mixed  $value  The value.
+     * @param  int  $limit  The limit.
+     * @return ?string The result.
+     */
     private function normalize(mixed $value, int $limit): ?string
     {
         if (! is_string($value)) {
@@ -157,6 +166,11 @@ class AnnouncementDraftService
         return $cut !== '' ? $cut : null;
     }
 
+    /**
+     * Build the system prompt that guides the announcement drafter.
+     *
+     * @return string The result.
+     */
     private function systemInstruction(): string
     {
         return 'You write short announcements for a barangay youth basketball tournament. '

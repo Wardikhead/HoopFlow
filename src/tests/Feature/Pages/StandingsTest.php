@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Standings test. */
+
 use App\Livewire\Public\StandingsShow;
 use App\Models\Tournament;
 use App\Models\User;

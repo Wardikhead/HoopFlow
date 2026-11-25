@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Parity test. */
+
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\MatchModel;

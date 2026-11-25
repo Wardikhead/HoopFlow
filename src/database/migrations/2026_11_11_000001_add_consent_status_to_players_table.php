@@ -1,5 +1,7 @@
 <?php
 
+/** Database migration 2026 11 11 000001 add consent status to players table. */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -7,6 +9,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Up.
+     *
+     * @return void Nothing.
+     */
     public function up(): void
     {
         Schema::table('players', function (Blueprint $table) {
@@ -43,6 +50,11 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Down.
+     *
+     * @return void Nothing.
+     */
     public function down(): void
     {
         Schema::table('eligibility_documents', function (Blueprint $table) {

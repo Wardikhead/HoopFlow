@@ -1,3 +1,4 @@
+{{-- Blade view for Error page. --}}
 @props([
     'code',
     'title',

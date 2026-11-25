@@ -1,3 +1,4 @@
+{{-- Blade view for Story. --}}
 @php
     $rounds = $bracket['rounds'];
     $quarters = $rounds[0]['matches'] ?? [];

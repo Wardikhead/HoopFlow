@@ -1,5 +1,7 @@
 <?php
 
+/** Configuration for Auth. */
+
 use App\Models\User;
 
 return [

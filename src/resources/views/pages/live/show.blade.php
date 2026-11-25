@@ -1,3 +1,4 @@
+{{-- Blade view for Show. --}}
 @extends('layouts.public')
 
 @section('title', 'Live scores · '.$tournament->name)

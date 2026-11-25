@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Game manage. */
+
 namespace App\Livewire\Organizer;
 
 use App\Livewire\SecureComponent;
@@ -91,6 +93,12 @@ class GameManage extends SecureComponent
 
     public string $correctionReason = '';
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $match  The match.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $match = null): void
     {
         abort_unless(auth()->user()?->hasRole('organizer') ?? false, 403);
@@ -138,18 +146,33 @@ class GameManage extends SecureComponent
             ->find($this->matchId);
     }
 
+    /**
+     * Home team.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function homeTeam(): ?Team
     {
         return $this->match?->homeTeam;
     }
 
+    /**
+     * Away team.
+     *
+     * @return ?Team The result.
+     */
     #[Computed]
     public function awayTeam(): ?Team
     {
         return $this->match?->awayTeam;
     }
 
+    /**
+     * Is locked.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function isLocked(): bool
     {
@@ -157,6 +180,11 @@ class GameManage extends SecureComponent
             && in_array($this->match?->status, ['final', 'forfeit', 'in_progress'], true);
     }
 
+    /**
+     * Series anchor.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function seriesAnchor(): ?MatchModel
     {
@@ -194,6 +222,11 @@ class GameManage extends SecureComponent
             ->get();
     }
 
+    /**
+     * Series summary.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function seriesSummary(): string
     {
@@ -227,12 +260,22 @@ class GameManage extends SecureComponent
         return $leader.' leads '.max($homeWins, $awayWins).'–'.min($homeWins, $awayWins);
     }
 
+    /**
+     * Series game label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function seriesGameLabel(): string
     {
         return $this->match?->seriesGameLabel() ?? '';
     }
 
+    /**
+     * Series schedule label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function seriesScheduleLabel(): string
     {
@@ -248,6 +291,11 @@ class GameManage extends SecureComponent
         return $courtName.' · '.$slot->start_at->format('M j, Y · g:i A');
     }
 
+    /**
+     * Next series game.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function nextSeriesGame(): ?MatchModel
     {
@@ -267,6 +315,11 @@ class GameManage extends SecureComponent
         return $this->seriesGames->firstWhere('id', $active->id);
     }
 
+    /**
+     * Next series summary.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function nextSeriesSummary(): string
     {
@@ -288,6 +341,11 @@ class GameManage extends SecureComponent
         return 'Game '.$next->game_number.' is next · '.$schedule;
     }
 
+    /**
+     * Locked title.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function lockedTitle(): string
     {
@@ -300,6 +358,12 @@ class GameManage extends SecureComponent
         return $match->best_of > 1 ? 'Game '.$match->game_number.' recorded' : 'Locked result';
     }
 
+    /**
+     * Is active series game.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return bool The result.
+     */
     public function isActiveSeriesGame(MatchModel $game): bool
     {
         $anchor = $this->seriesAnchor;
@@ -313,6 +377,12 @@ class GameManage extends SecureComponent
         return $active instanceof MatchModel && (int) $active->id === (int) $game->id;
     }
 
+    /**
+     * Series status label.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesStatusLabel(MatchModel $game): string
     {
         $status = $this->seriesGameStatus($game);
@@ -351,6 +421,12 @@ class GameManage extends SecureComponent
         return $game->status;
     }
 
+    /**
+     * Series status tone.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesStatusTone(MatchModel $game): string
     {
         $status = $this->seriesGameStatus($game);
@@ -368,6 +444,12 @@ class GameManage extends SecureComponent
         };
     }
 
+    /**
+     * Series game unavailable reason.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return ?string The result.
+     */
     public function seriesGameUnavailableReason(MatchModel $game): ?string
     {
         if ($game->status === 'conditional') {
@@ -387,6 +469,11 @@ class GameManage extends SecureComponent
         return null;
     }
 
+    /**
+     * Has editable box score.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasEditableBoxScore(): bool
     {
@@ -488,6 +575,12 @@ class GameManage extends SecureComponent
         return app(GameStatsService::class)->pointsFor($quarter);
     }
 
+    /**
+     * Stat points for side.
+     *
+     * @param  string  $side  The side.
+     * @return int The result.
+     */
     public function statPointsForSide(string $side): int
     {
         $entries = match ($side) {
@@ -508,11 +601,23 @@ class GameManage extends SecureComponent
         return $total;
     }
 
+    /**
+     * Set active quarter.
+     *
+     * @param  int  $index  The index.
+     * @return void Nothing.
+     */
     public function setActiveQuarter(int $index): void
     {
         $this->activeQuarter = max(0, min($index, count($this->quarters['team1']) - 1));
     }
 
+    /**
+     * Updated.
+     *
+     * @param  string  $name  The name.
+     * @return void Nothing.
+     */
     public function updated(string $name): void
     {
         if (str_starts_with($name, 'quarters.')) {
@@ -549,6 +654,11 @@ class GameManage extends SecureComponent
         }
     }
 
+    /**
+     * Add overtime.
+     *
+     * @return void Nothing.
+     */
     public function addOvertime(): void
     {
         if ($this->editableMatch() === null) {
@@ -573,6 +683,11 @@ class GameManage extends SecureComponent
         $this->activeQuarter = count($this->quarters['team1']) - 1;
     }
 
+    /**
+     * Remove overtime.
+     *
+     * @return void Nothing.
+     */
     public function removeOvertime(): void
     {
         if ($this->editableMatch() === null) {
@@ -615,6 +730,11 @@ class GameManage extends SecureComponent
         $this->doRemoveOvertime();
     }
 
+    /**
+     * Do remove overtime.
+     *
+     * @return void Nothing.
+     */
     public function doRemoveOvertime(): void
     {
         $this->showConfirm = false;
@@ -635,6 +755,12 @@ class GameManage extends SecureComponent
         $this->activeQuarter = min($this->activeQuarter, count($this->quarters['team1']) - 1);
     }
 
+    /**
+     * Set side.
+     *
+     * @param  string  $side  The side.
+     * @return void Nothing.
+     */
     public function setSide(string $side): void
     {
         if (in_array($side, ['all', 'team1', 'team2'], true)) {
@@ -642,6 +768,11 @@ class GameManage extends SecureComponent
         }
     }
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->tournamentFilter = 'all';
@@ -649,6 +780,11 @@ class GameManage extends SecureComponent
         $this->teamSearch = '';
     }
 
+    /**
+     * Save draft.
+     *
+     * @return void Nothing.
+     */
     public function saveDraft(): void
     {
         if ($this->correctionMode) {
@@ -676,6 +812,11 @@ class GameManage extends SecureComponent
         $this->toast($message, 'Saved');
     }
 
+    /**
+     * Request publish.
+     *
+     * @return void Nothing.
+     */
     public function requestPublish(): void
     {
         if ($this->correctionMode) {
@@ -726,6 +867,11 @@ class GameManage extends SecureComponent
         $this->openConfirm($title, $message, $label, 'primary', 'confirmPublish');
     }
 
+    /**
+     * Confirm publish.
+     *
+     * @return void Nothing.
+     */
     public function confirmPublish(): void
     {
         $this->showConfirm = false;
@@ -764,6 +910,11 @@ class GameManage extends SecureComponent
         $this->toast('Result published. The winner advances to the next round.', 'Result published');
     }
 
+    /**
+     * Request save correction.
+     *
+     * @return void Nothing.
+     */
     public function requestSaveCorrection(): void
     {
         if (! $this->correctionMode) {
@@ -808,6 +959,11 @@ class GameManage extends SecureComponent
         );
     }
 
+    /**
+     * Confirm save correction.
+     *
+     * @return void Nothing.
+     */
     public function confirmSaveCorrection(): void
     {
         $this->showConfirm = false;
@@ -828,6 +984,11 @@ class GameManage extends SecureComponent
         $this->redirect(route('gameStats', ['match' => $match->id]), navigate: true);
     }
 
+    /**
+     * Cancel correction.
+     *
+     * @return void Nothing.
+     */
     public function cancelCorrection(): void
     {
         $match = $this->match;
@@ -839,16 +1000,32 @@ class GameManage extends SecureComponent
         $this->redirect(route('gameStats', ['match' => $match->id]), navigate: true);
     }
 
+    /**
+     * Close confirm.
+     *
+     * @return void Nothing.
+     */
     public function closeConfirm(): void
     {
         $this->showConfirm = false;
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.game-manage');
     }
 
+    /**
+     * Select match.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     protected function selectMatch(MatchModel $match): void
     {
         $match = $this->resolveActiveSeriesMatch($match);
@@ -858,6 +1035,12 @@ class GameManage extends SecureComponent
         $this->loadEditor($match);
     }
 
+    /**
+     * Resolve active series match.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return MatchModel The result.
+     */
     protected function resolveActiveSeriesMatch(MatchModel $match): MatchModel
     {
         if ($match->best_of <= 1) {
@@ -905,6 +1088,11 @@ class GameManage extends SecureComponent
         return $anchor->activeGame() ?? $match;
     }
 
+    /**
+     * Enter correction mode.
+     *
+     * @return void Nothing.
+     */
     protected function enterCorrectionMode(): void
     {
         $match = $this->match;
@@ -926,6 +1114,12 @@ class GameManage extends SecureComponent
         $this->errorMessage = '';
     }
 
+    /**
+     * Load editor.
+     *
+     * @param  MatchModel  $match  The match.
+     * @return void Nothing.
+     */
     protected function loadEditor(MatchModel $match): void
     {
         $loaded = app(GameStatsService::class)->load($match);
@@ -953,6 +1147,11 @@ class GameManage extends SecureComponent
         ];
     }
 
+    /**
+     * Editable match.
+     *
+     * @return ?MatchModel The result.
+     */
     protected function editableMatch(): ?MatchModel
     {
         $match = $this->match;
@@ -1003,6 +1202,12 @@ class GameManage extends SecureComponent
         return $match;
     }
 
+    /**
+     * Sync team quarter.
+     *
+     * @param  string  $side  The side.
+     * @return void Nothing.
+     */
     protected function syncTeamQuarter(string $side): void
     {
         $sum = 0;
@@ -1016,6 +1221,12 @@ class GameManage extends SecureComponent
         $this->syncFinal($side);
     }
 
+    /**
+     * Sync final.
+     *
+     * @param  string  $side  The side.
+     * @return void Nothing.
+     */
     protected function syncFinal(string $side): void
     {
         $this->finals[$side] = array_sum($this->quarters[$side]);
@@ -1062,17 +1273,39 @@ class GameManage extends SecureComponent
         return array_fill_keys(array_keys(GameStatsService::FIELDS), 0);
     }
 
+    /**
+     * Clamp int.
+     *
+     * @param  mixed  $value  The value.
+     * @return int The result.
+     */
     protected function clampInt(mixed $value): int
     {
         return max(0, min(GameStatsService::MAX_VALUE, is_numeric($value) ? (int) $value : 0));
     }
 
+    /**
+     * Fail.
+     *
+     * @param  string  $message  The message.
+     * @return void Nothing.
+     */
     protected function fail(string $message): void
     {
         $this->errorMessage = $message;
         $this->toast($message, 'Unable to save', 'danger');
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @return void Nothing.
+     */
     protected function openConfirm(string $title, string $message, string $label, string $tone, string $action): void
     {
         $this->confirmTitle = $title;
@@ -1119,6 +1352,14 @@ class GameManage extends SecureComponent
         return [$label.' recorded', $series.'. '.$nextLabel.' is next'.$schedule.'.'];
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);

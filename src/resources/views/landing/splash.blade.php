@@ -1,3 +1,4 @@
+{{-- Blade view for Splash. --}}
 <div class="hf-lp-splash" data-lp-splash aria-hidden="true">
     <div class="hf-lp-splash__court" aria-hidden="true">
         <span class="hf-lp-splash__ring is-1"></span>

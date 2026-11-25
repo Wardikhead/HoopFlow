@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Reset password notification. */
+
 namespace App\Notifications;
 
 use App\Models\User;
@@ -8,6 +10,11 @@ use Illuminate\Notifications\Notification;
 
 class ResetPasswordNotification extends Notification
 {
+    /**
+     * Initialize the instance.
+     *
+     * @param  string  $token  The token.
+     */
     public function __construct(private readonly string $token) {}
 
     /**
@@ -18,6 +25,12 @@ class ResetPasswordNotification extends Notification
         return ['mail'];
     }
 
+    /**
+     * To mail.
+     *
+     * @param  User  $notifiable  The notifiable.
+     * @return MailMessage The result.
+     */
     public function toMail(User $notifiable): MailMessage
     {
         $expires = (int) config(

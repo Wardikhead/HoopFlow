@@ -1,3 +1,4 @@
+{{-- Blade view for Compare. --}}
 @php
     $rows = collect($standings)->take(5);
 @endphp

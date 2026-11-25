@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Round robin playoff test. */
+
 use App\Models\Bracket;
 use App\Models\MatchModel;
 use App\Models\Registration;
@@ -16,6 +18,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Playoff tournament.
+ *
+ * @param  int  $playoffTeams  The playoff teams.
+ * @return Tournament The result.
+ */
 function playoffTournament(int $playoffTeams = 4): Tournament
 {
     $base = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();
@@ -56,6 +64,13 @@ function playoffTournament(int $playoffTeams = 4): Tournament
     return $tournament->fresh();
 }
 
+/**
+ * Play group stage.
+ *
+ * @param  BracketService  $service  The service.
+ * @param  Tournament  $tournament  The tournament.
+ * @return void Nothing.
+ */
 function playGroupStage(BracketService $service, Tournament $tournament): void
 {
     $group = Bracket::whereIn('division_id', $tournament->divisions()->pluck('id'))

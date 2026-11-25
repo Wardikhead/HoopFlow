@@ -1,8 +1,18 @@
+/**
+ * Field for.
+ *
+ * @param {*} error The error.
+ * @returns {*} The result.
+ */
 function fieldFor(error) {
     const field = error.closest('.hf-field');
     return field?.querySelector('input, select, textarea') ?? null;
 }
 
+/**
+ * Ensure error ids.
+ * @returns {*} The result.
+ */
 function ensureErrorIds() {
     document.querySelectorAll('.hf-field-error').forEach((error, index) => {
         if (!error.id) error.id = `hf-error-${index}-${Math.random().toString(36).slice(2, 8)}`;
@@ -15,6 +25,10 @@ function ensureErrorIds() {
     });
 }
 
+/**
+ * Build summary.
+ * @returns {*} The result.
+ */
 function buildSummary() {
     const errors = [...document.querySelectorAll('.hf-field-error')].filter((error) => error.textContent.trim() !== '');
     if (!errors.length || document.querySelector('[data-hf-error-summary]')) return;
@@ -46,6 +60,10 @@ function buildSummary() {
     host.prepend(summary);
 }
 
+/**
+ * Focus first invalid.
+ * @returns {*} The result.
+ */
 function focusFirstInvalid() {
     const summary = document.querySelector('[data-hf-error-summary]');
     if (!summary) return;
@@ -58,11 +76,19 @@ function focusFirstInvalid() {
 
 let bound = false;
 
+/**
+ * Refresh validation.
+ * @returns {*} The result.
+ */
 export function refreshValidation() {
     ensureErrorIds();
     buildSummary();
 }
 
+/**
+ * Init validation.
+ * @returns {*} The result.
+ */
 export function initValidation() {
     refreshValidation();
 

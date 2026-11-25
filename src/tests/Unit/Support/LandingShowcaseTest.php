@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Landing showcase test. */
+
 use App\Support\LandingShowcase;
 use Tests\TestCase;
 

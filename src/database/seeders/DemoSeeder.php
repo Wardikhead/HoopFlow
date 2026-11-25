@@ -1,5 +1,7 @@
 <?php
 
+/** Database seeder Demo seeder. */
+
 namespace Database\Seeders;
 
 use App\Models\Announcement;
@@ -84,6 +86,11 @@ class DemoSeeder extends Seeder
     /** @var list<Referee> */
     protected array $referees = [];
 
+    /**
+     * Run.
+     *
+     * @return void Nothing.
+     */
     public function run(): void
     {
         $this->call([OrganizationSeeder::class, RoleSeeder::class]);
@@ -121,6 +128,11 @@ class DemoSeeder extends Seeder
         $this->seedAuditTrail();
     }
 
+    /**
+     * Seed users.
+     *
+     * @return void Nothing.
+     */
     protected function seedUsers(): void
     {
         $this->organizer = User::updateOrCreate(
@@ -158,6 +170,13 @@ class DemoSeeder extends Seeder
         $this->assignRole($this->fan, 'fan');
     }
 
+    /**
+     * Assign role.
+     *
+     * @param  User  $user  The user.
+     * @param  string  $roleKey  The role key.
+     * @return void Nothing.
+     */
     protected function assignRole(User $user, string $roleKey): void
     {
         $roleId = Role::query()->where('key', $roleKey)->value('id');
@@ -176,6 +195,11 @@ class DemoSeeder extends Seeder
         );
     }
 
+    /**
+     * Purge demo data.
+     *
+     * @return void Nothing.
+     */
     protected function purgeDemoData(): void
     {
         foreach ([
@@ -206,6 +230,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed teams.
+     *
+     * @return void Nothing.
+     */
     protected function seedTeams(): void
     {
         foreach ($this->teamDefinitions as $index => $definition) {
@@ -239,6 +268,14 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed roster.
+     *
+     * @param  Team  $team  The team.
+     * @param  int  $teamIndex  The team index.
+     * @param  string  $state  The state.
+     * @return void Nothing.
+     */
     protected function seedRoster(Team $team, int $teamIndex, string $state): void
     {
         $firstNames = ['Jayson', 'Kobe', 'Carl', 'Kai', 'June Mar', 'Gabe', 'CJ', 'Dwight', 'Calvin', 'RR', 'Marc', 'Prince', 'Andre', 'Jolo', 'Troy', 'Luis'];
@@ -285,6 +322,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed referees.
+     *
+     * @return void Nothing.
+     */
     protected function seedReferees(): void
     {
         $this->referees = [];
@@ -447,6 +489,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed completed single elimination.
+     *
+     * @return void Nothing.
+     */
     protected function seedCompletedSingleElimination(): void
     {
         $tournament = $this->createTournament([
@@ -496,6 +543,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed completed round robin.
+     *
+     * @return void Nothing.
+     */
     protected function seedCompletedRoundRobin(): void
     {
         $tournament = $this->createTournament([
@@ -578,6 +630,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed active best of three.
+     *
+     * @return void Nothing.
+     */
     protected function seedActiveBestOfThree(): void
     {
         $tournament = $this->createTournament([
@@ -668,6 +725,11 @@ class DemoSeeder extends Seeder
         $this->publishBoxScore($secondGame2, $awayScore2, $homeScore2);
     }
 
+    /**
+     * Seed completed double elimination.
+     *
+     * @return void Nothing.
+     */
     protected function seedCompletedDoubleElimination(): void
     {
         $tournament = $this->createTournament([
@@ -732,6 +794,11 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed registration open tournament.
+     *
+     * @return void Nothing.
+     */
     protected function seedRegistrationOpenTournament(): void
     {
         $tournament = $this->createTournament([
@@ -866,6 +933,13 @@ class DemoSeeder extends Seeder
             ->get();
     }
 
+    /**
+     * Series game.
+     *
+     * @param  MatchModel  $anchor  The anchor.
+     * @param  int  $gameNumber  The game number.
+     * @return MatchModel The result.
+     */
     protected function seriesGame(MatchModel $anchor, int $gameNumber): MatchModel
     {
         if ($gameNumber === 1) {
@@ -884,6 +958,14 @@ class DemoSeeder extends Seeder
         return $game;
     }
 
+    /**
+     * Record score.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $homeScore  The home score.
+     * @param  int  $awayScore  The away score.
+     * @return void Nothing.
+     */
     protected function recordScore(MatchModel $match, int $homeScore, int $awayScore): void
     {
         app(BracketService::class)->recordScore($match, $homeScore, $awayScore);
@@ -946,6 +1028,14 @@ class DemoSeeder extends Seeder
             : [$base - 2, $base + $margin];
     }
 
+    /**
+     * Publish box score.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  int  $homeScore  The home score.
+     * @param  int  $awayScore  The away score.
+     * @return void Nothing.
+     */
     protected function publishBoxScore(MatchModel $match, int $homeScore, int $awayScore): void
     {
         $homeTeam = $match->homeTeam;
@@ -1049,6 +1139,11 @@ class DemoSeeder extends Seeder
         ];
     }
 
+    /**
+     * Attach match officials.
+     *
+     * @return void Nothing.
+     */
     protected function attachMatchOfficials(): void
     {
         if ($this->referees === []) {
@@ -1101,6 +1196,14 @@ class DemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Attach official.
+     *
+     * @param  MatchModel  $match  The match.
+     * @param  Referee  $referee  The referee.
+     * @param  string  $role  The role.
+     * @return void Nothing.
+     */
     protected function attachOfficial(MatchModel $match, Referee $referee, string $role): void
     {
         MatchOfficial::create([
@@ -1110,6 +1213,11 @@ class DemoSeeder extends Seeder
         ]);
     }
 
+    /**
+     * Seed announcements.
+     *
+     * @return void Nothing.
+     */
     protected function seedAnnouncements(): void
     {
         $founders = $this->tournamentBySlug('founders-cup-2026');
@@ -1225,6 +1333,11 @@ class DemoSeeder extends Seeder
         ]);
     }
 
+    /**
+     * Seed audit trail.
+     *
+     * @return void Nothing.
+     */
     protected function seedAuditTrail(): void
     {
         $founders = $this->tournamentBySlug('founders-cup-2026');
@@ -1329,11 +1442,22 @@ class DemoSeeder extends Seeder
         ]);
     }
 
+    /**
+     * Tournament by slug.
+     *
+     * @param  string  $slug  The slug.
+     * @return Tournament The result.
+     */
     protected function tournamentBySlug(string $slug): Tournament
     {
         return Tournament::query()->where('slug', $slug)->firstOrFail();
     }
 
+    /**
+     * Organization.
+     *
+     * @return Organization The result.
+     */
     protected function organization(): Organization
     {
         if (! $this->organization instanceof Organization) {
@@ -1343,6 +1467,11 @@ class DemoSeeder extends Seeder
         return $this->organization;
     }
 
+    /**
+     * Organizer.
+     *
+     * @return User The result.
+     */
     protected function organizer(): User
     {
         if (! $this->organizer instanceof User) {

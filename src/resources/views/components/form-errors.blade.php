@@ -1,3 +1,4 @@
+{{-- Blade view for Form errors. --}}
 @props(['targets' => []])
 
 @if ($errors->any())

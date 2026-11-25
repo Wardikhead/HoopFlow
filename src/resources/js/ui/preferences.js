@@ -1,18 +1,32 @@
+// Front-end script for Preferences.
+
 const THEME_KEY = 'hf-theme';
 const DENSITY_KEY = 'hf-density';
 const MOTION_KEY = 'hf-motion';
 const media = window.matchMedia('(prefers-color-scheme: dark)');
 
+/**
+ * Theme preference.
+ * @returns {*} The result.
+ */
 export function themePreference() {
     return localStorage.getItem(THEME_KEY) || 'system';
 }
 
+/**
+ * Resolved theme.
+ * @returns {*} The result.
+ */
 export function resolvedTheme() {
     const pref = themePreference();
     if (pref === 'system') return media.matches ? 'dark' : 'light';
     return pref === 'dark' ? 'dark' : 'light';
 }
 
+/**
+ * Apply preferences.
+ * @returns {*} The result.
+ */
 export function applyPreferences() {
     const theme = resolvedTheme();
     document.documentElement.dataset.theme = theme;
@@ -22,6 +36,13 @@ export function applyPreferences() {
     document.documentElement.style.colorScheme = theme;
 }
 
+/**
+ * Set preference.
+ *
+ * @param {*} name The name.
+ * @param {*} value The value.
+ * @returns {*} The result.
+ */
 export function setPreference(name, value) {
     if (name === 'theme') localStorage.setItem(THEME_KEY, value);
     if (name === 'density') localStorage.setItem(DENSITY_KEY, value);
@@ -31,10 +52,18 @@ export function setPreference(name, value) {
     document.dispatchEvent(new CustomEvent('hf:theme-changed', { detail: { theme: resolvedTheme() } }));
 }
 
+/**
+ * Toggle theme.
+ * @returns {*} The result.
+ */
 export function toggleTheme() {
     setPreference('theme', resolvedTheme() === 'dark' ? 'light' : 'dark');
 }
 
+/**
+ * Sync preference buttons.
+ * @returns {*} The result.
+ */
 export function syncPreferenceButtons() {
     document.querySelectorAll('[data-hf-pref]').forEach((button) => {
         const name = button.dataset.hfPref;
@@ -48,6 +77,10 @@ export function syncPreferenceButtons() {
     });
 }
 
+/**
+ * Init preferences.
+ * @returns {*} The result.
+ */
 export function initPreferences() {
     applyPreferences();
 

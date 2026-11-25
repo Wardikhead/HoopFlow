@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Bracket test. */
+
 use App\Livewire\Organizer\BracketShow;
 use App\Livewire\Organizer\TournamentShow;
 use App\Models\AuditLog;
@@ -375,6 +377,11 @@ it('uses the bracket service champion resolution on the tournament page', functi
         ->assertSet('champion', null);
 });
 
+/**
+ * Bracket series fixture.
+ *
+ * @return array<mixed> The result.
+ */
 function bracketSeriesFixture(): array
 {
     $tournament = Tournament::where('slug', 'cdo-grassroots-classic')->firstOrFail();

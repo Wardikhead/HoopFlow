@@ -1,5 +1,7 @@
 <?php
 
+/** Route definitions for Api. */
+
 use App\Http\Controllers\Api\MatchScoreController;
 use App\Http\Controllers\Api\PublicLiveScoreController;
 use Illuminate\Support\Facades\Route;

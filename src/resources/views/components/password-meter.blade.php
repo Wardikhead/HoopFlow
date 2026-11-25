@@ -1,3 +1,4 @@
+{{-- Blade view for Password meter. --}}
 @props(['model' => 'password'])
 
 <div class="hf-password-meter" :class="'hf-score-'+evaluation.score" x-show="focused || {{ $model }}.length > 0" x-cloak>

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Live score api test. */
+
 use App\Models\Bracket;
 use App\Models\Division;
 use App\Models\MatchModel;

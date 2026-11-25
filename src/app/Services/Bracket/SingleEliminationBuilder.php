@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Single elimination builder. */
+
 namespace App\Services\Bracket;
 
 final class SingleEliminationBuilder

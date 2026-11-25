@@ -1,3 +1,4 @@
+{{-- Blade view for Profile. --}}
 @extends('layouts.public')
 
 @section('title', 'Profile')

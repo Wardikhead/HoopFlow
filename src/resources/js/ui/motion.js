@@ -1,9 +1,18 @@
+// Front-end script for Motion.
+
 const reduce = typeof window !== 'undefined'
     ? window.matchMedia('(prefers-reduced-motion: reduce)')
     : { matches: false };
 
 let bound = false;
 
+/**
+ * Motion enabled.
+ *
+ * @param {*} { reduce: reduced  The { reduce: reduced.
+ * @param {*} preference  The preference.
+ * @returns {*} The result.
+ */
 export function motionEnabled({ reduce: reduced = null, preference = null } = {}) {
     const osReduced = reduced ?? reduce.matches;
     const preferenceValue = preference
@@ -12,6 +21,10 @@ export function motionEnabled({ reduce: reduced = null, preference = null } = {}
     return !osReduced && preferenceValue !== 'reduced';
 }
 
+/**
+ * Apply reveal.
+ * @returns {*} The result.
+ */
 export function applyReveal() {
     if (reduce.matches) return;
 
@@ -21,6 +34,10 @@ export function applyReveal() {
     });
 }
 
+/**
+ * Init motion.
+ * @returns {*} The result.
+ */
 export function initMotion() {
     if (bound) return;
     bound = true;

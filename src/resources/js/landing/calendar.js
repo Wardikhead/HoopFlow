@@ -1,3 +1,5 @@
+// Front-end script for Calendar.
+
 export default function initCalendar() {
     const root = document.querySelector('[data-calendar]');
 

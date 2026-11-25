@@ -1,10 +1,20 @@
 <?php
 
+/** Tests for Eligible birthdate test. */
+
 use App\Models\Division;
 use App\Models\Tournament;
 use App\Rules\EligibleBirthdate;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Birthdate errors.
+ *
+ * @param  string  $birthdate  The birthdate.
+ * @param  Division  $division  The division.
+ * @param  Tournament  $tournament  The tournament.
+ * @return array<mixed> The result.
+ */
 function birthdateErrors(string $birthdate, Division $division, Tournament $tournament): array
 {
     return Validator::make(

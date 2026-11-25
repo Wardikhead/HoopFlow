@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Game stats show. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\AuditLog;
@@ -83,6 +85,12 @@ class GameStatsShow extends Component
 
     public string $sortDirection = 'desc';
 
+    /**
+     * Mount.
+     *
+     * @param  int|string|null  $match  The match.
+     * @return void Nothing.
+     */
     public function mount(int|string|null $match = null): void
     {
         if ($match !== null && is_numeric($match)) {
@@ -108,12 +116,22 @@ class GameStatsShow extends Component
         }
     }
 
+    /**
+     * Is organizer.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function isOrganizer(): bool
     {
         return auth()->user()?->hasRole('organizer') ?? false;
     }
 
+    /**
+     * Role label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function roleLabel(): string
     {
@@ -143,6 +161,11 @@ class GameStatsShow extends Component
             ->find($this->matchId);
     }
 
+    /**
+     * Can score.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canScore(): bool
     {
@@ -155,6 +178,11 @@ class GameStatsShow extends Component
             && $match->away_team_id !== null;
     }
 
+    /**
+     * Can correct.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function canCorrect(): bool
     {
@@ -198,6 +226,11 @@ class GameStatsShow extends Component
         ];
     }
 
+    /**
+     * Has stats.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasStats(): bool
     {
@@ -206,6 +239,11 @@ class GameStatsShow extends Component
         return $match instanceof MatchModel && $match->playerStats->isNotEmpty();
     }
 
+    /**
+     * Has editable box score.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasEditableBoxScore(): bool
     {
@@ -216,6 +254,11 @@ class GameStatsShow extends Component
             && $match->playerQuarterStats->isNotEmpty();
     }
 
+    /**
+     * Series anchor.
+     *
+     * @return ?MatchModel The result.
+     */
     #[Computed]
     public function seriesAnchor(): ?MatchModel
     {
@@ -248,6 +291,11 @@ class GameStatsShow extends Component
             ->get();
     }
 
+    /**
+     * Series summary.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function seriesSummary(): string
     {
@@ -295,6 +343,12 @@ class GameStatsShow extends Component
         return $game->status;
     }
 
+    /**
+     * Series game status label.
+     *
+     * @param  MatchModel  $game  The game.
+     * @return string The result.
+     */
     public function seriesGameStatusLabel(MatchModel $game): string
     {
         return match ($this->seriesGameStatus($game)) {
@@ -308,6 +362,11 @@ class GameStatsShow extends Component
         };
     }
 
+    /**
+     * Box score label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function boxScoreLabel(): string
     {
@@ -326,6 +385,11 @@ class GameStatsShow extends Component
         };
     }
 
+    /**
+     * Box score message.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function boxScoreMessage(): string
     {
@@ -442,6 +506,11 @@ class GameStatsShow extends Component
         return $periods;
     }
 
+    /**
+     * Period label.
+     *
+     * @return string The result.
+     */
     #[Computed]
     public function periodLabel(): string
     {
@@ -454,6 +523,11 @@ class GameStatsShow extends Component
         return 'All';
     }
 
+    /**
+     * Has quarter data.
+     *
+     * @return bool The result.
+     */
     #[Computed]
     public function hasQuarterData(): bool
     {
@@ -630,16 +704,34 @@ class GameStatsShow extends Component
         ];
     }
 
+    /**
+     * Set period.
+     *
+     * @param  string  $period  The period.
+     * @return void Nothing.
+     */
     public function setPeriod(string $period): void
     {
         $this->period = $this->resolvePeriod($period);
     }
 
+    /**
+     * Resolve period.
+     *
+     * @param  string  $period  The period.
+     * @return string The result.
+     */
     protected function resolvePeriod(string $period): string
     {
         return in_array($period, array_column($this->periods, 'key'), true) ? $period : 'all';
     }
 
+    /**
+     * Sort by.
+     *
+     * @param  string  $key  The key.
+     * @return void Nothing.
+     */
     public function sortBy(string $key): void
     {
         if (! in_array($key, ['points', 'assists', 'rebounds'], true)) {
@@ -656,6 +748,12 @@ class GameStatsShow extends Component
         $this->sortDirection = 'desc';
     }
 
+    /**
+     * Open score console.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openScoreConsole(int|string|null $matchId = null): void
     {
         if ($matchId !== null && is_numeric($matchId)) {
@@ -700,6 +798,11 @@ class GameStatsShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close score console.
+     *
+     * @return void Nothing.
+     */
     public function closeScoreConsole(): void
     {
         $this->showScoreConsole = false;
@@ -707,6 +810,13 @@ class GameStatsShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Add score.
+     *
+     * @param  int  $side  The side.
+     * @param  int  $points  The points.
+     * @return void Nothing.
+     */
     public function addScore(int $side, int $points): void
     {
         if (! $this->showScoreConsole || $this->forfeitSide !== 0) {
@@ -729,6 +839,11 @@ class GameStatsShow extends Component
         }
     }
 
+    /**
+     * Undo score.
+     *
+     * @return void Nothing.
+     */
     public function undoScore(): void
     {
         if ($this->forfeitSide !== 0) {
@@ -745,6 +860,11 @@ class GameStatsShow extends Component
         $this->score2 = $previous['score2'];
     }
 
+    /**
+     * Request finalize score.
+     *
+     * @return void Nothing.
+     */
     public function requestFinalizeScore(): void
     {
         $match = $this->match;
@@ -808,6 +928,12 @@ class GameStatsShow extends Component
         );
     }
 
+    /**
+     * Open correction.
+     *
+     * @param  int|string|null  $matchId  The match id.
+     * @return void Nothing.
+     */
     public function openCorrection(int|string|null $matchId = null): void
     {
         if ($matchId !== null && is_numeric($matchId)) {
@@ -844,12 +970,22 @@ class GameStatsShow extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Close correction.
+     *
+     * @return void Nothing.
+     */
     public function closeCorrection(): void
     {
         $this->showCorrection = false;
         $this->resetValidation();
     }
 
+    /**
+     * Request correction.
+     *
+     * @return void Nothing.
+     */
     public function requestCorrection(): void
     {
         $match = $this->match;
@@ -901,6 +1037,12 @@ class GameStatsShow extends Component
         );
     }
 
+    /**
+     * Confirm.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     public function confirm(BracketService $bracketService): void
     {
         $action = $this->confirmAction;
@@ -923,11 +1065,22 @@ class GameStatsShow extends Component
         }
     }
 
+    /**
+     * Cancel confirm.
+     *
+     * @return void Nothing.
+     */
     public function cancelConfirm(): void
     {
         $this->resetConfirm();
     }
 
+    /**
+     * Perform finalize.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performFinalize(BracketService $bracketService): void
     {
         $match = $this->freshMatch();
@@ -961,6 +1114,12 @@ class GameStatsShow extends Component
         );
     }
 
+    /**
+     * Perform forfeit.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performForfeit(BracketService $bracketService): void
     {
         $match = $this->freshMatch();
@@ -984,6 +1143,12 @@ class GameStatsShow extends Component
         );
     }
 
+    /**
+     * Perform correction.
+     *
+     * @param  BracketService  $bracketService  The bracket service.
+     * @return void Nothing.
+     */
     protected function performCorrection(BracketService $bracketService): void
     {
         $match = $this->freshMatch();
@@ -1013,6 +1178,11 @@ class GameStatsShow extends Component
         $this->toast('Correction saved and the bracket path was recalculated.', 'Score corrected');
     }
 
+    /**
+     * Fresh match.
+     *
+     * @return ?MatchModel The result.
+     */
     protected function freshMatch(): ?MatchModel
     {
         if ($this->matchId === null) {
@@ -1024,6 +1194,16 @@ class GameStatsShow extends Component
             ->find($this->matchId);
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @return void Nothing.
+     */
     protected function openConfirm(
         string $title,
         string $message,
@@ -1039,6 +1219,11 @@ class GameStatsShow extends Component
         $this->showConfirm = true;
     }
 
+    /**
+     * Reset confirm.
+     *
+     * @return void Nothing.
+     */
     protected function resetConfirm(): void
     {
         $this->showConfirm = false;
@@ -1066,11 +1251,24 @@ class GameStatsShow extends Component
         ];
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.game-stats-show');

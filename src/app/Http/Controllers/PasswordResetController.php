@@ -1,5 +1,7 @@
 <?php
 
+/** HTTP controller for Password reset controller. */
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -19,11 +21,22 @@ class PasswordResetController extends Controller
 {
     public const GENERIC_SENT_MESSAGE = "If an account exists for that email, we've sent a password reset link. Check your inbox and spam folder.";
 
+    /**
+     * Show link request form.
+     *
+     * @return View The result.
+     */
     public function showLinkRequestForm(): View
     {
         return view('auth.forgot-password');
     }
 
+    /**
+     * Send reset link.
+     *
+     * @param  Request  $request  The request.
+     * @return RedirectResponse The result.
+     */
     public function sendResetLink(Request $request): RedirectResponse
     {
         $request->merge([
@@ -43,6 +56,13 @@ class PasswordResetController extends Controller
         return back()->with('status', self::GENERIC_SENT_MESSAGE);
     }
 
+    /**
+     * Show reset form.
+     *
+     * @param  Request  $request  The request.
+     * @param  string  $token  The token.
+     * @return View The result.
+     */
     public function showResetForm(Request $request, string $token): View
     {
         return view('auth.reset-password', [
@@ -51,6 +71,14 @@ class PasswordResetController extends Controller
         ]);
     }
 
+    /**
+     * Reset.
+     *
+     * @param  Request  $request  The request.
+     * @param  SessionRegistry  $sessions  The sessions.
+     * @param  AuditLogger  $audit  The audit.
+     * @return RedirectResponse The result.
+     */
     public function reset(
         Request $request,
         SessionRegistry $sessions,

@@ -1,5 +1,7 @@
 <?php
 
+/** Application class Landing showcase. */
+
 namespace App\Support;
 
 use LogicException;

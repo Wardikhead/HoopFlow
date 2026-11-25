@@ -1,5 +1,7 @@
 <?php
 
+/** Livewire component for Tournaments index. */
+
 namespace App\Livewire\Organizer;
 
 use App\Models\Tournament;
@@ -36,6 +38,11 @@ class TournamentsIndex extends Component
 
     public ?int $confirmTournamentId = null;
 
+    /**
+     * Clear filters.
+     *
+     * @return void Nothing.
+     */
     public function clearFilters(): void
     {
         $this->search = '';
@@ -43,6 +50,12 @@ class TournamentsIndex extends Component
         $this->division = '';
     }
 
+    /**
+     * Request archive.
+     *
+     * @param  int  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     public function requestArchive(int $tournamentId): void
     {
         $tournament = Tournament::query()->find($tournamentId);
@@ -63,6 +76,12 @@ class TournamentsIndex extends Component
         );
     }
 
+    /**
+     * Request restore.
+     *
+     * @param  int  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     public function requestRestore(int $tournamentId): void
     {
         $tournament = Tournament::query()->find($tournamentId);
@@ -83,6 +102,12 @@ class TournamentsIndex extends Component
         );
     }
 
+    /**
+     * Request delete.
+     *
+     * @param  int  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     public function requestDelete(int $tournamentId): void
     {
         $tournament = Tournament::query()->find($tournamentId);
@@ -103,6 +128,11 @@ class TournamentsIndex extends Component
         );
     }
 
+    /**
+     * Confirm.
+     *
+     * @return void Nothing.
+     */
     public function confirm(): void
     {
         $action = $this->confirmAction;
@@ -152,6 +182,11 @@ class TournamentsIndex extends Component
         };
     }
 
+    /**
+     * Cancel confirm.
+     *
+     * @return void Nothing.
+     */
     public function cancelConfirm(): void
     {
         $this->resetConfirm();
@@ -209,6 +244,17 @@ class TournamentsIndex extends Component
             ->values();
     }
 
+    /**
+     * Open confirm.
+     *
+     * @param  string  $title  The title.
+     * @param  string  $message  The message.
+     * @param  string  $label  The label.
+     * @param  string  $tone  The tone.
+     * @param  string  $action  The action.
+     * @param  int  $tournamentId  The tournament id.
+     * @return void Nothing.
+     */
     protected function openConfirm(
         string $title,
         string $message,
@@ -226,6 +272,11 @@ class TournamentsIndex extends Component
         $this->showConfirm = true;
     }
 
+    /**
+     * Reset confirm.
+     *
+     * @return void Nothing.
+     */
     protected function resetConfirm(): void
     {
         $this->showConfirm = false;
@@ -237,11 +288,24 @@ class TournamentsIndex extends Component
         $this->confirmTournamentId = null;
     }
 
+    /**
+     * Toast.
+     *
+     * @param  string  $message  The message.
+     * @param  string  $title  The title.
+     * @param  string  $tone  The tone.
+     * @return void Nothing.
+     */
     protected function toast(string $message, string $title, string $tone = 'success'): void
     {
         $this->dispatch('hf-toast', title: $title, message: $message, tone: $tone);
     }
 
+    /**
+     * Render.
+     *
+     * @return View The result.
+     */
     public function render(): View
     {
         return view('livewire.organizer.tournaments-index');

@@ -1,5 +1,7 @@
 <?php
 
+/** Eloquent model for Registration. */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +18,11 @@ class Registration extends Model
     /** @use HasFactory<Factory> */
     use HasFactory;
 
+    /**
+     * Casts.
+     *
+     * @return array<mixed> The result.
+     */
     protected function casts(): array
     {
         return [

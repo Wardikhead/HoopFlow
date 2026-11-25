@@ -1,3 +1,4 @@
+{{-- Blade view for Game stats show. --}}
 <div>
     @php
         $match = $this->match;

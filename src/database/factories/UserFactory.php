@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for User factory. */
+
 namespace Database\Factories;
 
 use App\Models\Role;

@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Structure test. */
+
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
@@ -12,6 +14,12 @@ beforeEach(function () {
     $this->seed(PrototypeSeeder::class);
 });
 
+/**
+ * Structure x path.
+ *
+ * @param  string  $html  The html.
+ * @return DOMXPath The result.
+ */
 function structureXPath(string $html): DOMXPath
 {
     $dom = new DOMDocument;
@@ -48,6 +56,13 @@ function structureHeadings(string $html): array
     return $headings;
 }
 
+/**
+ * Structure expect single h1.
+ *
+ * @param  string  $html  The html.
+ * @param  string  $page  The page.
+ * @return void Nothing.
+ */
 function structureExpectSingleH1(string $html, string $page): void
 {
     $levels = structureHeadings($html);

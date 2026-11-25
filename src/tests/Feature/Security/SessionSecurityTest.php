@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Session security test. */
+
 use App\Models\User;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;

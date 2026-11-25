@@ -1,5 +1,7 @@
 <?php
 
+/** Route definitions for Game management. */
+
 use App\Livewire\Organizer\GameManage;
 use Illuminate\Support\Facades\Route;
 

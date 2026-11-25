@@ -1,5 +1,7 @@
 <?php
 
+/** Database support for Match model factory. */
+
 namespace Database\Factories;
 
 use App\Models\Bracket;
@@ -14,6 +16,11 @@ use Illuminate\Support\Facades\DB;
  */
 class MatchModelFactory extends Factory
 {
+    /**
+     * Definition.
+     *
+     * @return array<mixed> The result.
+     */
     public function definition(): array
     {
         $id = DB::getDriverName() === 'pgsql'

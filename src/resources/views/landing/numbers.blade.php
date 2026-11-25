@@ -1,3 +1,4 @@
+{{-- Blade view for Numbers. --}}
 <section id="numbers" class="hf-lp-numbers" aria-labelledby="numbers-title">
     <div class="hf-lp-shell">
         <div class="hf-lp-numbers__head hf-lp-wipe">

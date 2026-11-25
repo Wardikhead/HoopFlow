@@ -1,5 +1,7 @@
 <?php
 
+/** Domain service for Announcement service. */
+
 namespace App\Services;
 
 use App\Models\Announcement;
@@ -45,6 +47,14 @@ class AnnouncementService
         });
     }
 
+    /**
+     * Pin or unpin an announcement and audit the change.
+     *
+     * @param  Announcement  $announcement  The announcement.
+     * @param  bool  $pinned  The pinned.
+     * @param  ?User  $actor  The actor.
+     * @return void Nothing.
+     */
     public function setPinned(Announcement $announcement, bool $pinned, ?User $actor = null): void
     {
         DB::transaction(function () use ($announcement, $pinned, $actor): void {
@@ -62,6 +72,13 @@ class AnnouncementService
         });
     }
 
+    /**
+     * Delete an announcement and audit the change.
+     *
+     * @param  Announcement  $announcement  The announcement.
+     * @param  ?User  $actor  The actor.
+     * @return void Nothing.
+     */
     public function delete(Announcement $announcement, ?User $actor = null): void
     {
         DB::transaction(function () use ($announcement, $actor): void {

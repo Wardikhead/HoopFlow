@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Tournament lifecycle service test. */
+
 use App\Models\AuditLog;
 use App\Models\Bracket;
 use App\Models\Division;
@@ -11,6 +13,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+/**
+ * Tls unit tournament.
+ *
+ * @param  string  $status  The status.
+ * @param  array<mixed>  $rules  The rules.
+ * @return Tournament The result.
+ */
 function tlsUnitTournament(string $status = 'registration-open', array $rules = []): Tournament
 {
     return Tournament::factory()->create([
@@ -19,6 +28,13 @@ function tlsUnitTournament(string $status = 'registration-open', array $rules = 
     ]);
 }
 
+/**
+ * Tls unit group bracket.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @param  string  $phase  The phase.
+ * @return Bracket The result.
+ */
 function tlsUnitGroupBracket(Tournament $tournament, string $phase = 'group'): Bracket
 {
     $division = Division::factory()->create(['tournament_id' => $tournament->id]);
@@ -30,6 +46,14 @@ function tlsUnitGroupBracket(Tournament $tournament, string $phase = 'group'): B
     ]);
 }
 
+/**
+ * Tls unit match.
+ *
+ * @param  Tournament  $tournament  The tournament.
+ * @param  Bracket  $bracket  The bracket.
+ * @param  string  $status  The status.
+ * @return MatchModel The result.
+ */
 function tlsUnitMatch(Tournament $tournament, Bracket $bracket, string $status): MatchModel
 {
     return MatchModel::factory()->create([

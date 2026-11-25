@@ -1,3 +1,4 @@
+{{-- Blade view for Tournaments index. --}}
 <div>
 @php
     $user = auth()->user();

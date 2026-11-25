@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Bracket service test. */
+
 use App\Models\AuditLog;
 use App\Models\Bracket;
 use App\Models\MatchModel;

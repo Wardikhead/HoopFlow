@@ -1,5 +1,7 @@
 <?php
 
+/** Tests for Announcements test. */
+
 use App\Livewire\Organizer\AnnouncementCreate;
 use App\Livewire\Organizer\AnnouncementsIndex;
 use App\Models\Announcement;
