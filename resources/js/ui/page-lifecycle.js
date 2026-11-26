@@ -68,6 +68,12 @@ function initGlobals() {
     // render. Restore them inside onSwap so the new page never paints with
     // the wrong theme or an expanded rail.
     document.addEventListener('livewire:navigating', (event) => {
+        // The SPA swap rebuilds the shell, so the mobile dock and active icon
+        // would replay their entry animations and flash on every tap. Mark the
+        // document before the swap, then again after it, in case the incoming
+        // <html> attributes were replaced.
+        document.documentElement.classList.add('hf-spa-nav');
+
         if (typeof event.detail?.onSwap !== 'function') return;
 
         event.detail.onSwap(() => {
