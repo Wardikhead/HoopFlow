@@ -283,7 +283,9 @@
    full document loads, so navigating the app never replays it. */
 .hf-spa-nav .hf-main,
 .hf-spa-nav .hf-reveal,
-.hf-spa-nav .hf-page-enter {
+.hf-spa-nav .hf-page-enter,
+.hf-spa-nav .hf-bottom-nav,
+.hf-spa-nav .hf-nav-tab.is-active .bi {
   animation: none !important;
 }
 
