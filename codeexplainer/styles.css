@@ -931,8 +931,16 @@ h1::after {
   white-space: nowrap;
 }
 
-.code-lang {
+.code-range {
   margin-left: auto;
+  color: var(--dim);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.code-lang {
+  margin-left: 0;
   color: var(--accent);
   font-size: 9px;
   letter-spacing: 0.1em;
@@ -1018,6 +1026,28 @@ h1::after {
 
 .expand-btn:hover {
   color: var(--text);
+}
+
+.code-explain {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-soft);
+}
+
+.code-explain span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--blue);
+  font: 600 9px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.code-explain p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 /* ---------- why / caveat ---------- */

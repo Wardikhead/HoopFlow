@@ -142,6 +142,9 @@ function renderCode(block, sectionId, index) {
   const code = block.code.replace(/\n$/, '');
   const lines = code.split('\n');
   const collapsed = lines.length > 20;
+  const place = block.label ? `${block.path} · ${block.label}` : block.path;
+  const firstLine = Number.isInteger(block.startLine) ? block.startLine : 1;
+  const lastLine = firstLine + lines.length - 1;
 
   CODE_STORE.set(id, block.code);
 
@@ -149,12 +152,14 @@ function renderCode(block, sectionId, index) {
     <figure class="code-card">
       <figcaption class="code-head">
         <span class="code-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span class="code-file">${esc(block.file)}</span>
+        <span class="code-file" title="${esc(place)}">${esc(place)}</span>
+        <span class="code-range">L${firstLine}–${lastLine}</span>
         <span class="code-lang">${esc(block.lang)}</span>
         <button class="copy-btn" type="button" data-copy="${id}">Copy</button>
       </figcaption>
+      ${block.explain ? `<div class="code-explain"><span>What this snippet does</span><p>${esc(block.explain)}</p></div>` : ''}
       <div class="code-body${collapsed ? ' is-collapsed' : ''}" id="${id}-body">
-        <pre class="gutter" aria-hidden="true">${lines.map((_, lineIndex) => lineIndex + 1).join('\n')}</pre>
+        <pre class="gutter" aria-hidden="true">${lines.map((_, lineIndex) => firstLine + lineIndex).join('\n')}</pre>
         <pre class="code"><code>${highlight(code)}</code></pre>
       </div>
       ${collapsed ? `<button class="expand-btn" type="button" data-expand="${id}-body" data-lines="${lines.length}">Show all ${lines.length} lines</button>` : ''}
