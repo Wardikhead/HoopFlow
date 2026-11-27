@@ -11,6 +11,14 @@ for (const section of SECTIONS) {
   if (NAIVE_SNIPPETS[section.id]) section.naive = NAIVE_SNIPPETS[section.id];
 }
 
+/* Short inline notes live in sections-notes.js, keyed by section id and block. */
+for (const section of SECTIONS) {
+  section.code.forEach((block, index) => {
+    const notes = SNIPPET_NOTES[`${section.id}:${index}`];
+    if (notes) block.notes = notes;
+  });
+}
+
 const PIPELINE = [
   { id: 'browser', label: 'Browser', detail: 'Sends the session cookie with every request.' },
   { id: 'headers', label: 'SecurityHeaders', detail: 'Prepended: wraps the whole stack and sets headers on the way out.' },

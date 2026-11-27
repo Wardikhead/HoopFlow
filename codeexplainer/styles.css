@@ -1090,7 +1090,7 @@ h1::after {
   border-right: 1px solid var(--line-soft);
   background: #080b0f;
   color: var(--dim);
-  font: 11.5px/1.7 var(--mono);
+  font: 12px/1.7 var(--mono);
   text-align: right;
   user-select: none;
 }
@@ -1101,6 +1101,18 @@ h1::after {
   font: 12px/1.7 var(--mono);
   white-space: pre;
   tab-size: 4;
+}
+
+.line-note {
+  padding-left: 2ch;
+  color: var(--dim);
+  font-style: italic;
+  user-select: none;
+}
+
+.line-note::before {
+  content: "↳ ";
+  color: rgba(148, 163, 184, 0.55);
 }
 
 .tok-comment { color: #5f7188; font-style: italic; }
@@ -1542,7 +1554,7 @@ h1::after {
   }
 
   .gutter {
-    font-size: 10.5px;
+    font-size: 11px;
   }
 }
 

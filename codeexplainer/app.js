@@ -36,6 +36,8 @@ function searchText(section) {
 
   for (const block of section.code) {
     parts.push(block.path, block.label, block.explain, block.code);
+
+    if (block.notes) parts.push(...Object.values(block.notes));
   }
 
   if (section.naive) {
@@ -84,7 +86,12 @@ function highlight(code) {
     else if (match[4]) kind = 'var';
     else if (match[5]) kind = 'kw';
 
-    out += `<span class="tok-${kind}">${esc(match[0])}</span>`;
+    /* A docblock or block comment spans lines. Emit one span per line so the
+       highlighted HTML can be split on newlines for inline notes. */
+    const text = match[0];
+    out += text.includes('\n')
+      ? text.split('\n').map((part) => `<span class="tok-${kind}">${esc(part)}</span>`).join('\n')
+      : `<span class="tok-${kind}">${esc(text)}</span>`;
     last = match.index + match[0].length;
   }
 
@@ -198,6 +205,22 @@ function renderCode(block, sectionId, index) {
   const place = block.label ? `${block.path} · ${block.label}` : block.path;
   const firstLine = Number.isInteger(block.startLine) ? block.startLine : 1;
   const lastLine = firstLine + lines.length - 1;
+  const notes = block.notes ?? {};
+  const painted = highlight(code).split('\n');
+  const gutterRows = [];
+  const bodyRows = [];
+
+  lines.forEach((_, lineIndex) => {
+    gutterRows.push(String(firstLine + lineIndex));
+    bodyRows.push(painted[lineIndex]);
+
+    /* A note sits on its own row so it never widens the code line. The gutter
+       gets an empty row in the same place, which keeps the numbers aligned. */
+    if (notes[lineIndex]) {
+      gutterRows.push('');
+      bodyRows.push(`<span class="line-note">${esc(notes[lineIndex])}</span>`);
+    }
+  });
 
   CODE_STORE.set(id, block.code);
 
@@ -212,8 +235,8 @@ function renderCode(block, sectionId, index) {
       </figcaption>
       ${block.explain ? `<div class="code-explain"><span>What this snippet does</span><p>${esc(block.explain)}</p></div>` : ''}
       <div class="code-body${collapsed ? ' is-collapsed' : ''}" id="${id}-body">
-        <pre class="gutter" aria-hidden="true">${lines.map((_, lineIndex) => firstLine + lineIndex).join('\n')}</pre>
-        <pre class="code"><code>${highlight(code)}</code></pre>
+        <pre class="gutter" aria-hidden="true">${gutterRows.join('\n')}</pre>
+        <pre class="code"><code>${bodyRows.join('\n')}</code></pre>
       </div>
       ${collapsed ? `<button class="expand-btn" type="button" data-expand="${id}-body" data-lines="${lines.length}">Show all ${lines.length} lines</button>` : ''}
     </figure>
