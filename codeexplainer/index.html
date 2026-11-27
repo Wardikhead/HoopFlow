@@ -29,7 +29,7 @@
 
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input id="search" type="search" placeholder="Search 25 sections…  (press /)" autocomplete="off" aria-label="Search sections" />
+      <input id="search" type="search" placeholder="Search titles, code, explanations…  (press /)" autocomplete="off" aria-label="Search sections" />
       <span class="search-count" id="searchCount" aria-live="polite"></span>
     </div>
 
@@ -48,6 +48,7 @@
       <div class="sidebar-foot">
         <p>Read-only study guide. No application code was changed.</p>
         <p class="mono">source: <span>src/</span></p>
+        <div class="group-progress" id="groupProgress" aria-live="polite"></div>
       </div>
     </aside>
 
@@ -185,6 +186,7 @@
 
   <script src="sections-security.js"></script>
   <script src="sections-features.js"></script>
+  <script src="sections-naive.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

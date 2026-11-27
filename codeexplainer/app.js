@@ -23,9 +23,26 @@ function esc(value) {
 }
 
 function searchText(section) {
-  return [section.title, section.file, section.tag, section.tldr, section.group]
-    .join(' ')
-    .toLowerCase();
+  const parts = [
+    section.title,
+    section.file,
+    section.tag,
+    section.tldr,
+    section.group,
+    section.why,
+    section.caveat,
+    ...section.steps,
+  ];
+
+  for (const block of section.code) {
+    parts.push(block.path, block.label, block.explain, block.code);
+  }
+
+  if (section.naive) {
+    parts.push(section.naive.label, section.naive.explain, section.naive.code);
+  }
+
+  return parts.filter(Boolean).join(' ').toLowerCase();
 }
 
 function loadStudied() {
@@ -138,6 +155,41 @@ function renderNav() {
   `;
 }
 
+function lineCount(code) {
+  return code.replace(/\n$/, '').split('\n').length;
+}
+
+function sectionRef(section) {
+  const blocks = section.code.filter((block) => block.path === section.file && Number.isInteger(block.startLine));
+
+  if (blocks.length === 0) return section.file;
+
+  const start = Math.min(...blocks.map((block) => block.startLine));
+  const end = Math.max(...blocks.map((block) => block.startLine + lineCount(block.code) - 1));
+
+  return `${section.file}:${start}-${end}`;
+}
+
+function citation(section) {
+  const kind = section.label ? `Feature ${section.label}` : `Figure ${section.num}`;
+
+  return `${kind} — ${section.title} (${sectionRef(section)})`;
+}
+
+function groupStats() {
+  const groups = new Map();
+
+  for (const section of ALL_SECTIONS) {
+    const entry = groups.get(section.group) ?? { name: section.group, done: 0, total: 0 };
+
+    entry.total += 1;
+    if (studied.has(section.id)) entry.done += 1;
+    groups.set(section.group, entry);
+  }
+
+  return [...groups.values()];
+}
+
 function renderCode(block, sectionId, index) {
   const id = `code-${sectionId}-${index}`;
   const code = block.code.replace(/\n$/, '');
@@ -154,7 +206,7 @@ function renderCode(block, sectionId, index) {
       <figcaption class="code-head">
         <span class="code-dots" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="code-file" title="${esc(place)}">${esc(place)}</span>
-        <span class="code-range">L${firstLine}–${lastLine}</span>
+        <button class="code-range" type="button" data-ref="${esc(`${block.path}:${firstLine}-${lastLine}`)}" title="Copy reference (path:line)">L${firstLine}–${lastLine}</button>
         <span class="code-lang">${esc(block.lang)}</span>
         <button class="copy-btn" type="button" data-copy="${id}">Copy</button>
       </figcaption>
@@ -168,12 +220,35 @@ function renderCode(block, sectionId, index) {
   `;
 }
 
+function renderNaive(section) {
+  const naive = section.naive;
+  const code = naive.code.replace(/\n$/, '');
+
+  return `
+    <figure class="code-card is-naive" id="naive-${esc(section.id)}" hidden>
+      <figcaption class="code-head">
+        <span class="naive-tag">Illustrative · not in src/</span>
+        <span class="code-file">${esc(naive.label)}</span>
+        <span class="code-lang">php</span>
+      </figcaption>
+      <div class="code-explain">
+        <span>Why this is unsafe</span>
+        <p>${esc(naive.explain)}</p>
+      </div>
+      <div class="code-body">
+        <pre class="code"><code>${highlight(code)}</code></pre>
+      </div>
+    </figure>
+  `;
+}
+
 function sectionBody(section) {
   return `
     <ol class="steps">
       ${section.steps.map((step) => `<li>${esc(step)}</li>`).join('')}
     </ol>
     ${section.code.map((block, index) => renderCode(block, section.id, index)).join('')}
+    ${section.naive ? renderNaive(section) : ''}
     <div class="why">
       <strong>Why it matters</strong>
       <p>${esc(section.why)}</p>
@@ -195,9 +270,13 @@ function renderSection(section) {
           <h2>${esc(section.title)}</h2>
           <span class="section-file">${esc(section.file)}</span>
         </div>
-        <button class="study-toggle" type="button" data-study="${section.id}" aria-pressed="${on}">
-          ${on ? 'Studied ✓' : 'Mark studied'}
-        </button>
+        <div class="section-actions">
+          ${section.naive ? `<button class="naive-btn" type="button" data-naive="${esc(section.id)}" aria-expanded="false" aria-controls="naive-${esc(section.id)}">Naive version</button>` : ''}
+          <button class="cite-btn" type="button" data-cite="${esc(citation(section))}" title="Copy citation">Cite</button>
+          <button class="study-toggle" type="button" data-study="${section.id}" aria-pressed="${on}">
+            ${on ? 'Studied ✓' : 'Mark studied'}
+          </button>
+        </div>
       </header>
       <p class="tldr">${esc(section.tldr)}</p>
       ${sectionBody(section)}
@@ -290,9 +369,30 @@ function updateProgress() {
   const done = ALL_SECTIONS.filter((section) => studied.has(section.id)).length;
   const text = document.getElementById('progressText');
   const fill = document.getElementById('progressFill');
+  const chip = text ? text.closest('.progress-chip') : null;
 
   if (text) text.textContent = `${done} / ${total}`;
   if (fill) fill.style.width = `${total === 0 ? 0 : (done / total) * 100}%`;
+
+  const groups = groupStats();
+
+  if (chip) {
+    chip.title = groups.map((group) => `${group.name}: ${group.done}/${group.total}`).join(' · ');
+  }
+
+  const panel = document.getElementById('groupProgress');
+
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <p class="group-title">Progress by group</p>
+    ${groups.map((group) => `
+      <div class="group-row${group.done === group.total ? ' is-done' : ''}">
+        <span>${esc(group.name)}</span>
+        <span class="group-count">${group.done}/${group.total}</span>
+      </div>
+    `).join('')}
+  `;
 }
 
 /* ---------- interactions ---------- */
@@ -547,6 +647,48 @@ function initDelegates() {
         copyButton.textContent = 'Copy';
         copyButton.classList.remove('is-copied');
       }, 1200);
+
+      return;
+    }
+
+    const refButton = event.target.closest('[data-ref]');
+    if (refButton) {
+      const copied = await copyText(refButton.dataset.ref);
+
+      refButton.classList.toggle('is-copied', copied);
+
+      window.setTimeout(() => refButton.classList.remove('is-copied'), 1200);
+
+      return;
+    }
+
+    const citeButton = event.target.closest('[data-cite]');
+    if (citeButton) {
+      const copied = await copyText(citeButton.dataset.cite);
+
+      if (!citeButton.dataset.label) citeButton.dataset.label = citeButton.textContent;
+
+      citeButton.textContent = copied ? 'Copied ✓' : 'Copy failed';
+      citeButton.classList.toggle('is-copied', copied);
+
+      window.setTimeout(() => {
+        citeButton.textContent = citeButton.dataset.label;
+        citeButton.classList.remove('is-copied');
+      }, 1200);
+
+      return;
+    }
+
+    const naiveButton = event.target.closest('[data-naive]');
+    if (naiveButton) {
+      const card = document.getElementById(`naive-${naiveButton.dataset.naive}`);
+      if (!card) return;
+
+      const open = card.hidden;
+
+      card.hidden = !open;
+      naiveButton.setAttribute('aria-expanded', String(open));
+      naiveButton.textContent = open ? 'Hide naive version' : 'Naive version';
 
       return;
     }

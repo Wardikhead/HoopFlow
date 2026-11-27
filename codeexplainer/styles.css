@@ -357,8 +357,42 @@ code,
   color: var(--accent);
 }
 
+.group-progress {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.group-title {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.group-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 10px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.group-count {
+  color: var(--dim);
+  font: 10px var(--mono);
+}
+
+.group-row.is-done,
+.group-row.is-done .group-count {
+  color: var(--mint);
+}
+
 main {
   width: 100%;
+  min-width: 0;
   max-width: 1040px;
   padding: 52px 48px 96px;
 }
@@ -852,6 +886,47 @@ h1::after {
   color: var(--mint);
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cite-btn,
+.naive-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  font: 600 10px var(--mono);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.cite-btn:hover,
+.naive-btn:hover {
+  border-color: var(--dim);
+  color: var(--text);
+}
+
+.cite-btn.is-copied {
+  border-color: rgba(52, 211, 153, 0.5);
+  color: var(--mint);
+}
+
+.naive-btn {
+  border-color: rgba(251, 191, 36, 0.35);
+  color: var(--amber);
+}
+
+.naive-btn[aria-expanded="true"] {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
 .tldr {
   margin: 18px 0 0;
   padding: 13px 16px;
@@ -938,10 +1013,30 @@ h1::after {
 
 .code-range {
   margin-left: auto;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
   color: var(--dim);
-  font-size: 9.5px;
+  font: 600 9.5px var(--mono);
   letter-spacing: 0.04em;
   white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.code-range:hover {
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.code-range.is-copied {
+  border-color: rgba(52, 211, 153, 0.5);
+  color: var(--mint);
+}
+
+.code-range.is-copied::after {
+  content: " ✓";
 }
 
 .code-lang {
@@ -1053,6 +1148,33 @@ h1::after {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.code-card.is-naive {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.code-card.is-naive .code-head {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.code-card.is-naive .code-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.code-card.is-naive .code-explain span {
+  color: var(--amber);
+}
+
+.naive-tag {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 4px;
+  color: var(--amber);
+  font: 600 9px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ---------- why / caveat ---------- */
@@ -1284,7 +1406,7 @@ h1::after {
 
 @media (max-width: 1080px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
@@ -1397,7 +1519,7 @@ h1::after {
     font-size: 24px;
   }
 
-  .study-toggle {
+  .section-actions {
     grid-column: 2;
     justify-self: start;
     margin-top: 4px;

@@ -5,6 +5,12 @@
 const SECTIONS = [...SECURITY_SECTIONS, ...FEATURE_SECTIONS];
 const FEATURES = FEATURE_SECTIONS;
 
+/* Illustrative insecure counterparts live in sections-naive.js. They are shown
+   only on request and are never presented as source. */
+for (const section of SECTIONS) {
+  if (NAIVE_SNIPPETS[section.id]) section.naive = NAIVE_SNIPPETS[section.id];
+}
+
 const PIPELINE = [
   { id: 'browser', label: 'Browser', detail: 'Sends the session cookie with every request.' },
   { id: 'headers', label: 'SecurityHeaders', detail: 'Prepended: wraps the whole stack and sets headers on the way out.' },
