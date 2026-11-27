@@ -97,8 +97,10 @@ code,
   backdrop-filter: blur(14px);
 }
 
-.menu-btn {
+.menu-btn,
+.nav-toggle {
   display: none;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 38px;
@@ -111,7 +113,8 @@ code,
   cursor: pointer;
 }
 
-.menu-btn svg {
+.menu-btn svg,
+.nav-toggle svg {
   width: 18px;
   height: 18px;
   fill: none;
@@ -244,6 +247,7 @@ code,
   grid-template-columns: 288px minmax(0, 1fr);
   max-width: 1500px;
   margin: 0 auto;
+  transition: grid-template-columns 0.22s ease;
 }
 
 .sidebar {
@@ -255,6 +259,7 @@ code,
   border-right: 1px solid var(--line-soft);
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
 }
 
 .drawer-close {
@@ -1253,6 +1258,29 @@ h1::after {
 }
 
 /* ---------- responsive ---------- */
+
+@media (min-width: 1081px) {
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .shell.is-nav-collapsed {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
+  .shell.is-nav-collapsed .sidebar {
+    padding-inline: 0;
+    border-right-color: transparent;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  /* With the rail gone, centre the reading column in the freed space
+     instead of letting it hug the left edge. */
+  .shell.is-nav-collapsed main {
+    margin-inline: auto;
+  }
+}
 
 @media (max-width: 1080px) {
   .shell {

@@ -4,6 +4,7 @@ const FIGURES = SECTIONS.filter((section) => section.num > 0);
 const ALL_SECTIONS = [...FIGURES, ...FEATURES];
 const CODE_STORE = new Map();
 const STORAGE_KEY = 'hf-security-study-v1';
+const NAV_STATE_KEY = 'hf-security-nav-collapsed';
 
 const studied = loadStudied();
 let quizAnswered = 0;
@@ -422,6 +423,46 @@ function closeMenu() {
   document.body.style.overflow = '';
 }
 
+function setNavCollapsed(collapsed) {
+  const shell = document.querySelector('.shell');
+  const toggle = document.getElementById('navToggle');
+  const label = collapsed ? 'Show navigation' : 'Hide navigation';
+
+  if (!shell || !toggle) return;
+
+  shell.classList.toggle('is-nav-collapsed', collapsed);
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.setAttribute('aria-label', label);
+  toggle.title = label;
+
+  try {
+    localStorage.setItem(NAV_STATE_KEY, collapsed ? '1' : '0');
+  } catch {
+    /* private mode: the choice just will not persist */
+  }
+}
+
+function initNavToggle() {
+  const shell = document.querySelector('.shell');
+  const toggle = document.getElementById('navToggle');
+
+  if (!shell || !toggle) return;
+
+  let collapsed = false;
+
+  try {
+    collapsed = localStorage.getItem(NAV_STATE_KEY) === '1';
+  } catch {
+    collapsed = false;
+  }
+
+  setNavCollapsed(collapsed);
+
+  toggle.addEventListener('click', () => {
+    setNavCollapsed(!shell.classList.contains('is-nav-collapsed'));
+  });
+}
+
 function initMenu() {
   document.getElementById('menuBtn').addEventListener('click', openMenu);
   document.getElementById('drawerClose').addEventListener('click', closeMenu);
@@ -598,6 +639,7 @@ renderDocFixes();
 updateStats();
 updateProgress();
 initSearch();
+initNavToggle();
 initMenu();
 initScrollSpy();
 initKeyboard();
